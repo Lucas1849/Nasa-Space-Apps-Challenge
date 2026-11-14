@@ -23,18 +23,25 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
 body {
   margin: 0; min-height: 100vh; color: var(--fg); font-family: var(--font); line-height: 1.45;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+/* Degradê do fundo numa camada fixa própria: não é redesenhado ao rolar a página
+   (background-attachment: fixed forçava repintar a tela inteira a cada rolagem). */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(1200px 700px at 15% -10%, #1b2a6b 0%, transparent 60%),
               radial-gradient(900px 600px at 110% 20%, #3b1d6b 0%, transparent 55%),
               linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 60%);
-  background-attachment: fixed;
-  overflow-x: hidden;
 }
 
-/* Campo de estrelas em duas camadas (CSS puro, sem imagens) */
-.stars { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+/* Campo de estrelas (CSS puro, sem imagens), estático, numa camada fixa só (body::after).
+   Desempenho: as estrelas animadas repintavam a tela inteira a cada quadro (~16 fps com a tela parada).
+   Estáticas, são desenhadas uma vez e o jogo roda a 60 fps. */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .6;
   background-image:
     radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 51%),
     radial-gradient(1px 1px at 60% 70%, #fff 50%, transparent 51%),
@@ -43,10 +50,13 @@ body {
     radial-gradient(1px 1px at 90% 55%, #fff 50%, transparent 51%),
     radial-gradient(1.5px 1.5px at 10% 60%, #ffe9c4 50%, transparent 51%),
     radial-gradient(1px 1px at 50% 10%, #fff 50%, transparent 51%),
-    radial-gradient(1px 1px at 70% 45%, #fff 50%, transparent 51%);
-  background-size: 420px 420px; opacity: .7; animation: drift 120s linear infinite; }
-.stars-far { background-size: 260px 260px; opacity: .35; animation-duration: 200s; animation-direction: reverse; }
-@keyframes drift { to { background-position: 420px 420px; } }
+    radial-gradient(1px 1px at 70% 45%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 50%, rgba(255,255,255,.6) 50%, transparent 51%);
+  background-size: 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px,
+    260px 260px, 260px 260px, 260px 260px;
+}
 
 #app { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 20px 20px 60px; }
 
@@ -83,14 +93,17 @@ select option { background: #0f1736; }
 
 .row { display: flex; gap: 10px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
 .row.wrap button { text-align: left; border-radius: var(--radius-sm); }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; backdrop-filter: blur(6px); }
-.screen { animation: rise .35s ease both; }
+/* Sem backdrop-filter: o desfoque era recalculado a cada quadro sobre as estrelas em movimento.
+   O fundo um pouco mais opaco dá o mesmo efeito de vidro escuro. */
+.panel { background: rgba(16, 22, 46, 0.82); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+/* A entrada animada só acontece quando a TELA muda, não a cada clique (ver main.js). */
+.screen.enter { animation: rise .25s ease both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* ---------- HUD (barra superior nas telas de jogo) ---------- */
 .hud { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 10px 16px; margin: -8px -8px 18px; border-radius: var(--radius);
-  background: rgba(7, 11, 24, 0.75); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+  background: rgba(7, 11, 24, 0.94); border: 1px solid var(--line); }
 .hud .who { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #06101f; box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
 .c0 { background: #38bdf8; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #f472b6; }
@@ -213,7 +226,7 @@ select option { background: #0f1736; }
 /* ---------- Voo (evento) ---------- */
 .flight { max-width: 900px; margin: 0 auto; text-align: center; padding-top: 30px; }
 .flight .alarm { font-size: 4rem; animation: pulse 1.2s ease-in-out infinite; display: inline-block; }
-@keyframes pulse { 0%,100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(251,191,36,0)); } 50% { transform: scale(1.08); filter: drop-shadow(0 0 18px rgba(251,191,36,.6)); } }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .flight h1 { color: var(--amber); }
 .event-text { font-size: 1.1rem; max-width: 64ch; margin: 14px auto 0; color: #d6ddf7; }
 .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 20px; text-align: left; }
@@ -238,10 +251,10 @@ select option { background: #0f1736; }
 .lesson p { margin: 4px 0; }
 
 /* ---------- Overlay de lançamento ---------- */
-.launch-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 100%, #1b2a6b 0%, var(--bg) 70%); animation: fadeIn .3s ease; }
-.launch-overlay .rocket { font-size: 5rem; animation: liftoff 2.2s cubic-bezier(.4,0,.6,1) forwards; }
-.launch-overlay .count { position: absolute; top: 18%; font-family: var(--mono); font-size: 4rem; font-weight: 700; color: var(--accent); animation: tick 2.2s steps(1) forwards; }
-.launch-overlay .flame { position: absolute; bottom: 0; left: 50%; width: 40vw; height: 30vh; transform: translateX(-50%); background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,.6) 0%, rgba(251,113,133,.25) 40%, transparent 70%); animation: flame 2.2s ease-out forwards; }
+.launch-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 100%, #1b2a6b 0%, var(--bg) 70%); animation: fadeIn .3s ease; }
+.launch-overlay .rocket { font-size: 5rem; animation: liftoff 1.4s cubic-bezier(.4,0,.6,1) forwards; }
+.launch-overlay .count { position: absolute; top: 18%; font-family: var(--mono); font-size: 4rem; font-weight: 700; color: var(--accent); animation: tick 1.4s steps(1) forwards; }
+.launch-overlay .flame { position: absolute; bottom: 0; left: 50%; width: 40vw; height: 30vh; transform: translateX(-50%); background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,.6) 0%, rgba(251,113,133,.25) 40%, transparent 70%); animation: flame 1.4s ease-out forwards; }
 @keyframes liftoff { 0% { transform: translateY(40vh) scale(.9); } 30% { transform: translateY(30vh) scale(1); } 100% { transform: translateY(-80vh) scale(.6); } }
 @keyframes tick { 0% { content: '3'; } }
 @keyframes flame { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scaleY(2); } }

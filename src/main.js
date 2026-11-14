@@ -6,10 +6,20 @@ import { SCREENS } from './ui/screens.js';
 const app = document.getElementById('app');
 let state = createInitialState();
 
+let lastScreen = null;
+let lastTurn = null;
+
+// Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
+// num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
 function render() {
-  app.innerHTML = '';
-  app.appendChild(SCREENS[state.screen](state, actions));
-  window.scrollTo(0, 0);
+  const changed = state.screen !== lastScreen || state.turn !== lastTurn;
+  const scrollY = window.scrollY;
+  const node = SCREENS[state.screen](state, actions);
+  if (changed) node.classList.add('enter');
+  app.replaceChildren(node);
+  window.scrollTo(0, changed ? 0 : scrollY);
+  lastScreen = state.screen;
+  lastTurn = state.turn;
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
@@ -56,18 +66,22 @@ function showToast(text) {
   setTimeout(() => t.remove(), 2500);
 }
 
-// Animação curta de lançamento (contagem + foguete) antes da tela de voo.
+// Animação curta de lançamento (contagem + foguete) antes da tela de voo. Um clique pula.
 function showLaunchOverlay() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const o = document.createElement('div');
   o.className = 'launch-overlay';
+  o.title = 'Clique para pular';
   o.innerHTML = '<div class="count">3</div><div class="rocket">🚀</div><div class="flame"></div>';
   document.body.appendChild(o);
   const count = o.querySelector('.count');
-  setTimeout(() => { count.textContent = '2'; }, 500);
-  setTimeout(() => { count.textContent = '1'; }, 1000);
-  setTimeout(() => { count.textContent = 'Lançar!'; }, 1500);
-  setTimeout(() => o.remove(), 2400);
+  const timers = [
+    setTimeout(() => { count.textContent = '2'; }, 300),
+    setTimeout(() => { count.textContent = '1'; }, 600),
+    setTimeout(() => { count.textContent = 'Lançar!'; }, 900),
+    setTimeout(() => o.remove(), 1400),
+  ];
+  o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
 
 // Exposto para depuração no console do navegador.
