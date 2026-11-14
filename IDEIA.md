@@ -186,3 +186,116 @@ O time já tem uma base jogável (tabuleiro, oficina, simulação, 3 missões). 
 - O voo tem quantos turnos em cada missão?
 - Multiplayer: só no mesmo computador (hot-seat) ou online?
 - Quem faz o quê (dados, simulação, interface, textos)?
+
+## 13. Propostas do Henrique (para revisão)
+
+> Status: **proposta**. Não substitui nada acima até o grupo aprovar. Responde às perguntas em
+> aberto sobre fim de partida, duração do voo e multiplayer, e corrige um problema de
+> balanceamento da versão atual.
+
+### 13.1 Problema: missão fácil sempre vence
+Hoje cada jogador **escolhe** a missão no setup e ganha quem terminar primeiro. Como as missões
+vão de "fácil" a "muito difícil" sem compensação, quem pega o Primeiro satélite quase sempre
+vence. O jogador esperto sempre escolhe a fácil.
+
+### 13.2 Cartas de vitória: 4 condições, uma por jogador
+A condição de vitória passa a ser uma **carta de agência**, **sorteada sem repetição**. As
+cartas usam as missões que já existem e cada uma corresponde a um critério de pontuação do
+desafio.
+
+| Carta | Para vencer | Perfil | Critério do desafio |
+|---|---|---|---|
+| **Exploradora** | Cumprir o Pouso tripulado | Uma aposta grande, cara e arriscada | Sucesso da missão |
+| **Científica** | Somar 15 de ciência em missões cumpridas | Instrumentos bons, destinos distantes | Valor científico |
+| **Infraestrutura** | Cumprir 3 missões na órbita da Terra (satélite, ser vivo, GEO) | Missões baratas e confiáveis | Uso eficiente de recursos |
+| **Pioneira** | Ser o primeiro do mundo em 2 missões quaisquer | Lançar cedo, arriscar | Boas decisões (lançar agora ou esperar) |
+
+- Cada jogador cumpre cada missão **no máximo uma vez**.
+- **Recorde mundial:** o jogo registra quem cumpriu cada missão primeiro.
+- As cartas **disputam as mesmas missões**, então a corrida continua: a Pioneira compete com
+  todos, Infraestrutura e Científica querem a GEO, Científica e Exploradora querem a Lua.
+- No hot-seat todos veem as cartas de todos, e isso faz parte da corrida visível.
+- Números (15 de ciência, 3 missões, 2 recordes) são **chutes para testar**. Suspeita: a
+  Exploradora é a mais difícil e pode precisar de verba inicial maior.
+
+| Jogadores | Distribuição |
+|---|---|
+| 1 (solo) | Sorteia 1 carta; joga contra o limite de rodadas e compara com a história real (13.5) |
+| 2 e 3 | Sorteia sem repetir; as cartas que sobram ficam de fora (variedade entre partidas) |
+| 4 | Uma carta para cada |
+
+Por que não 2 condições para 4 jogadores: os pares com a mesma carta viram duas partidas
+separadas e quem sai na frente dispara. Fica para o modo equipe EUA × URSS do roadmap.
+Por que não deixar escolher: todos pegariam a que parece mais fácil.
+Futuro: com 6 cartas, cada um compra 2 e fica com 1.
+
+### 13.3 Estrutura da rodada
+Uma **rodada** = todos jogam uma vez (hot-seat). Cada turno tem 3 fases:
+
+1. **Tabuleiro (sempre):** rola o dado, anda, aplica a casa.
+2. **Uma ação, conforme a nave:**
+   - **No chão:** compra e vende na oficina à vontade; se quiser, **lança** (encerra o turno).
+   - **Em voo:** não mexe na nave; pode comprar peças para a próxima missão (estoque).
+   - **Missão cumprida:** escolhe a próxima missão.
+3. **Voo avança uma etapa** (se em voo): evento da etapa com a chance de falha **e o motivo**
+   ("40%: blindagem 1/3 +25%, sem redundância +15%"); jogador decide consertar, abortar ou
+   insistir.
+   - Etapa superada: avança; a última cumpre a missão.
+   - Etapa falhou: a nave é perdida e o jogador ganha **dados de falha**, que reduzem o risco
+     **do sistema que falhou** na próxima tentativa (ex.: falhou por energia → −20% de risco de
+     energia). O relatório mostra essa ligação: é o passo *Verify* do ciclo da NASA.
+
+**Fim da rodada:** confere as cartas. A rodada **termina antes** de declarar o vencedor, para
+todos jogarem o mesmo número de turnos. Se dois cumprirem a carta na mesma rodada, desempata
+pelo progresso extra (ex.: ciência a mais). No limite de rodadas, vence quem tiver **maior %
+de progresso** na própria carta.
+
+### 13.4 Etapas do voo por destino
+
+| Destino | Etapas | Turnos em voo | Missões |
+|---|---|---|---|
+| LEO | Subida → Órbita | 1 | Primeiro satélite, Ser vivo |
+| GEO | Subida → Transferência → GEO | 2 | Satélite de comunicação |
+| Lua | Subida → Transferência → Chegada (→ Pouso) | 3 a 4 | Sonda lunar, Pouso tripulado |
+
+Destinos distantes = mais eventos = mais risco. A decisão "lanço agora ou espero" existe para
+todos, mas pesa diferente em cada carta.
+
+### 13.5 Contexto de Guerra Fria
+- **Cada rodada é um ano**, de **1957** (Sputnik) a **1969** (Apollo 11): **13 rodadas**. O ano
+  aparece no topo da tela.
+- **História alternativa:** os jogadores comandam **agências fictícias** (nome escolhido no
+  setup). Funciona com 4 jogadores e evita colocar alguém para "jogar de URSS contra EUA".
+- **Cartão "Na história real"** no relatório de sucesso:
+
+  | Missão | Marco real |
+  |---|---|
+  | Primeiro satélite | Sputnik 1 (URSS, 1957); Explorer 1 (EUA, 1958) |
+  | Ser vivo em órbita | Sputnik 2, com a cadela Laika (URSS, 1957) |
+  | Satélite GEO | Syncom 3 (EUA, 1964) |
+  | Sonda lunar | Luna 2 (URSS, 1959) |
+  | Pouso tripulado | Apollo 11 (EUA, 1969) |
+
+  **Conferir as datas nas páginas de história da NASA (nasa.gov/history) antes de publicar** e
+  citar a fonte na tela e no `SUBMISSION.md`. Isso conta para o requisito de recurso da NASA.
+- **Solo:** no fim, compara com a história ("Você pousou na Lua em 1966, 3 anos antes da
+  história real"), sem disputa de recorde com eventos reais.
+- **Casas com cara de época** (só texto, mesma mecânica): "Discurso presidencial: a Lua vira
+  prioridade", "Crise diplomática: verba desviada", "Ano Geofísico Internacional: cooperação
+  científica", "Teste de motor falha na plataforma".
+- **Tom:** prestígio e ciência, nada de armas ou caricatura de países. Epílogo com o
+  **Apollo–Soyuz (1975)**: a competição que virou cooperação.
+
+### 13.6 Ordem de implementação sugerida
+1. Ano na tela, limite de 13 rodadas, textos de época nas casas (só dados e texto).
+2. Cartas de vitória (`src/data/objectives.js`, uma função `check` por carta) e registro de
+   recordes no estado.
+3. Escolher a próxima missão após cumprir uma.
+4. Cartão "Na história real" (`src/data/history.js`).
+5. Voo em várias etapas (mexe em `src/sim/actions.js` e `src/sim/state.js`: **avisar o grupo**).
+6. Dados de falha por sistema.
+
+### 13.7 Decisões para o grupo
+- Aprovar as 4 cartas e os números (15 de ciência, 3 missões, 2 recordes).
+- Falha = nave perdida inteira (proposta) ou só parte?
+- 13 rodadas (1957–1969) está bom?
