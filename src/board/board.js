@@ -1,25 +1,37 @@
-// Camada do TABULEIRO: o jogador anda e ganha verba (estilo Banco Imobiliário).
-// O tabuleiro é só o jeito de conseguir recursos; o centro do jogo é a oficina (src/ui/workshop.js).
+// Camada do TABULEIRO (IDEIA.md v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
+// O tabuleiro alimenta a engenharia: verba, tecnologia, desconto, proteção, prédios e informação.
 // Funções puras, sem DOM. Recebem `rng` para os testes serem determinísticos.
-// ATENÇÃO: valores FICTÍCIOS para balanceamento.
+// ATENÇÃO: valores FICTÍCIOS para balanceamento. Casas de dinheiro são fracas de propósito.
+//
+// Tipos de casa:
+//   start    largada (volta completa dá verba)
+//   funds    verba (positiva ou negativa)
+//   event    carta de dilema (em solo) ou imprevisto na próxima etapa (com a nave em voo)
+//   tech     cooperação científica: +tecnologia
+//   shop     feira de fornecedores: desconto na próxima compra
+//   lot      terreno: construir prédio ou usar o prédio do rival
+//   spy      espionagem: paga para ver o estado de um rival (uma vez por ano)
+//   repair   oficina de reparos: +1 proteção contra falha
+//   catchup  choque do Sputnik: verba de recuperação para quem está atrás
+// As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
 
 export const TILES = [
   { id: 0, type: 'start', label: 'Largada', funds: 10 },
-  { id: 1, type: 'funds', label: 'Verba do governo', funds: 15 },
-  { id: 2, type: 'event', label: 'Evento' },
-  { id: 3, type: 'funds', label: 'Patrocínio', funds: 10 },
-  { id: 4, type: 'tax', label: 'Corte de orçamento', funds: -10 },
-  { id: 5, type: 'funds', label: 'Prêmio científico', funds: 20 },
-  { id: 6, type: 'event', label: 'Evento' },
-  { id: 7, type: 'catchup', label: 'Apoio ao atrasado', funds: 25 },
-];
-
-// Eventos aleatórios da casa "Evento". Compensação para quem está atrás entra na casa 'catchup'.
-export const EVENTS = [
-  { id: 'grant', text: 'Verba extra de pesquisa.', funds: 15 },
-  { id: 'delay', text: 'Atraso no fornecedor: custo extra.', funds: -8 },
-  { id: 'spinoff', text: 'Tecnologia reaproveitada: desconto de 10% na próxima compra.', discount: 10 },
-  { id: 'shield', text: 'Teste bem-sucedido: proteção contra uma falha.', shield: 1 },
+  { id: 1, type: 'lot', label: 'Terreno livre' },
+  { id: 2, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
+  { id: 3, type: 'event', label: 'Evento' },
+  { id: 4, type: 'spy', label: 'Espionagem' },
+  { id: 5, type: 'lot', label: 'Terreno livre' },
+  { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
+  { id: 7, type: 'event', label: 'Evento' },
+  { id: 8, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
+  { id: 9, type: 'lot', label: 'Terreno livre' },
+  { id: 10, type: 'shop', label: 'Feira de fornecedores', discount: 15 },
+  { id: 11, type: 'event', label: 'Evento' },
+  { id: 12, type: 'repair', label: 'Oficina de reparos', shield: 1 },
+  { id: 13, type: 'lot', label: 'Terreno livre' },
+  { id: 14, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
+  { id: 15, type: 'event', label: 'Evento' },
 ];
 
 export function rollDie(rng = Math.random) {
@@ -34,11 +46,11 @@ export function movePlayer(player, steps) {
   return { ...player, position, passedStart };
 }
 
-// Aplica o efeito da casa onde o jogador parou. Devolve { player, messages[] }.
-// `isLast` = jogador com menos progresso (recebe o apoio da casa 'catchup').
-export function applyTile(player, tile, { rng = Math.random, isLast = false } = {}) {
+// Aplica o efeito automático da casa. Devolve { player, messages[] }.
+// `isLast` = jogador com menos progresso (recebe a verba do choque do Sputnik).
+export function applyTile(player, tile, { isLast = false } = {}) {
   const messages = [];
-  let p = { ...player };
+  const p = { ...player };
 
   if (p.passedStart && tile.type !== 'start') {
     p.funds += TILES[0].funds;
@@ -48,26 +60,31 @@ export function applyTile(player, tile, { rng = Math.random, isLast = false } = 
   switch (tile.type) {
     case 'start':
     case 'funds':
-    case 'tax':
       p.funds += tile.funds;
       messages.push(`${tile.label}: ${tile.funds >= 0 ? '+' : ''}${tile.funds} de verba.`);
+      break;
+    case 'tech':
+      p.tech = (p.tech || 0) + tile.tech;
+      messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
+      break;
+    case 'shop':
+      p.discount = Math.max(p.discount || 0, tile.discount);
+      messages.push(`${tile.label}: ${tile.discount}% de desconto na próxima compra.`);
+      break;
+    case 'repair':
+      p.shields = (p.shields || 0) + tile.shield;
+      messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);
       break;
     case 'catchup':
       if (isLast) {
         p.funds += tile.funds;
-        messages.push(`${tile.label}: você está atrás, +${tile.funds} de verba.`);
+        messages.push(`${tile.label}: o governo libera verba de recuperação, +${tile.funds}.`);
       } else {
-        messages.push(`${tile.label}: só vale para quem está atrás.`);
+        messages.push(`${tile.label}: só vale para quem está atrás na corrida.`);
       }
       break;
-    case 'event': {
-      const ev = EVENTS[Math.floor(rng() * EVENTS.length)];
-      if (ev.funds) p.funds += ev.funds;
-      if (ev.discount) p.discount = Math.max(p.discount || 0, ev.discount);
-      if (ev.shield) p.shields = (p.shields || 0) + ev.shield;
-      messages.push(`Evento: ${ev.text}`);
+    default:
       break;
-    }
   }
 
   p.funds = Math.max(0, p.funds);

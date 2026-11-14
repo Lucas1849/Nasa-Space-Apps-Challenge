@@ -6,7 +6,9 @@
 //   comms       = capacidade mínima de comunicação efetiva
 //   lifeSupport = exige cápsula com suporte de vida
 //   lifetime    = anos mínimos de operação (vida útil da órbita + bônus de peças)
-// orbit: órbita onde a missão precisa ser executada.
+// orbit: órbita onde a missão precisa ser executada (define as etapas do voo, ver data/stages.js).
+// extraStages: etapas a mais no fim do voo (ex.: retorno da tripulação).
+// Cada jogador cumpre cada missão no máximo uma vez. O primeiro do mundo leva o recorde.
 //
 // Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
 // Efeitos possíveis (só 3 tipos): 'funds' (+ verba), 'discount' (% de desconto na loja), 'shield' (proteção contra falha).
@@ -54,6 +56,15 @@ export const MISSIONS = {
     needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
     milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
   },
+  space_station: {
+    id: 'space_station',
+    name: 'Estação espacial',
+    difficulty: 'difícil',
+    orbit: 'leo',
+    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
+    needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
+    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+  },
   crewed_moon: {
     id: 'crewed_moon',
     name: 'Tripulação na Lua',
@@ -61,6 +72,7 @@ export const MISSIONS = {
     orbit: 'moon',
     goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
     needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
+    extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
     milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
   },
 };

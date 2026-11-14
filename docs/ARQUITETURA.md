@@ -21,7 +21,7 @@ Qualquer servidor estático serve (`npx serve`, extensão Live Server do VS Code
 
 | Pasta | O que tem | Regra |
 |---|---|---|
-| `src/data/` | Missões (com milestones), instrumentos, peças, lançadores, órbitas | Só dados. Valores fictícios têm comentário avisando |
+| `src/data/` | Missões (com milestones), instrumentos, peças, lançadores, órbitas, lados e escadas, cartas de dilema, etapas do voo, prédios, calendário histórico | Só dados. Valores fictícios têm comentário avisando |
 | `src/board/` | Tabuleiro: casas, dado, movimento, eventos | Funções puras, **sem DOM**, `rng` injetável |
 | `src/sim/` | Estado, recursos, checagens, simulação, ações do turno | Funções puras, **sem DOM** |
 | `src/ui/` | Telas (setup, tabuleiro, oficina, relatório) e componentes | Só lê o estado e chama `actions.*` |
@@ -48,22 +48,38 @@ UI (src/ui)  --chama-->  actions (src/sim/actions.js)  --altera-->  state (src/s
 - Não há framework: cada tela é `(state, actions) => HTMLElement` e é reconstruída inteira.
   É simples e suficiente para o tamanho do jogo.
 
-## Ciclo do jogo (conforme `IDEIA.md`)
+## Ciclo do jogo (conforme a parte v3 do `IDEIA.md`)
 
-1. **Setup**: 1–4 jogadores (hot-seat), cada um escolhe uma missão.
-2. **Tabuleiro**: joga o dado, cai numa casa (verba, imposto, evento, apoio ao atrasado).
-3. **Oficina** (centro do jogo): compra/vende instrumentos e peças, escolhe lançador e órbita.
-   O painel de recursos e a checagem do projeto atualizam em tempo real.
-4. **Lançamento**: paga o lançador e sorteia um **evento de voo** (`src/data/events.js`).
-5. **Voo**: o jogador escolhe entre 2 opções; cada uma mostra a consequência antes. A opção vira
-   `modifiers` (penalidade de ciência, chance extra de falha, verba, anos de vida útil).
-6. **Simulação**: `simulate(player, { modifiers })` roda as checagens + chance de falha aleatória
-   (escudos absorvem). Milestones concedem verba, desconto ou escudo.
-7. **Relatório**: sucesso/falha, pontuação, motivos, a lição do evento e "o que mudaria o resultado".
-8. Passa a vez. Ganha quem cumprir a própria missão primeiro; os outros podem continuar.
+Tensão central: **lançar agora (barato e arriscado) ou esperar melhorar (seguro, mas o rival pode
+estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida.
 
-**Sandbox**: `startGame(state, setup, { sandbox: true })` pula o tabuleiro, dá verba alta e
-alterna só entre oficina → voo → relatório. Serve para explorar trade-offs e para a demo.
+1. **Setup**: 1–4 agências (hot-seat). Os **lados** (EUA ou URSS, `src/data/sides.js`) são sorteados
+   de forma equilibrada. Cada lado tem uma **escada** de 4 missões; completar a escada é a vitória.
+   Solo: o outro lado é um **bot** que cumpre cada degrau no ano real (±1).
+2. **Tela de troca** entre turnos: "passe o dispositivo". O diário é privado; rivais ficam escondidos.
+3. **Ano novo** (a cada 3 rodadas, `src/data/history.js`): verba e tecnologia (mais Laboratório e
+   Patrocinador). A partida vai de 1957 a 1969.
+4. **Tabuleiro** (16 casas, `src/board/board.js`): rola 2 dados e escolhe um. Casas de evento sorteiam
+   uma **carta de dilema** conforme a situação (`src/data/dilemmas.js`); terrenos recebem prédios
+   (`src/data/buildings.js`); prédio de rival pode ser usado pagando ao dono; a **espionagem** revela
+   o estado real de um rival (uma vez por ano); boatos dão informação vaga.
+5. **Oficina** (centro do jogo): a missão é o degrau atual da escada. Peças e lançadores são
+   bloqueados por tecnologia. Mostra recursos, checagem e o **risco do voo** por etapa.
+6. **Lançamento**: paga o lançador; a nave sai da oficina (dá para montar a do próximo degrau
+   enquanto ela voa) e a **subida** é sorteada na hora. Lançar encerra o turno.
+7. **Voo em etapas** (`src/data/stages.js`, `src/sim/flight.js`): LEO 2 etapas, GEO 3, Lua 3,
+   tripulada 4. Uma etapa por turno. Casa de evento com a nave em voo vira imprevisto; chegadas sempre
+   têm imprevisto. Cada opção mostra o risco e o porquê; dá para gastar a reserva (revisão paga).
+   Não existe abortar. Proteções salvam uma etapa.
+8. **Resultado**: falha = nave perdida + **dados de falha** (−5% de risco naquele sistema e +1 de
+   tecnologia) + **missão de consolação** se passou da subida. Sucesso = avaliação final (`simulate`
+   com `randomFailure: false`), sobe um degrau; o primeiro do lado leva o bônus cheio.
+9. **Fim da rodada**: quem completou a escada vence (a rodada termina antes, para todos jogarem o
+   mesmo número de turnos). Em 1969, vence quem subiu mais degraus. A tela final revela tudo e compara
+   com a história real.
+
+**Sandbox**: `startGame(state, setup, { sandbox: true })` pula o tabuleiro, dá verba e tecnologia
+altas, deixa escolher qualquer missão e avançar as etapas do voo em sequência. Serve para a demo.
 
 Checagens têm `hard: true|false`. As duras impedem o sucesso; as leves (hoje só "dados >
 comunicação") deixam voar e reduzem a ciência pela metade. Isso segue a ideia de que a maior
@@ -83,8 +99,20 @@ Todas devolvem um texto explicativo que aparece na oficina (preview) e no relat�
 | Ciência e comunicação mínimas | ≥ `mission.needs` |
 | Suporte de vida | se `mission.needs.lifeSupport` |
 | Vida útil | `orbit.baseLifetime` + Σ `lifetimeBonus` (+ `lifetimeDelta` do voo) ≥ `mission.needs.lifetime` |
-| Verba | ≥ custo do lançador |
-| Falha aleatória | 15 % (+ `failChance` da decisão em voo) após projeto correto; escudo absorve |
+| Verba | ≥ custo do lançador (ignorada na avaliação depois do voo, `modifiers.launched`) |
+| Falha aleatória | no jogo, substituída pelo risco por etapa (`src/sim/flight.js`); `simulate` ainda aceita a falha única de 15 % para testes |
+
+## Risco por etapa (`src/sim/flight.js`)
+
+| Sistema da etapa | Aumenta o risco | Reduz o risco |
+|---|---|---|
+| Lançamento (subida) | carga > 85 % do foguete (+10 %) | dados de falha, Controle de missão |
+| Energia (órbita, transferência) | sobra de energia < 5 (+10 %) | bateria (−5 %) |
+| Comunicação (chegadas) | dados > comunicação (+10 %) | 2+ antenas (−5 %) |
+| Suporte de vida (retorno) | sobra de energia < 10 (+10 %) | |
+| Qualquer | opção arriscada do imprevisto (+20 a +35 %) | revisão paga (−8 %), dados de falha (−5 % cada), Controle de missão (−3 % por nível) |
+
+Risco mínimo 2 %, máximo 90 %. Todos os números são fictícios, para balanceamento.
 
 ## Inspirações (ideias, sem código copiado)
 

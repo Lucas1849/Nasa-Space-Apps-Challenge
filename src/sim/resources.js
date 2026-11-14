@@ -46,9 +46,23 @@ export function effectiveTotals(player) {
   };
 }
 
+export const FACTORY_DISCOUNT_PER_LEVEL = 10; // % por nível da Fábrica (data/buildings.js)
+export const MAX_DISCOUNT = 50;
+
+// Desconto total em %: desconto de uma compra (evento, milestone) + Fábrica (permanente).
+export function discountFor(player) {
+  const factory = (player.buildings?.factory || 0) * FACTORY_DISCOUNT_PER_LEVEL;
+  return Math.min(MAX_DISCOUNT, (player.discount || 0) + factory);
+}
+
 // Preço de um item para o jogador, já com desconto acumulado.
 export function priceFor(player, itemId) {
   const base = CATALOG[itemId].cost;
-  const discount = player.discount || 0;
-  return Math.max(1, Math.round(base * (1 - discount / 100)));
+  return Math.max(1, Math.round(base * (1 - discountFor(player) / 100)));
 }
+
+// Nível de tecnologia exigido. Lançadores (têm `reach`) recebem o ajuste do lado (data/sides.js).
+export const requiredTech = (player, item) => Math.max(1, (item.minTech || 0) + (item.reach ? player.launcherTech || 0 : 0));
+
+// Peça ou lançador bloqueado pela tecnologia da agência?
+export const isLocked = (player, item) => requiredTech(player, item) > (player.tech || 0);
