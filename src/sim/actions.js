@@ -1,21 +1,27 @@
 // Ações do jogo: cada função altera o estado e devolve mensagens para o log.
 // A UI só chama estas funções; a regra de negócio fica aqui (testável sem DOM).
-import { createPlayer, currentPlayer, pushLog } from './state.js';
+import { createPlayer, currentPlayer, pushLog, SANDBOX_FUNDS } from './state.js';
 import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
 import { CATALOG, priceFor } from './resources.js';
 import { checkDesign, simulate } from './simulate.js';
 import { MISSIONS } from '../data/missions.js';
 import { INSTRUMENTS } from '../data/instruments.js';
+import { FLIGHT_EVENTS, pickEvent, resolveOption } from '../data/events.js';
 
-export function startGame(state, setup) {
-  // setup = [{ name, missionId }, ...] (1 a 4 jogadores)
+// setup = [{ name, missionId }, ...] (1 a 4 jogadores); options = { sandbox }
+export function startGame(state, setup, options = {}) {
+  state.sandbox = Boolean(options.sandbox);
   state.players = setup.map((p, i) => createPlayer(i, p.name || `Jogador ${i + 1}`, p.missionId));
+  if (state.sandbox) state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; });
   state.turn = 0;
   state.round = 1;
   state.log = [];
   state.winner = null;
-  state.screen = 'board';
-  pushLog(state, 'Partida iniciada. Jogue o dado para ganhar verba, depois monte a espaçonave na oficina.');
+  state.pendingFlight = null;
+  state.screen = state.sandbox ? 'workshop' : 'board';
+  pushLog(state, state.sandbox
+    ? 'Modo sandbox: verba livre, sem tabuleiro. Explore os trade-offs à vontade.'
+    : 'Partida iniciada. Jogue o dado para ganhar verba, depois monte a espaçonave na oficina.');
 }
 
 // Jogador com menos progresso (menos milestones, depois menos verba) recebe o apoio da casa 'catchup'.
@@ -95,6 +101,7 @@ function checkMilestones(state, player) {
   if (checkDesign(player).designOk) grant(state, player, 'design_ready');
 }
 
+// Lançamento: paga o lançador e sorteia um evento de voo. A simulação roda em resolveFlight().
 export function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
   const design = checkDesign(p);
@@ -102,10 +109,29 @@ export function launch(state, rng = Math.random) {
   p.funds -= design.totals.launchCost;
   p.launches += 1;
   grant(state, p, 'launched');
-  const result = simulate(p, { rng });
+  const event = pickEvent(rng);
+  state.pendingFlight = { eventId: event.id };
+  pushLog(state, `${p.name} lançou a missão "${MISSIONS[p.missionId].name}". Em voo: ${event.title}.`);
+  state.screen = 'flight';
+  return null;
+}
+
+// Jogador escolheu uma opção do evento de voo. Aplica a consequência e simula.
+export function resolveFlight(state, optionIndex, rng = Math.random) {
+  const p = currentPlayer(state);
+  const event = FLIGHT_EVENTS[state.pendingFlight?.eventId];
+  if (!event) return 'Nenhum evento de voo pendente.';
+  const option = event.options[optionIndex];
+  const effect = resolveOption(option, p) || {};
+  if (effect.funds) p.funds = Math.max(0, p.funds + effect.funds);
+
+  const result = simulate(p, { rng, modifiers: effect });
   if (result.usedShield) p.shields -= 1;
+  result.flight = { event, option, effect };
   p.lastResult = result;
-  pushLog(state, `${p.name} lançou a missão "${MISSIONS[p.missionId].name}": ${result.success ? 'SUCESSO' : 'FALHA'}.`);
+  state.pendingFlight = null;
+
+  pushLog(state, `${p.name} decidiu: "${option.label}". Resultado: ${result.success ? 'SUCESSO' : 'FALHA'}.`);
   if (result.success) {
     grant(state, p, 'mission_complete');
     p.won = true;
@@ -120,5 +146,5 @@ export function endTurn(state) {
   delete p.rolled;
   state.turn = (state.turn + 1) % state.players.length;
   if (state.turn === 0) state.round += 1;
-  state.screen = 'board';
+  state.screen = state.sandbox ? 'workshop' : 'board';
 }

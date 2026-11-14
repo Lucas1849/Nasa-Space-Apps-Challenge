@@ -2,6 +2,7 @@
 import { effectiveTotals } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
 import { MISSIONS } from '../data/missions.js';
+import { GLOSSARY } from '../data/glossary.js';
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -41,13 +42,18 @@ export function resourceBar(player) {
     row('Dados → Comunicação', `${t.data} → ${t.commsEffective}`, null, t.commsEffective >= t.data, 'Dados gerados por turno contra a capacidade de transmitir (já com a penalidade da órbita).'),
     row('Ciência', t.scienceEffective, mission.needs.science, t.scienceEffective >= mission.needs.science, 'Valor científico contra o mínimo da missão.'),
     row('Comunicação', t.commsEffective, mission.needs.comms, t.commsEffective >= mission.needs.comms, 'Comunicação efetiva contra o mínimo da missão.'),
+    row('Vida útil (anos)', t.lifetime, mission.needs.lifetime, t.lifetime >= mission.needs.lifetime, 'Anos de operação: vida da órbita + bônus de propulsor/bateria, contra o mínimo da missão.'),
   ]);
 }
 
-// Lista de checagens do projeto (verde/vermelho), reaproveitada na oficina e no relatório.
-export function checklist(player) {
-  const { checks } = checkDesign(player);
-  return el('ul', { class: 'checklist' }, checks.map((c) => el('li', { class: c.ok ? 'ok' : 'bad' }, `${c.ok ? '✔' : '✖'} ${c.text}`)));
+// Lista de checagens do projeto (verde/vermelho/amarelo), reaproveitada na oficina e no relatório.
+export function checklist(checks) {
+  return el('ul', { class: 'checklist' }, checks.map((c) =>
+    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, `${c.ok ? '✔' : c.hard ? '✖' : '⚠'} ${c.text}`)));
+}
+
+export function designChecklist(player) {
+  return checklist(checkDesign(player).checks);
 }
 
 export function milestoneTrack(player) {
@@ -60,4 +66,14 @@ export function milestoneTrack(player) {
 
 export function logPanel(state) {
   return el('div', { class: 'log' }, [el('h3', {}, 'Diário da missão'), el('ul', {}, state.log.map((l) => el('li', {}, l)))]);
+}
+
+// Glossário recolhível: explica cada recurso em uma frase.
+export function glossary(open = false) {
+  const d = el('details', { class: 'glossary' }, [
+    el('summary', {}, '📘 O que significam os recursos?'),
+    el('dl', {}, GLOSSARY.flatMap((g) => [el('dt', {}, g.term), el('dd', {}, g.text)])),
+  ]);
+  if (open) d.open = true;
+  return d;
 }

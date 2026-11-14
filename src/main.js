@@ -30,6 +30,7 @@ const actions = {
   chooseLauncher: wrap(game.chooseLauncher),
   chooseOrbit: wrap(game.chooseOrbit),
   launch: wrap(game.launch),
+  resolveFlight: wrap(game.resolveFlight),
   endTurn: wrap(game.endTurn),
   newGame: wrap(() => { state = createInitialState(); }),
 };

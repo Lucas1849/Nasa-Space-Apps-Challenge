@@ -31,6 +31,10 @@ Todos vêm da aba Resources do desafio (detalhes em `space_mission_design_game.t
 - **CubeSat 101 (NASA CSLI)** — referência para os tipos de subsistema (energia, comunicação,
   instrumentos) e para a ideia de que massa e energia são os limites principais de um satélite pequeno.
   https://www3.nasa.gov/sites/default/files/atoms/files/nasa_csli_cubesat_101_508.pdf
+- **Marsbound! Mission to the Red Planet (NASA/JPL Education)** — atividade oficial em que cada
+  componente é uma carta com massa, energia e custo e a equipe itera até fechar o orçamento. Base
+  do formato "Ganha / Custa" dos cards da oficina.
+  https://www.jpl.nasa.gov/edu/teach/activity/marsbound
 
 Os números do jogo são fictícios (balanceamento); o que vem da NASA é o **processo e os trade-offs**.
 

@@ -37,18 +37,21 @@ Regra de ouro: quem precisar mudar `src/sim/state.js` ou `src/sim/actions.js` av
 Dados e balanceamento
 - [ ] Jogar 3 partidas inteiras e anotar: dá para cumprir "Primeiro satélite" em ~3 rodadas?
       "Sonda lunar" em ~8? Ajustar custos/verba em `src/data/` e `STARTING_FUNDS`.
-- [ ] Adicionar 2 missões (ex.: "Pouso tripulado na Lua", "Estação espacial") só preenchendo
-      `missions.js`. Se precisar de peça nova (ex.: módulo de habitação), adicionar em `parts.js`.
-- [ ] Revisar textos das peças: cada uma deve deixar claro o que ganha e o que perde.
+- [x] Adicionar 2 missões → feitas: "Satélite meteorológico" (GEO, 5 anos) e "Tripulação na Lua".
+- [x] Revisar textos das peças: cards mostram "Ganha:" e "Custa:" separados.
+- [ ] Mais eventos de voo em `src/data/events.js` (hoje são 4). Cada um com 2 opções e lição.
 
 Simulação e regras
-- [ ] Vida útil da missão (recurso "tempo" do desafio): órbita baixa decai; bateria/propulsão estende.
+- [x] Vida útil da missão: órbita tem `baseLifetime`, propulsor/bateria têm `lifetimeBonus`.
+- [x] Eventos de voo com decisão (tempestade solar, detrito, corte de verba, antena travada).
+- [x] Glossário dos recursos (tela inicial e oficina).
+- [x] Modo sandbox (sem tabuleiro, verba livre).
 - [ ] Evento de "janela de lançamento": lançar fora da janela custa mais verba.
-- [ ] Tela/trecho de **tutorial** nas primeiras ações (1 frase por conceito: massa, energia, dados…).
 - [ ] Testes para cada regra nova (seguir o padrão de `test/simulate.test.mjs`).
 
 Interface e arte
-- [ ] Desenho da espaçonave na oficina que muda conforme as peças (SVG simples ou canvas 2D).
+- [x] Desenho da espaçonave na oficina que muda conforme as peças (SVG em `src/ui/spacecraft.js`).
+- [ ] Melhorar a arte do SVG (texturas, animação de lançamento). Hoje são formas simples.
 - [ ] Tabuleiro mais visual (anel em vez de grade) e animação do peão.
 - [ ] Ícones por recurso; tooltips já existem (`title`), melhorar o texto.
 - [ ] Responsivo no celular (a grade já quebra em 2 colunas; conferir a oficina).
