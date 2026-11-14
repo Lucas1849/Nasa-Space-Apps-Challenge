@@ -1,38 +1,44 @@
 // Ações do jogo: cada função altera o estado e devolve uma mensagem de erro (string) ou null.
 // A UI só chama estas funções; a regra de negócio fica aqui (testável sem DOM).
 //
-// Turno (IDEIA.md v2, seções 3 e 13.3):
-//   0. Início: orçamento anual (verba) + tecnologia (base + Laboratório).
-//   1. Tabuleiro (sempre): joga o dado, anda, aplica a casa. Terreno = decisão de prédio.
+// Regras da IDEIA-v3:
+//   - Cada agência é de um lado (EUA ou URSS) e vence completando a ESCADA de missões do lado.
+//   - 3 rodadas = 1 ano. No "Ano novo" cada agência recebe verba e tecnologia.
+//   - Rival escondido: só o espião e os boatos revelam o estado dos outros. Tela de troca entre turnos.
+//   - Solo: o outro lado é um bot que segue o calendário histórico, com variação.
+//
+// Turno:
+//   1. Tabuleiro: rola 2 dados, escolhe um, anda e decide (dilema, prédio, espião).
 //   2. Uma ação, conforme a nave:
 //      - no chão: oficina à vontade e, se quiser, LANÇA (a subida acontece na hora e encerra o turno);
-//      - em voo: avança UMA etapa (imprevisto da casa onde parou + decisão + risco explicado);
-//        pode comprar peças para a próxima nave enquanto a outra voa;
-//      - missão cumprida: escolhe a próxima missão.
-//   3. Passa a vez. No fim de cada rodada (= 1 ano) confere as cartas de vitória e o limite de 1969.
+//      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado); dá para montar a próxima nave.
+//   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
 import {
-  createPlayer, currentPlayer, pushLog, emptySpacecraft,
-  SANDBOX_FUNDS, SANDBOX_TECH, ANNUAL_BUDGET, TECH_PER_TURN, RECORD_BONUS,
-  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT,
+  createPlayer, currentPlayer, pushLog, emptySpacecraft, humans,
+  SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR,
+  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST,
 } from './state.js';
 import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
-import { CATALOG, priceFor, isLocked } from './resources.js';
+import { CATALOG, priceFor, isLocked, requiredTech } from './resources.js';
 import { checkDesign, simulate } from './simulate.js';
 import { flightPlan, stageRisk, stageOptions, flyer, describeRisk, pct } from './flight.js';
+import { ladderProgress } from './progress.js';
 import { MISSIONS } from '../data/missions.js';
 import { INSTRUMENTS } from '../data/instruments.js';
 import { LAUNCHERS } from '../data/launchers.js';
 import { FLIGHT_EVENTS, pickEvent } from '../data/events.js';
-import { STAGES, SYSTEM_NAMES, STAGE_BONUS, FAILURE_DATA_BONUS } from '../data/stages.js';
-import { OBJECTIVES, objectiveProgress, drawObjectives } from '../data/objectives.js';
+import { STAGES, SYSTEM_NAMES, STAGE_BONUS, FAILURE_DATA_BONUS, CONSOLATION_FUNDS } from '../data/stages.js';
+import { SIDES, ladderOf, drawSides, STEP_BONUS_FIRST, STEP_BONUS_LATER } from '../data/sides.js';
+import { DILEMMAS, pickDilemma } from '../data/dilemmas.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost, USE_FEE, CATCHUP_UPGRADE_DISCOUNT } from '../data/buildings.js';
-import { MAX_ROUNDS, yearOf } from '../data/history.js';
+import { MAX_ROUNDS, REAL_HISTORY, yearOf, isNewYear } from '../data/history.js';
 
-const SPONSOR_FUNDS_PER_LEVEL = 4;
+const SPONSOR_FUNDS_PER_LEVEL = 10; // por ano
+const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
 
 // ---------------------------------------------------------------- partida e turno
 
-// setup = [{ name, missionId? }, ...] (1 a 4 jogadores); options = { sandbox, rng }
+// setup = [{ name, missionId? }, ...] (1 a 4 agências); options = { sandbox, rng }
 export function startGame(state, setup, options = {}) {
   const rng = options.rng || Math.random;
   state.sandbox = Boolean(options.sandbox);
@@ -40,9 +46,11 @@ export function startGame(state, setup, options = {}) {
   state.turn = 0;
   state.round = 1;
   state.log = [];
-  state.records = {};
+  state.sideFirsts = {};
   state.lots = {};
+  state.dice = null;
   state.pendingTile = null;
+  state.pendingDilemma = null;
   state.winners = [];
   state.gameOver = false;
   state.lastRoll = null;
@@ -54,30 +62,70 @@ export function startGame(state, setup, options = {}) {
     return null;
   }
 
-  const cards = drawObjectives(state.players.length, rng);
-  state.players.forEach((p, i) => {
-    p.objectiveId = cards[i];
-    p.funds += OBJECTIVES[cards[i]].startBonus;
-  });
-  state.screen = 'board';
-  pushLog(state, `Começa a corrida espacial. Cada rodada é um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
+  const sides = drawSides(state.players.length, rng);
+  state.players.forEach((p, i) => assignSide(p, sides[i]));
+  if (state.players.length === 1) state.players.push(createBot(state.players[0], rng));
+
+  pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
+  state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
   startTurn(state);
+  state.screen = humans(state).length > 1 ? 'handoff' : 'board';
   return null;
 }
 
-// Início do turno: orçamento anual e tecnologia. Esperar rende tecnologia (peças melhores),
-// mas os rivais avançam: essa é a tensão central do jogo.
+function assignSide(p, sideId) {
+  const side = SIDES[sideId];
+  p.side = sideId;
+  p.launcherTech = side.launcherTech;
+  p.funds += side.startFunds;
+  p.missionId = side.ladder[0];
+}
+
+// Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
+function createBot(human, rng) {
+  const sideId = human.side === 'usa' ? 'ussr' : 'usa';
+  const bot = createPlayer(1, `Agência rival (${SIDES[sideId].name})`);
+  bot.bot = true;
+  assignSide(bot, sideId);
+  bot.schedule = ladderOf(bot).map((m) => {
+    const real = REAL_HISTORY[m].sides[sideId];
+    return real == null ? null : real + Math.floor(rng() * 3) - 1;
+  });
+  return bot;
+}
+
+// Início do turno. No "Ano novo" (1ª rodada de cada ano): verba e tecnologia.
 function startTurn(state) {
   const p = currentPlayer(state);
   p.rolled = false;
   p.flightAdvanced = false;
   p.launchedThisTurn = false;
+  state.dice = null;
   state.pendingTile = null;
-  const funds = ANNUAL_BUDGET + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
-  const tech = TECH_PER_TURN + p.buildings.lab;
-  p.funds += funds;
-  p.tech += tech;
-  pushLog(state, `${p.name}: orçamento do ano +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`);
+  state.pendingDilemma = null;
+  if (p.bot) return;
+  if (isNewYear(state.round)) {
+    const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
+    const tech = TECH_PER_YEAR + p.buildings.lab;
+    p.funds += funds;
+    p.tech += tech;
+    pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+  }
+}
+
+// Turno do bot: cumpre os degraus cujo ano chegou. Tudo privado (rival escondido).
+function botTurn(state) {
+  const bot = currentPlayer(state);
+  const year = yearOf(state.round);
+  const ladder = ladderOf(bot);
+  while (bot.step < ladder.length && bot.schedule[bot.step] != null && year >= bot.schedule[bot.step]) {
+    const missionId = ladder[bot.step];
+    bot.completed.push({ missionId, year, science: 0 });
+    bot.bestStage[missionId] = flightPlan(missionId).length;
+    bot.step += 1;
+    bot.missionId = ladder[bot.step] || null;
+    pushLog(state, `${bot.name} cumpriu "${MISSIONS[missionId].name}".`, bot.id);
+  }
 }
 
 export function endTurn(state) {
@@ -86,86 +134,189 @@ export function endTurn(state) {
     state.screen = p.flight ? 'flight' : 'workshop';
     return null;
   }
-  if (!p.rolled) return 'Jogue o dado antes de passar a vez.';
+  if (!p.rolled) return 'Role os dados e ande antes de passar a vez.';
+  if (state.pendingDilemma) return 'Resolva a carta de dilema antes de passar a vez.';
   if (p.flight?.pending) return 'Decida o imprevisto do voo antes de passar a vez.';
   if (p.flight && !p.flightAdvanced) return 'Sua nave está em voo: avance uma etapa antes de passar a vez.';
-
-  state.pendingTile = null;
-  state.turn = (state.turn + 1) % state.players.length;
-  if (state.turn === 0) {
-    endRound(state);
-    if (state.gameOver) return null;
-    state.round += 1;
-  }
-  state.screen = 'board';
-  startTurn(state);
+  advanceTurn(state);
   return null;
 }
 
-// Desempate: progresso além da meta (ex.: ciência a mais), depois missões cumpridas, depois verba.
-function rankKey(state, p) {
-  const { value, target } = objectiveProgress(p, state);
-  return [Math.min(1, value / target), value / target, p.completed.length, p.funds];
+// Passa para o próximo jogador humano; o bot joga sozinho no caminho.
+function advanceTurn(state) {
+  for (;;) {
+    state.turn = (state.turn + 1) % state.players.length;
+    if (state.turn === 0) {
+      endRound(state);
+      if (state.gameOver) return;
+      state.round += 1;
+      if (isNewYear(state.round)) pushLog(state, `Começa o ano de ${yearOf(state.round)}.`);
+    }
+    startTurn(state);
+    if (!currentPlayer(state).bot) break;
+    botTurn(state);
+  }
+  state.screen = humans(state).length > 1 ? 'handoff' : 'board';
 }
-function compareRank(state, a, b) {
-  const ka = rankKey(state, a);
-  const kb = rankKey(state, b);
+
+// Desempate: progresso na escada, depois degraus, depois ciência entregue, depois verba.
+function rankKey(p) {
+  const prog = ladderProgress(p);
+  return [prog.pct, prog.steps, p.completed.reduce((s, c) => s + c.science, 0), p.funds];
+}
+function compareRank(a, b) {
+  const ka = rankKey(a);
+  const kb = rankKey(b);
   for (let i = 0; i < ka.length; i += 1) if (ka[i] !== kb[i]) return kb[i] - ka[i];
   return 0;
 }
 
-// Fim da rodada: a rodada termina antes de declarar vencedor, para todos jogarem o mesmo número de turnos.
+// Fim da rodada: termina antes de declarar vencedor, para todos jogarem o mesmo número de turnos.
 function endRound(state) {
-  const done = state.players.filter((p) => objectiveProgress(p, state).done);
+  const done = state.players.filter((p) => ladderProgress(p).done);
   const timeUp = state.round >= MAX_ROUNDS;
   if (!done.length && !timeUp) return;
   const pool = done.length ? done : state.players;
-  const sorted = [...pool].sort((a, b) => compareRank(state, a, b));
-  state.winners = sorted.filter((p) => compareRank(state, p, sorted[0]) === 0).map((p) => p.id);
+  const sorted = [...pool].sort(compareRank);
+  state.winners = sorted.filter((p) => compareRank(p, sorted[0]) === 0).map((p) => p.id);
   state.gameOver = true;
-  state.endReason = done.length ? 'objective' : 'time';
+  state.endReason = done.length ? 'ladder' : 'time';
   state.screen = 'gameover';
   const names = state.winners.map((id) => state.players[id].name).join(' e ');
-  pushLog(state, done.length ? `${names} cumpriu a carta de vitória!` : `Fim de ${yearOf(state.round)}: vence quem chegou mais perto da carta (${names}).`);
+  pushLog(state, done.length ? `${names} completou a escada de missões!` : `Fim de ${yearOf(state.round)}: vence quem subiu mais degraus (${names}).`);
 }
 
 // ---------------------------------------------------------------- tabuleiro
 
-// Jogador com menos progresso na carta (depois menos verba) recebe o apoio da casa 'catchup'.
+// Quem está em último na corrida recebe o choque do Sputnik e desconto no upgrade.
 function isLastPlayer(state, player) {
-  return state.players.every((p) => compareRank(state, player, p) >= 0);
+  return state.players.every((p) => compareRank(player, p) >= 0);
 }
 
-export function rollAndMove(state, rng = Math.random) {
+// Rola 2 dados; o jogador escolhe qual usar (IDEIA-v3: ainda tem sorte, mas ele sente que decidiu).
+export function rollDice(state, rng = Math.random) {
   const p = currentPlayer(state);
   if (state.sandbox) return 'No modo sandbox não há tabuleiro.';
-  if (p.rolled) return 'Você já jogou o dado neste turno.';
-  const steps = rollDie(rng);
+  if (p.rolled || state.dice) return 'Você já rolou os dados neste turno.';
+  state.dice = [rollDie(rng), rollDie(rng)];
+  return null;
+}
+
+export function moveBy(state, index, rng = Math.random) {
+  const p = currentPlayer(state);
+  if (!state.dice) return 'Role os dados primeiro.';
+  const steps = state.dice[index];
+  if (!steps) return 'Dado inválido.';
+  state.dice = null;
   const moved = movePlayer(p, steps);
   const tile = TILES[moved.position];
-  const { player, messages } = applyTile(moved, tile, { rng, isLast: isLastPlayer(state, p) });
+  const { player, messages } = applyTile(moved, tile, { isLast: isLastPlayer(state, p) });
   Object.assign(p, player);
   p.rolled = true;
   state.lastRoll = steps;
-  pushLog(state, `${p.name} tirou ${steps} e parou em "${tile.label}".`);
-  messages.forEach((m) => pushLog(state, `${p.name}: ${m}`));
+  pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
+  messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
     if (!lot) state.pendingTile = { tileId: tile.id, kind: 'build' };
     else if (lot.ownerId !== p.id) state.pendingTile = { tileId: tile.id, kind: 'use' };
-    else pushLog(state, `${p.name}: este terreno já é seu (${BUILDINGS[lot.buildingId].name}).`);
+    else pushLog(state, `${p.name}: este terreno já é seu (${BUILDINGS[lot.buildingId].name}).`, p.id);
   }
 
-  // Com a nave em voo, a casa define o imprevisto da próxima etapa (IDEIA.md seção 7).
-  if (p.flight && (tile.type === 'hazard' || tile.type === 'event')) {
-    const eventId = tile.flightEvent || pickEvent(rng).id;
-    p.flight.tileEvent = eventId;
-    pushLog(state, `${p.name}: sua nave em voo vai enfrentar "${FLIGHT_EVENTS[eventId].title}" na próxima etapa.`);
-  } else if (tile.type === 'hazard') {
-    pushLog(state, `${p.name}: sem nave em voo, nada acontece.`);
+  if (tile.type === 'spy') {
+    if (state.players.length < 2) pushLog(state, `${p.name}: não há rivais para espionar.`, p.id);
+    else if (p.lastSpyYear === yearOf(state.round)) pushLog(state, `${p.name}: o espião já trabalhou este ano.`, p.id);
+    else state.pendingTile = { tileId: tile.id, kind: 'spy' };
+  }
+
+  // Evento: com a nave em voo vira imprevisto na próxima etapa; em solo, carta de dilema.
+  if (tile.type === 'event') {
+    if (p.flight) {
+      const eventId = pickEvent(rng).id;
+      p.flight.tileEvent = eventId;
+      pushLog(state, `${p.name}: sua nave em voo vai enfrentar "${FLIGHT_EVENTS[eventId].title}" na próxima etapa.`, p.id);
+    } else {
+      state.pendingDilemma = { id: pickDilemma(p, rng).id };
+    }
   }
   return null;
+}
+
+// Atalho: rola e anda com o primeiro dado (usado nos testes).
+export function rollAndMove(state, rng = Math.random) {
+  return rollDice(state, rng) || moveBy(state, 0, rng);
+}
+
+function applyEffect(state, p, e, rng) {
+  if (e.gamble) {
+    const won = rng() < e.gamble.chance;
+    pushLog(state, `${p.name}: ${won ? 'deu certo!' : 'deu errado.'}`, p.id);
+    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng);
+    return;
+  }
+  if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
+  if (e.tech) p.tech = Math.max(0, p.tech + e.tech);
+  if (e.discount) p.discount = Math.max(p.discount, e.discount);
+  if (e.shield) p.shields += e.shield;
+  if (e.launchRisk) p.launchRisk = (p.launchRisk || 0) + e.launchRisk;
+  if (e.rumor) spreadRumor(state, p, rng);
+}
+
+export function chooseDilemma(state, index, rng = Math.random) {
+  const p = currentPlayer(state);
+  const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
+  if (!card) return 'Nenhuma carta de dilema pendente.';
+  const option = card.options[index];
+  if (!option) return 'Opção inválida.';
+  state.pendingDilemma = null;
+  pushLog(state, `${p.name} — ${card.title}: "${option.label}". ${option.lesson}`, p.id);
+  applyEffect(state, p, option.effect, rng);
+  return null;
+}
+
+// Boato: informação vaga sobre um rival, às vezes errada.
+function spreadRumor(state, p, rng) {
+  const rivals = state.players.filter((r) => r.id !== p.id);
+  if (!rivals.length) return;
+  const rival = rivals[Math.floor(rng() * rivals.length)];
+  const total = ladderOf(rival).length;
+  const truth = rng() < RUMOR_TRUTH;
+  const shown = truth ? rival.step : Math.max(0, Math.min(total, rival.step + (rng() < 0.5 ? -1 : 1)));
+  p.intel[rival.id] = { year: yearOf(state.round), rumor: true, steps: shown, total };
+  pushLog(state, `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`, p.id);
+}
+
+// Espionagem: paga e vê o estado real de um rival (degrau atual e quanto a nave está pronta).
+export function spyOn(state, rivalId) {
+  const p = currentPlayer(state);
+  if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
+  const rival = state.players.find((r) => r.id === rivalId && r.id !== p.id);
+  if (!rival) return 'Rival inválido.';
+  if (p.funds < SPY_COST) return `Verba insuficiente: o espião custa ${SPY_COST}.`;
+  p.funds -= SPY_COST;
+  p.lastSpyYear = yearOf(state.round);
+  p.intel[rival.id] = spyReport(state, rival);
+  state.pendingTile = null;
+  pushLog(state, `${p.name} pagou ${SPY_COST} ao espião para observar ${rival.name}.`, p.id);
+  return null;
+}
+
+function spyReport(state, rival) {
+  const ladder = ladderOf(rival);
+  const report = {
+    year: yearOf(state.round),
+    rumor: false,
+    steps: rival.step,
+    total: ladder.length,
+    mission: rival.missionId ? MISSIONS[rival.missionId].name : null,
+  };
+  if (rival.bot) return { ...report, note: 'Segue o próprio calendário; não dá para ver a oficina.' };
+  if (rival.flight) {
+    return { ...report, mission: MISSIONS[rival.flight.missionId].name, inFlight: true, stage: rival.flight.stageIndex, stages: rival.flight.plan.length };
+  }
+  const checks = checkDesign(rival).checks.filter((c) => c.hard);
+  return { ...report, ready: checks.length ? checks.filter((c) => c.ok).length / checks.length : 0 };
 }
 
 // Terreno livre: constrói um prédio novo (nível 1). Upgrade depois é de qualquer lugar.
@@ -181,7 +332,7 @@ export function buildOnLot(state, buildingId) {
   p.buildings[buildingId] = 1;
   state.lots[pending.tileId] = { ownerId: p.id, buildingId };
   state.pendingTile = null;
-  pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} por ${cost}.`);
+  pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} num terreno.`);
   return null;
 }
 
@@ -199,13 +350,9 @@ export function useRivalBuilding(state) {
   if (p.funds < fee) return `Verba insuficiente: a taxa é ${fee}.`;
   p.funds -= fee;
   owner.funds += fee;
-  const e = building.useEffect;
-  if (e.tech) p.tech += e.tech;
-  if (e.discount) p.discount = Math.max(p.discount, e.discount);
-  if (e.shield) p.shields += e.shield;
-  if (e.funds) p.funds += e.funds;
+  applyEffect(state, p, building.useEffect, Math.random);
   state.pendingTile = null;
-  pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}: ${building.useText}.`);
+  pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
   return null;
 }
 
@@ -224,7 +371,7 @@ export function upgradeBuilding(state, buildingId) {
   if (p.funds < cost) return `Verba insuficiente: o upgrade custa ${cost}.`;
   p.funds -= cost;
   p.buildings[buildingId] = level + 1;
-  pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`);
+  pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`, p.id);
   return null;
 }
 
@@ -235,26 +382,27 @@ export function upgradeCostFor(state, player, buildingId) {
   return behind ? Math.round(base * CATCHUP_UPGRADE_DISCOUNT) : base;
 }
 
-// Sem eliminação: com pouca verba, a agência pede socorro e perde tecnologia (IDEIA.md seção 8).
+// Sem eliminação: com pouca verba, a agência pede socorro e perde tecnologia.
 export function requestBailout(state) {
   const p = currentPlayer(state);
   if (p.funds >= BAILOUT_LIMIT) return `Socorro só com menos de ${BAILOUT_LIMIT} de verba.`;
   p.funds += BAILOUT_FUNDS;
   p.tech = Math.max(0, p.tech - BAILOUT_TECH_COST);
   p.bailouts += 1;
-  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba, −${BAILOUT_TECH_COST} de tecnologia.`);
+  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba, −${BAILOUT_TECH_COST} de tecnologia.`, p.id);
   return null;
 }
 
 // ---------------------------------------------------------------- missão e oficina
 
+// Só no sandbox: no jogo normal a missão é o degrau atual da escada.
 export function chooseMission(state, missionId) {
   const p = currentPlayer(state);
+  if (!state.sandbox) return 'A missão é o próximo degrau da escada do seu lado.';
   if (!MISSIONS[missionId]) return 'Missão desconhecida.';
   if (p.flight) return 'Espere a nave em voo terminar a missão antes de trocar.';
-  if (p.completed.some((c) => c.missionId === missionId)) return 'Você já cumpriu esta missão. Escolha outra.';
   p.missionId = missionId;
-  pushLog(state, `${p.name} escolheu a missão "${MISSIONS[missionId].name}".`);
+  pushLog(state, `${p.name} escolheu a missão "${MISSIONS[missionId].name}".`, p.id);
   checkMilestones(state, p);
   return null;
 }
@@ -262,35 +410,34 @@ export function chooseMission(state, missionId) {
 export function buyItem(state, itemId) {
   const p = currentPlayer(state);
   const item = CATALOG[itemId];
-  if (isLocked(p, item)) return `${item.name} exige tecnologia ${item.minTech} (você tem ${p.tech}).`;
+  if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
   const price = priceFor(p, itemId);
   if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
   p.funds -= price;
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   bucket.push(itemId);
-  pushLog(state, `${p.name} comprou ${item.name} por ${price}${p.discount ? ` (desconto de ${p.discount}%)` : ''}.`);
+  pushLog(state, `${p.name} comprou ${item.name} por ${price}.`, p.id);
   p.discount = 0; // desconto de evento vale para uma compra (a Fábrica é permanente)
   checkMilestones(state, p);
   return null;
 }
 
-// Antes de voar, revende pelo valor cheio (regra do IDEIA.md). Peças que voltaram de missão abortada valem metade.
+// Antes de voar, revende pelo valor cheio (regra do IDEIA.md).
 export function sellItem(state, itemId) {
   const p = currentPlayer(state);
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   const idx = bucket.indexOf(itemId);
   if (idx === -1) return 'Item não está na espaçonave.';
   bucket.splice(idx, 1);
-  const refund = p.spacecraft.flown ? Math.floor(CATALOG[itemId].cost / 2) : CATALOG[itemId].cost;
-  p.funds += refund;
-  pushLog(state, `${p.name} vendeu ${CATALOG[itemId].name} por ${refund}.`);
+  p.funds += CATALOG[itemId].cost;
+  pushLog(state, `${p.name} vendeu ${CATALOG[itemId].name} por ${CATALOG[itemId].cost}.`, p.id);
   return null;
 }
 
 export function chooseLauncher(state, launcherId) {
   const p = currentPlayer(state);
   const launcher = LAUNCHERS[launcherId];
-  if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${launcher.minTech} (você tem ${p.tech}).`;
+  if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
   p.spacecraft.launcherId = launcherId;
   checkMilestones(state, p);
   return null;
@@ -314,7 +461,7 @@ function grant(state, player, milestoneId, missionId = player.missionId) {
   if (ms.effect.type === 'funds') player.funds += ms.effect.value;
   if (ms.effect.type === 'discount') player.discount = Math.max(player.discount, ms.effect.value);
   if (ms.effect.type === 'shield') player.shields += ms.effect.value;
-  pushLog(state, `${player.name} atingiu o degrau "${ms.name}" (${describeEffect(ms.effect)}).`);
+  pushLog(state, `${player.name} atingiu "${ms.name}" (${describeEffect(ms.effect)}).`, player.id);
 }
 
 export function describeEffect(effect) {
@@ -332,18 +479,19 @@ function checkMilestones(state, player) {
 // Lança: paga o lançador, a nave sai da oficina e a SUBIDA é sorteada na hora (encerra o turno).
 export function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
-  if (!p.missionId) return 'Escolha uma missão antes de lançar.';
+  if (!p.missionId) return state.sandbox ? 'Escolha uma missão antes de lançar.' : 'Sua escada já está completa.';
   if (p.flight) return 'Você já tem uma nave em voo.';
-  if (!state.sandbox && !p.rolled) return 'Jogue o dado antes de lançar.';
+  if (!state.sandbox && !p.rolled) return 'Ande no tabuleiro antes de lançar.';
   if (!state.sandbox && p.launchedThisTurn) return 'Só um lançamento por turno.';
   const design = checkDesign(p);
   if (!design.ok) return 'O projeto ainda tem pendências: veja a checagem na oficina.';
   p.funds -= design.totals.launchCost;
   p.launches += 1;
   grant(state, p, 'launched');
+  const missionId = p.missionId;
   p.flight = {
-    missionId: p.missionId,
-    plan: flightPlan(p.missionId),
+    missionId,
+    plan: flightPlan(missionId),
     stageIndex: 0,
     craft: p.spacecraft,
     modifiers: { sciencePenalty: 0, lifetimeDelta: 0 },
@@ -351,25 +499,27 @@ export function launch(state, rng = Math.random) {
     pending: null,
     tileEvent: null,
     last: null,
-    year: yearOf(state.round),
   };
-  // A oficina fica livre: dá para montar a próxima nave enquanto esta voa. Lançador e órbita ficam pré-escolhidos.
+  // A oficina fica livre para montar a próxima nave (próximo degrau) enquanto esta voa.
   p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
+  if (!state.sandbox) p.missionId = ladderOf(p)[p.step + 1] || null;
   p.launchedThisTurn = true;
   p.flightAdvanced = true;
-  pushLog(state, `${p.name} lançou a missão "${MISSIONS[p.missionId].name}".`);
+  pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
   const stageId = p.flight.plan[0];
-  resolveStage(state, p, stageId, stageRisk(flyer(p), stageId), { label: 'Lançamento' }, rng);
+  const risk = stageRisk(flyer(p), stageId);
+  p.launchRisk = 0; // o defeito ignorado só pesa nesta subida
+  resolveStage(state, p, stageId, risk, { label: 'Lançamento' }, rng);
   return null;
 }
 
-// Prepara a próxima etapa: imprevisto da casa onde o jogador parou (ou garantido nos pontos-chave).
+// Prepara a próxima etapa: imprevisto da casa de evento onde o jogador parou (ou garantido nas chegadas).
 export function advanceFlight(state, rng = Math.random) {
   const p = currentPlayer(state);
   if (!p.flight) return 'Nenhuma nave em voo.';
   if (p.flight.pending) { state.screen = 'flight'; return null; }
   if (!state.sandbox) {
-    if (!p.rolled) return 'Jogue o dado primeiro: a casa onde você parar pode trazer um imprevisto para o voo.';
+    if (!p.rolled) return 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto para o voo.';
     if (p.flightAdvanced) return 'O voo avança uma etapa por turno.';
   }
   const stageId = p.flight.plan[p.flight.stageIndex];
@@ -392,8 +542,6 @@ export function chooseStageOption(state, index, rng = Math.random) {
   const option = stageOptions(p, pending)[index];
   if (!option) return 'Opção inválida.';
   if (option.disabled) return 'Verba insuficiente para esta opção.';
-  if (option.kind === 'abort') return abortFlight(state, p);
-
   const e = option.effect;
   if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
   if (e.sciencePenalty) p.flight.modifiers.sciencePenalty = combinePenalty(p.flight.modifiers.sciencePenalty, e.sciencePenalty);
@@ -404,7 +552,7 @@ export function chooseStageOption(state, index, rng = Math.random) {
   return null;
 }
 
-// Sorteia a etapa. Proteção absorve uma falha. Falha = nave perdida + dados de falha.
+// Sorteia a etapa. Proteção absorve uma falha. Falha = nave perdida + dados de falha (+ consolação).
 function resolveStage(state, p, stageId, risk, info, rng) {
   const stage = STAGES[stageId];
   let failed = rng() < risk.total;
@@ -429,7 +577,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
   };
   p.flight.stages.push(record);
   p.flight.last = record;
-  pushLog(state, `${p.name}: etapa "${stage.name}" ${failed ? 'FALHOU' : 'superada'} (risco ${pct(risk.total)})${usedShield ? ', salva pela proteção' : ''}.`);
+  pushLog(state, `${p.name}: etapa "${stage.name}" ${failed ? 'FALHOU' : 'superada'} (risco ${pct(risk.total)})${usedShield ? ', salva pela proteção' : ''}.`, p.id);
 
   if (failed) return failMission(state, p, stageId);
 
@@ -444,12 +592,19 @@ function resolveStage(state, p, stageId, risk, info, rng) {
   return null;
 }
 
+// Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
+function retarget(state, p) {
+  if (!state.sandbox) p.missionId = ladderOf(p)[p.step] || null;
+}
+
 function failMission(state, p, stageId) {
   const stage = STAGES[stageId];
   const flight = p.flight;
   const ship = flyer(p);
   p.failureData[stage.system] = (p.failureData[stage.system] || 0) + 1;
   p.tech += 1;
+  // Missão de consolação: a nave cumpre um objetivo menor e dá crédito parcial (não na subida).
+  if (stage.consolation) p.funds += CONSOLATION_FUNDS;
   const last = flight.last;
   p.lastResult = {
     success: false,
@@ -460,8 +615,8 @@ function failMission(state, p, stageId) {
     reasons: [
       `A etapa "${stage.name}" falhou: o risco era ${pct(last.risk)}.`,
       ...(last.causes.length ? [`O que aumentou o risco: ${last.causes.join('; ')}.`] : ['Mesmo um projeto bom tem risco: nada no espaço é garantido.']),
-      'A nave foi perdida.',
     ],
+    consolation: stage.consolation ? `${stage.consolation} Crédito parcial: +${CONSOLATION_FUNDS} de verba.` : null,
     failureLesson: `Dados de falha: na próxima tentativa, o risco de ${SYSTEM_NAMES[stage.system]} cai ${pct(FAILURE_DATA_BONUS)}, e a agência ganhou +1 de tecnologia. Falhar ensina: é o passo "Verify" do ciclo de projeto da NASA.`,
     checks: checkDesign(ship, { ...flight.modifiers, launched: true }).checks,
     score: 0,
@@ -469,6 +624,7 @@ function failMission(state, p, stageId) {
     craft: flight.craft,
   };
   p.flight = null;
+  retarget(state, p);
   state.screen = 'report';
   return null;
 }
@@ -482,49 +638,25 @@ function completeMission(state, p) {
   result.stages = flight.stages;
   result.craft = flight.craft;
   const year = yearOf(state.round);
+  result.year = year;
   if (result.success) {
     p.completed.push({ missionId, year, science: result.scienceDelivered });
     grant(state, p, 'mission_complete', missionId);
-    if (!state.records[missionId]) {
-      state.records[missionId] = { playerId: p.id, year };
-      p.funds += RECORD_BONUS;
-      result.record = true;
-      pushLog(state, `🏆 ${p.name} é a primeira agência do mundo a cumprir "${MISSIONS[missionId].name}" (+${RECORD_BONUS} de prestígio).`);
+    if (!state.sandbox && ladderOf(p)[p.step] === missionId) {
+      p.step += 1;
+      // Primeiro do lado leva o bônus cheio; quem chega depois no mesmo lado leva menos.
+      const key = `${p.side}:${missionId}`;
+      const first = state.sideFirsts[key] == null;
+      if (first) state.sideFirsts[key] = p.id;
+      const bonus = first ? STEP_BONUS_FIRST : STEP_BONUS_LATER;
+      p.funds += bonus;
+      result.stepBonus = { bonus, first };
     }
-    if (p.missionId === missionId) p.missionId = null; // escolhe a próxima missão
   }
-  pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`);
+  pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`, p.id);
   p.lastResult = result;
   p.flight = null;
-  state.screen = 'report';
-  return null;
-}
-
-// Abortar: sem risco; as peças voltam (revendem pela metade), o lançamento e o tempo se perdem.
-function abortFlight(state, p) {
-  const flight = p.flight;
-  const craft = flight.craft;
-  p.spacecraft.instruments.push(...craft.instruments);
-  p.spacecraft.parts.push(...craft.parts);
-  p.spacecraft.launcherId = p.spacecraft.launcherId || craft.launcherId;
-  p.spacecraft.orbitId = p.spacecraft.orbitId || craft.orbitId;
-  p.spacecraft.flown = true;
-  p.lastResult = {
-    success: false,
-    aborted: true,
-    missionId: flight.missionId,
-    stages: flight.stages,
-    reasons: [
-      `Missão abortada na etapa "${STAGES[flight.pending.stageId].name}".`,
-      'As peças voltaram para a oficina, mas o custo do lançamento e o tempo foram perdidos.',
-    ],
-    checks: [],
-    score: 0,
-    scienceDelivered: 0,
-    craft,
-  };
-  pushLog(state, `${p.name} abortou a missão "${MISSIONS[flight.missionId].name}".`);
-  p.flight = null;
+  retarget(state, p);
   state.screen = 'report';
   return null;
 }

@@ -36,12 +36,13 @@ Todos vêm da aba Resources do desafio (detalhes em `space_mission_design_game.t
   do formato "Ganha / Custa" dos cards da oficina.
   https://www.jpl.nasa.gov/edu/teach/activity/marsbound
 
-- **NASA History (linha do tempo da corrida espacial)** — o jogo vai de 1957 a 1969 e o relatório
-  mostra o cartão "Na história real" com o marco real de cada missão (só o ano):
-  - Sputnik 1 (1957): https://www.nasa.gov/history/65-years-ago-sputnik-ushers-in-the-space-age/
-  - Sputnik 2 e Laika (1957): https://www.nasa.gov/history/a-brief-history-of-animals-in-space/
+- **NASA History (calendário da corrida espacial)** — o jogo vai de 1957 a 1969, o bot do modo solo
+  cumpre cada degrau no ano real e o relatório mostra o cartão "Na história real" (só o ano):
+  - Sputnik 1 (1957) e Explorer 1 (1958): https://www.nasa.gov/history/explorer-1-overview/
+  - Laika/Sputnik 2 (1957) e Enos/Mercury-Atlas 5 (1961): https://www.nasa.gov/history/a-brief-history-of-animals-in-space/
   - TIROS-1 (1960) e ATS-1 (1966): https://www.nasa.gov/history/90-years-of-our-changing-views-of-earth/
-  - Luna 2 (1959): https://science.nasa.gov/moon/missions/
+  - Luna 2 (1959) e Ranger 7 (1964): https://www.nasa.gov/history/60-years-ago-ranger-7-photographs-the-moon/
+  - Salyut 1 (1971) e Skylab (1973): https://www.nasa.gov/missions/station/50-years-ago-launch-of-salyut-the-worlds-first-space-station/
   - Apollo 8 (1968): https://www.nasa.gov/mission/apollo-8/
 
 Os números do jogo são fictícios (balanceamento); o que vem da NASA é o **processo, os trade-offs e

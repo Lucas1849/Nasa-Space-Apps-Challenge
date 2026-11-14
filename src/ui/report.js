@@ -1,4 +1,4 @@
-// Relatório da missão: sucesso, falha ou aborto, pontuação e, principalmente, o PORQUÊ.
+// Relatório da missão: sucesso ou falha (com missão de consolação), pontuação e, principalmente, o PORQUÊ.
 // Mostra cada etapa do voo com o risco e a decisão, os dados de falha (passo Verify) e,
 // no sucesso, o cartão "Na história real".
 import { el, button, hud, checklist, stageTrack } from './components.js';
@@ -24,7 +24,7 @@ export function reportScreen(state, actions) {
   const failed = (r.checks || []).filter((c) => !c.ok);
   const history = REAL_HISTORY[r.missionId];
   const craftView = r.craft ? { ...p, missionId: r.missionId, spacecraft: r.craft } : p;
-  const title = r.success ? 'Missão cumprida' : r.aborted ? 'Missão abortada' : 'Missão falhou';
+  const title = r.success ? 'Missão cumprida' : 'Missão falhou';
 
   return el('section', { class: `screen report ${r.success ? 'success' : 'failure'}` }, [
     hud(state, p, 'report'),
@@ -35,7 +35,7 @@ export function reportScreen(state, actions) {
         el('h1', {}, title),
         el('p', { class: 'hint' }, r.success
           ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' 🏆 Primeira agência do mundo a cumprir esta missão!' : ''}`
-          : r.aborted ? 'A nave voltou, mas o lançamento e o tempo se perderam.' : 'Cada falha ensina algo: veja os dados de falha abaixo.'),
+          : 'Cada falha ensina algo: veja os dados de falha abaixo.'),
       ]),
       el('div', { class: 'score' }, [el('div', { class: 'big' }, r.score), el('div', { class: 'label' }, 'pontos')]),
     ]),
@@ -43,7 +43,12 @@ export function reportScreen(state, actions) {
       el('div', {}, [
         el('h2', {}, 'Por quê'),
         el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
+        r.consolation ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🎖️ Missão de consolação'), el('p', {}, r.consolation)]) : null,
         r.failureLesson ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🧪 Dados de falha'), el('p', {}, r.failureLesson)]) : null,
+        r.stepBonus ? el('div', { class: 'panel lesson' }, [
+          el('strong', {}, `🪜 Degrau cumprido: +${r.stepBonus.bonus} de verba`),
+          el('p', {}, r.stepBonus.first ? 'Você foi a primeira agência do seu lado a cumprir este degrau.' : 'Outra agência do seu lado chegou antes, por isso o bônus é menor.'),
+        ]) : null,
         r.stages?.length ? el('div', {}, [el('h2', {}, 'O voo, etapa por etapa'), stageLog(r.stages)]) : null,
         failed.length ? el('div', {}, [
           el('h2', {}, 'O que mudaria o resultado'),
@@ -52,7 +57,7 @@ export function reportScreen(state, actions) {
         r.success && history ? el('div', { class: 'panel lesson history' }, [
           el('strong', {}, `📜 Na história real (${history.year})`),
           el('p', {}, history.text),
-          state.sandbox ? null : el('p', { class: 'hint' }, `Você cumpriu em ${p.completed[p.completed.length - 1]?.year}. ${compareYear(p.completed[p.completed.length - 1]?.year, history.year)}`),
+          state.sandbox || !p.side ? null : el('p', { class: 'hint' }, `Você cumpriu em ${r.year}. ${history.sides[p.side] ? `Seu lado, na história real: ${history.sides[p.side]}. ${compareYear(r.year, history.sides[p.side])}` : 'Na história real, seu lado nunca cumpriu esta missão.'}`),
           el('a', { href: history.source, target: '_blank', rel: 'noopener' }, 'Fonte: NASA History'),
         ]) : null,
       ]),
@@ -63,8 +68,8 @@ export function reportScreen(state, actions) {
       ]),
     ]),
     el('p', { class: 'hint' }, r.success
-      ? 'Pontuação = ciência entregue ×10 + verba poupada + margem de massa não usada. Projetos enxutos pontuam mais. Escolha a próxima missão no tabuleiro.'
-      : 'Peças que voltaram de um voo abortado valem metade na revenda.'),
+      ? 'Pontuação = ciência entregue ×10 + verba poupada + margem de massa não usada. Projetos enxutos pontuam mais.'
+      : 'A nave foi perdida. Monte outra na oficina: tecnologia, prédios e dados de falha continuam com você.'),
     el('div', { class: 'row' }, [
       button(state.sandbox ? '🔧 Voltar à oficina' : 'Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
       state.sandbox ? null : button('🔧 Oficina', () => actions.go('workshop')),

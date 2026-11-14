@@ -312,6 +312,26 @@ select option { background: #0f1736; }
 .stage-log small { font-size: .8rem; }
 .history a { color: var(--accent); font-size: .85rem; }
 
+/* ---------- IDEIA v3: escadas, dados, espionagem, troca de dispositivo ---------- */
+.tile-spy { border-color: rgba(167, 139, 250, 0.45); background: rgba(167, 139, 250, 0.05); } .tile-spy .t-sub { color: #c4b5fd; }
+.tile-event .t-sub { color: var(--amber); }
+.ladder { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; counter-reset: step; }
+.ladder li { display: grid; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); color: var(--muted); }
+.ladder li.done { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.06); }
+.ladder li.now { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.08); }
+.ladder.compact li { padding: 4px 8px; font-size: .85rem; }
+.dice-choice { display: grid; gap: 8px; justify-items: center; }
+.die.small { font-size: 1.6rem; vertical-align: middle; }
+.tile-decision.dilemma { border-color: rgba(251,191,36,.45); }
+.intel { color: var(--accent) !important; }
+.gain-text { display: block; color: var(--ok); margin-top: 6px; }
+.lose-text { display: block; color: var(--amber); }
+.cards.sides .card-head small { margin-left: auto; }
+.handoff { min-height: 70vh; display: grid; place-items: center; }
+.handoff-card { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 40px; max-width: 480px; }
+.handoff-card .avatar { font-size: 1.6rem; }
+.hud .chip small { color: var(--muted); }
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 900px) {
   .hero, .workshop-grid, .report-grid, .board-layout { grid-template-columns: 1fr; }

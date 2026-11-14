@@ -9,7 +9,7 @@ import { LAUNCHERS } from '../data/launchers.js';
 import { ORBITS } from '../data/orbits.js';
 import { MISSIONS } from '../data/missions.js';
 import { currentPlayer } from '../sim/state.js';
-import { priceFor, isLocked, discountFor } from '../sim/resources.js';
+import { priceFor, isLocked, requiredTech, discountFor } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
 
@@ -41,7 +41,7 @@ function itemCard(player, item, actions) {
     ]),
     el('div', { class: 'row' }, [
       locked
-        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de ajuda internacional.' }, `🔒 exige tecnologia ${item.minTech}`)
+        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, `🔒 exige tecnologia ${requiredTech(player, item)}`)
         : button([el('span', { class: 'price' }, `💰 ${price}`), ' Comprar'], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
       button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
     ]),
@@ -53,7 +53,7 @@ function choice(label, options, selectedId, onPick, describe, player) {
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
-      return button(locked ? `🔒 ${o.name} · exige tecnologia ${o.minTech}` : describe(o), () => onPick(o.id), {
+      return button(locked ? `🔒 ${o.name} · exige tecnologia ${requiredTech(player, o)}` : describe(o), () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
         disabled: locked,
       });
@@ -78,9 +78,11 @@ export function workshopScreen(state, actions) {
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
       hud(state, p, 'workshop'),
-      el('h2', {}, '🎯 Escolha a missão antes de projetar a nave'),
-      el('p', { class: 'hint' }, 'O desafio começa pelos requisitos: cada missão exige uma órbita, ciência, comunicação e vida útil diferentes.'),
-      missionPicker(state, p, actions),
+      state.sandbox ? el('h2', {}, '🎯 Escolha a missão antes de projetar a nave') : el('h2', {}, '🏁 Sua escada está completa'),
+      el('p', { class: 'hint' }, state.sandbox
+        ? 'O desafio começa pelos requisitos: cada missão exige uma órbita, ciência, comunicação e vida útil diferentes.'
+        : 'Não há mais degraus para projetar. O vencedor é revelado no fim da rodada.'),
+      state.sandbox ? missionPicker(state, p, actions) : null,
       el('div', { class: 'row' }, [back]),
     ]);
   }
@@ -94,14 +96,15 @@ export function workshopScreen(state, actions) {
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
   const blocked = p.flight ? 'Você já tem uma nave em voo: monte esta para depois.'
-    : !state.sandbox && !p.rolled ? 'Jogue o dado no tabuleiro antes de lançar.'
+    : !state.sandbox && !p.rolled ? 'Ande no tabuleiro antes de lançar.'
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
   const discount = discountFor(p);
 
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop'),
-    p.flight ? el('p', { class: 'banner' }, `🛰️ Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a próxima.`) : null,
+    p.flight ? el('p', { class: 'banner' }, `🛰️ Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
+    state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),

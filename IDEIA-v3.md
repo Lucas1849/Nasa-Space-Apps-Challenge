@@ -171,3 +171,58 @@ Os dois lados ganham, mas ajudar um rival o deixa mais perto de ganhar. É o "Ap
 - Quais e quantas cartas de dilema por situação?
 - Vantagem e fraqueza de cada lado.
 - Tutorial e camada educativa extra (depois do jogo pronto).
+
+## 16. O que já está no jogo (Daniel, 14/11)
+
+> Status: **implementado** na branch `daniel/ideia-v2`. Segue esta v3 e aproveita da v2 o que a v3
+> manteve. Todos os números são chutes para testar e ficam em `src/data/`, sem código novo para mudar.
+
+### 16.1 O que faltava no tabuleiro para a ideia funcionar
+O tabuleiro antigo (8 casas, quase todas de dinheiro) tinha quatro problemas:
+
+1. **Não tinha decisão.** Agora há 2 dados à escolha, cartas de dilema, terrenos (construir ou não,
+   qual prédio), prédios de rivais (pagar para usar ou não) e espionagem.
+2. **Não falava com a engenharia.** As casas dão o que a oficina usa: tecnologia, desconto, proteção.
+   Com a nave em voo, a casa de evento vira o imprevisto da próxima etapa.
+3. **Dinheiro dependia de sorte.** O Ano novo dá verba e tecnologia fixas a cada 3 rodadas. As casas
+   de dinheiro ficaram fracas, como a seção 4 pede.
+4. **Não tinha interação.** Usar o prédio do rival paga o dono e dá um efeito para quem usa: é um
+   contrato simples, de um botão, em que os dois ganham.
+
+### 16.2 Mapa do que entrou
+| Ideia | Onde está |
+|---|---|
+| Lados EUA e URSS, escadas de 4 degraus, vantagem e fraqueza | `src/data/sides.js` |
+| Primeiro do lado leva bônus cheio (+20), quem chega depois leva menos (+8) | `src/sim/actions.js` |
+| 3 rodadas = 1 ano, 1957–1969, Ano novo com verba e tecnologia | `src/data/history.js` |
+| Solo contra bot que segue o calendário histórico (±1 ano) | `src/sim/actions.js` |
+| Rival escondido, diário privado, tela "passe o dispositivo" | `src/ui/handoff.js` |
+| Espionagem (12, uma vez por ano) e boatos (acertam 70%) | casa 🕵️ e carta "Boato" |
+| Cartas de dilema por situação (sem nave, montando a nave, em voo) | `src/data/dilemmas.js` |
+| 2 dados, o jogador escolhe qual usar | tabuleiro |
+| Prédios: Laboratório, Fábrica, Controle de missão, Patrocinador (nível 1 a 3) | `src/data/buildings.js` |
+| Peças e foguetes bloqueados por tecnologia | `minTech` em `src/data/` |
+| Voo em etapas (LEO 2, GEO 3, Lua 3, tripulada 4), uma por turno | `src/data/stages.js` |
+| Risco por etapa mostrado antes, com o motivo | `src/sim/flight.js` |
+| Reserva de verba no voo (revisão paga), sem "abortar" | tela de voo |
+| Missão de consolação com crédito parcial e dados de falha | `src/data/stages.js` |
+| Montar a nave do próximo degrau enquanto a atual voa | oficina |
+| Socorro de emergência, choque do Sputnik para quem está atrás | painel da agência, tabuleiro |
+| Cartão "Na história real" por lado, com fonte da NASA, e epílogo Apollo-Soyuz | relatório e fim |
+
+### 16.3 Decisões que tomei para responder as perguntas da seção 15 (dá para mudar)
+- **Escada da URSS:** Primeiro satélite → Ser vivo → Estação espacial → Tripulação na Lua. O final
+  é a Lua para os dois lados: a corrida à Lua. Na história real a URSS nunca chegou, então o bot
+  soviético nunca cumpre esse degrau.
+- **Vantagens:** EUA com mais verba (+20 no início, +5 por ano) e foguetes mais tarde (+1 de
+  tecnologia nos lançadores). URSS com foguetes cedo (−1) e orçamento menor (−5 por ano).
+- **Espião:** custa 12, uma vez por ano, e mostra degraus, missão atual e quanto a nave está pronta.
+- **Limite:** 1969 (39 rodadas). Com verba de 40 por ano, a Lua fica alcançável perto de 1965–1968.
+- **Falha = nave perdida inteira.** Em troca: dados de falha, +1 de tecnologia e, se passou da
+  subida, missão de consolação (+8 de verba).
+- A subida acontece no turno do lançamento. Por isso a Lua leva 2 a 3 turnos em voo.
+
+### 16.4 Ainda não entrou
+- Contratos completos (seção 10). Só existe o "usar prédio do rival".
+- Pagar para andar mais, sinergias entre peças, mais nações e escadas.
+- Balanceamento por partidas de teste.

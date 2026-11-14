@@ -56,6 +56,15 @@ export const MISSIONS = {
     needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
     milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
   },
+  space_station: {
+    id: 'space_station',
+    name: 'Estação espacial',
+    difficulty: 'difícil',
+    orbit: 'leo',
+    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
+    needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
+    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+  },
   crewed_moon: {
     id: 'crewed_moon',
     name: 'Tripulação na Lua',

@@ -31,16 +31,15 @@ function decisionView(state, p, actions) {
     el('p', { class: 'event-text' }, event ? event.text : `${stage.text} Nenhum imprevisto à vista, mas o risco existe.`),
     el('div', { class: 'options' }, options.map((opt, i) => {
       const effectText = describeEffect(opt.effect);
-      return el('div', { class: `card option ${opt.kind === 'abort' ? 'abort' : ''} ${opt.disabled ? 'disabled' : ''}`, onclick: opt.disabled ? null : () => actions.chooseStageOption(i) }, [
+      return el('div', { class: `card option ${opt.disabled ? 'disabled' : ''}`, onclick: opt.disabled ? null : () => actions.chooseStageOption(i) }, [
         el('strong', {}, opt.label),
-        opt.risk ? el('span', { class: 'risk-big' }, `risco ${pct(opt.risk.total)}`) : el('span', { class: 'risk-big safe' }, 'sem risco'),
-        opt.risk ? el('small', { class: 'consequence' }, describeRisk(opt.risk)) : null,
+        el('span', { class: 'risk-big' }, `risco ${pct(opt.risk.total)}`),
+        el('small', { class: 'consequence' }, describeRisk(opt.risk)),
         effectText ? el('small', { class: 'consequence' }, `→ ${effectText}`) : null,
-        opt.kind === 'abort' ? el('small', { class: 'hint' }, opt.lesson) : null,
-        button('Escolher', (e) => { e.stopPropagation(); actions.chooseStageOption(i); }, { class: `${opt.kind === 'abort' ? 'ghost' : 'primary'} small`, disabled: opt.disabled }),
+        button('Escolher', (e) => { e.stopPropagation(); actions.chooseStageOption(i); }, { class: 'primary small', disabled: opt.disabled }),
       ]);
     })),
-    el('p', { class: 'hint', style: 'margin-top:18px' }, 'O risco vem da sua nave: margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão. Uma proteção 🛡️ salva a etapa se ela falhar.'),
+    el('p', { class: 'hint', style: 'margin-top:18px' }, 'O risco vem da sua nave: margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão. Uma proteção 🛡️ salva a etapa se ela falhar. Se falhar, a nave ainda tenta uma missão de consolação.'),
   ];
 }
 

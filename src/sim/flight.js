@@ -33,6 +33,7 @@ export function stageRisk(player, stageId, extra = {}) {
   switch (stage.system) {
     case 'launch':
       if (t.maxMass && t.mass > 0.85 * t.maxMass) add(`carga perto do limite do foguete (${t.mass}/${t.maxMass})`, 0.10);
+      if (player.launchRisk) add('defeito conhecido que não foi corrigido', player.launchRisk);
       break;
     case 'power':
       if (t.powerBalance < 5) add(`energia sem margem (sobra ${t.powerBalance})`, 0.10);
@@ -76,34 +77,25 @@ export function flyer(player) {
   return { ...player, missionId: player.flight.missionId, spacecraft: player.flight.craft };
 }
 
-// Opções do jogador numa etapa do voo (IDEIA.md: consertar, abortar ou insistir).
-// Com imprevisto: as 2 opções do evento + abortar. Sem imprevisto: seguir, pagar revisão ou abortar.
+// Opções do jogador numa etapa do voo. Não existe "abortar" (IDEIA-v3 seção 7): se a etapa falhar,
+// a nave tenta uma missão de consolação. Com imprevisto: as 2 opções do evento.
+// Sem imprevisto: seguir ou gastar a reserva de verba para reduzir o risco.
 // Cada opção já traz o risco calculado e explicado, para o jogador decidir vendo o porquê.
 export function stageOptions(player, pending) {
   const ship = flyer(player);
   const { stageId, eventId } = pending;
-  const abort = {
-    kind: 'abort',
-    label: 'Abortar a missão',
-    effect: {},
-    risk: null,
-    lesson: 'Abortar encerra o voo sem risco: as peças voltam para o estoque (revendem pela metade), mas o custo do lançamento e o tempo se perdem.',
-  };
   if (eventId) {
     const event = FLIGHT_EVENTS[eventId];
-    return [
-      ...event.options.map((opt) => {
-        const effect = resolveOption(opt, ship) || {};
-        return {
-          kind: 'event',
-          label: opt.label,
-          effect,
-          risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: 'decisão arriscada no imprevisto' }),
-          lesson: opt.lesson,
-        };
-      }),
-      abort,
-    ];
+    return event.options.map((opt) => {
+      const effect = resolveOption(opt, ship) || {};
+      return {
+        kind: 'event',
+        label: opt.label,
+        effect,
+        risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: 'decisão arriscada no imprevisto' }),
+        lesson: opt.lesson,
+      };
+    });
   }
   return [
     { kind: 'go', label: 'Seguir com a etapa', effect: {}, risk: stageRisk(ship, stageId), lesson: null },
@@ -115,7 +107,6 @@ export function stageOptions(player, pending) {
       disabled: player.funds < REVIEW_COST,
       lesson: 'Revisões e testes extras custam dinheiro, mas pegam defeitos antes que virem falhas.',
     },
-    abort,
   ];
 }
 

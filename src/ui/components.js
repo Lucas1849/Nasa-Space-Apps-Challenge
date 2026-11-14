@@ -1,13 +1,14 @@
 // Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
 import { effectiveTotals } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
-import { flightPlan } from '../sim/flight.js';
+import { flightPlan, pct } from '../sim/flight.js';
+import { ladderProgress } from '../sim/progress.js';
 import { upgradeCostFor } from '../sim/actions.js';
 import { BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
 import { GLOSSARY } from '../data/glossary.js';
-import { OBJECTIVES, objectiveProgress } from '../data/objectives.js';
-import { REAL_HISTORY, MAX_ROUNDS, yearOf } from '../data/history.js';
+import { SIDES, ladderOf } from '../data/sides.js';
+import { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } from '../data/history.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 
@@ -38,24 +39,30 @@ export const ITEM_ICONS = {
   camera: '📷', camera_large: '🔭', spectro: '🌈', boom: '🧲', beacon: '📻',
   panel: '☀️', panel_large: '🔆', battery: '🔋', antenna: '📶', dish: '📡', thruster: '🔥', capsule: '🧑‍🚀',
 };
-export const MISSION_ICONS = { first_satellite: '🛰️', living_being: '🐕', weather_watch: '🌦️', lunar_probe: '🌙', crewed_moon: '👩‍🚀' };
+export const MISSION_ICONS = { first_satellite: '🛰️', living_being: '🐕', weather_watch: '🌦️', lunar_probe: '🌙', space_station: '🏠', crewed_moon: '👩‍🚀' };
 export const DIE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 export function avatar(player, size) {
-  return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null }, player.name[0].toUpperCase());
+  return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null }, player.bot ? '🤖' : player.name[0].toUpperCase());
 }
 
-// Barra superior: ano, quem joga, carta, missão, verba, tecnologia e em que etapa do ciclo está.
+export const sideLabel = (p) => (SIDES[p.side] ? `${SIDES[p.side].icon} ${SIDES[p.side].name}` : '');
+
+// Barra superior: ano, quem joga, lado, degrau, verba, tecnologia e em que etapa do ciclo está.
 export function hud(state, player, step) {
   const mission = MISSIONS[player.flight?.missionId || player.missionId];
-  const card = OBJECTIVES[player.objectiveId];
+  const prog = ladderProgress(player);
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
   const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
+  const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   return el('div', { class: 'hud' }, [
-    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox') : el('span', { class: 'chip year', title: `Rodada ${state.round} de ${MAX_ROUNDS}` }, ['📅 ', el('span', { class: 'num' }, yearOf(state.round))]),
+    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox')
+      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, ['📅 ', el('span', { class: 'num' }, yearOf(state.round)), el('small', {}, ` · ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
     el('div', { class: 'who' }, [avatar(player), player.name]),
-    card ? el('span', { class: 'chip', title: card.goal }, [card.icon, ' ', card.name]) : null,
-    el('span', { class: 'chip' }, mission ? [MISSION_ICONS[mission.id] || '🚀', ' ', mission.name, player.flight ? ' · em voo' : ''] : '🎯 escolhendo missão'),
+    player.side ? el('span', { class: 'chip' }, sideLabel(player)) : null,
+    el('span', { class: 'chip' }, mission
+      ? [MISSION_ICONS[mission.id] || '🚀', ' ', state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ' · em voo' : '']
+      : state.sandbox ? '🎯 escolhendo missão' : '🏁 escada completa'),
     el('span', { class: 'chip', title: 'Verba' }, ['💰 ', el('span', { class: 'num' }, player.funds)]),
     state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, ['🔧 tec ', el('span', { class: 'num' }, player.tech)]),
     player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, ['🛡️ ', el('span', { class: 'num' }, player.shields)]) : null,
@@ -68,76 +75,51 @@ export function progressBar(fraction, status = 'ok') {
   return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
 }
 
-function statusText(player) {
-  if (player.flight) {
-    const f = player.flight;
-    return `🛰️ em voo: ${MISSIONS[f.missionId].name}, etapa ${f.stageIndex + 1}/${f.plan.length}`;
-  }
-  if (player.missionId) return `🔧 no chão: ${MISSIONS[player.missionId].name}`;
-  return '🎯 escolhendo missão';
+// Escada de missões do lado do jogador, com o ano em que o lado cumpriu cada degrau na história real.
+export function ladderPanel(state, player) {
+  const ladder = ladderOf(player);
+  const prog = ladderProgress(player);
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, `🪜 Escada ${sideLabel(player)}`),
+    progressBar(prog.pct, prog.done ? 'done' : 'ok'),
+    el('ol', { class: 'ladder' }, ladder.map((m, i) => {
+      const done = player.completed.find((c) => c.missionId === m);
+      const real = REAL_HISTORY[m].sides[player.side];
+      const flying = player.flight?.missionId === m;
+      const cls = i < player.step ? 'done' : i === player.step ? 'now' : '';
+      return el('li', { class: cls }, [
+        el('span', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`),
+        el('small', { class: 'hint' }, [
+          done ? `✓ ${done.year}` : flying ? `🛰️ em voo, etapa ${player.flight.stageIndex + 1}/${player.flight.plan.length}` : i === player.step ? 'degrau atual' : '',
+          ` · história real: ${real ?? 'nunca'}`,
+        ]),
+      ]);
+    })),
+    el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
+  ]);
 }
 
-// Corrida visível (IDEIA.md seção 2): todos veem a carta, o progresso e a nave de todos.
-// É o custo de esperar: enquanto você melhora a nave, os rivais avançam.
-export function raceTable(state) {
-  return el('div', { class: 'panel race' }, [
-    el('h3', { style: 'margin-top:0' }, state.players.length > 1 ? '🏁 Corrida espacial' : '🏁 Sua agência na corrida'),
-    ...state.players.map((pl) => {
-      const card = OBJECTIVES[pl.objectiveId];
-      const prog = objectiveProgress(pl, state);
-      return el('div', { class: `race-row ${pl.id === state.turn ? 'current' : ''}` }, [
-        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-          avatar(pl, 26), el('strong', {}, pl.name),
-          card ? el('span', { class: 'chip small', title: card.goal }, `${card.icon} ${card.name}`) : null,
-          el('span', { class: 'spacer' }),
-          el('span', { class: 'num' }, `${Math.round(prog.pct * 100)}%`),
-        ]),
-        progressBar(prog.pct, prog.done ? 'done' : 'ok'),
-        el('div', { class: 'race-meta' }, [
-          el('span', {}, statusText(pl)),
-          el('span', {}, `💰 ${pl.funds} · 🔧 ${pl.tech}${pl.shields ? ` · 🛡️ ${pl.shields}` : ''} · ✓ ${pl.completed.length}`),
-        ]),
-        card ? el('small', { class: 'hint' }, `${card.goal} (${prog.value}/${prog.target})`) : null,
+// Rival escondido (IDEIA-v3 seção 8): só aparece o que o espião ou os boatos revelaram.
+export function rivalsPanel(state, player) {
+  const rivals = state.players.filter((r) => r.id !== player.id);
+  if (!rivals.length) return null;
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, '🕵️ Rivais'),
+    ...rivals.map((r) => {
+      const info = player.intel[r.id];
+      let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
+      if (info?.rumor) text = `Boato de ${info.year}: ${info.steps}/${info.total} degraus. Pode estar errado.`;
+      else if (info) {
+        const ship = info.inFlight ? `nave em voo (etapa ${info.stage + 1}/${info.stages})`
+          : info.ready != null ? `nave ${pct(info.ready)} pronta` : info.note || '';
+        text = `Espião em ${info.year}: ${info.steps}/${info.total} degraus${info.mission ? `, mirando "${info.mission}"` : ''}; ${ship}.`;
+      }
+      return el('div', { class: 'race-row' }, [
+        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideLabel(r))]),
+        el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
       ]);
     }),
   ]);
-}
-
-// Recordes mundiais: quem cumpriu cada missão primeiro (vale bônus e conta para a carta Pioneira).
-export function recordsPanel(state) {
-  return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, '🏆 Recordes mundiais'),
-    el('ul', { class: 'records' }, Object.values(MISSIONS).map((m) => {
-      const r = state.records[m.id];
-      return el('li', { class: r ? 'taken' : '' }, [
-        el('span', {}, `${MISSION_ICONS[m.id] || '🚀'} ${m.name}`),
-        el('span', { class: 'hint' }, r ? `${state.players[r.playerId].name}, ${r.year}` : `em aberto (história real: ${REAL_HISTORY[m.id].year})`),
-      ]);
-    })),
-  ]);
-}
-
-// Escolha da missão atual. Mostra se ela ajuda a carta de vitória e se o recorde ainda está em aberto.
-export function missionPicker(state, player, actions) {
-  const card = OBJECTIVES[player.objectiveId];
-  return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => {
-    const done = player.completed.some((c) => c.missionId === m.id);
-    const record = state.records[m.id];
-    const helps = card && !done && card.counts(m.id, state);
-    const stages = flightPlan(m.id).length;
-    return button([
-      el('span', { class: 'icon' }, MISSION_ICONS[m.id] || '🚀'),
-      el('strong', {}, m.name),
-      el('span', { class: 'diff' }, `${m.difficulty} · ${stages} etapas de voo`),
-      el('span', { class: 'goal' }, m.goal),
-      done ? el('span', { class: 'tag ok' }, '✓ cumprida') : null,
-      helps ? el('span', { class: 'tag accent' }, `${card.icon} conta para sua carta`) : null,
-      !state.sandbox ? el('span', { class: 'tag' }, record ? `recorde: ${state.players[record.playerId].name}` : '🏆 recorde em aberto') : null,
-    ], () => actions.chooseMission(m.id), {
-      class: `mission-card ${player.missionId === m.id ? 'selected' : ''}`,
-      disabled: done || Boolean(player.flight),
-    });
-  }));
 }
 
 // Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
@@ -162,6 +144,16 @@ export function agencyPanel(state, player, actions) {
       ? button(`🆘 Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`, () => actions.requestBailout(), { class: 'small ghost' })
       : null,
   ]);
+}
+
+// Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
+export function missionPicker(state, player, actions) {
+  return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => button([
+    el('span', { class: 'icon' }, MISSION_ICONS[m.id] || '🚀'),
+    el('strong', {}, m.name),
+    el('span', { class: 'diff' }, `${m.difficulty} · ${flightPlan(m.id).length} etapas de voo`),
+    el('span', { class: 'goal' }, m.goal),
+  ], () => actions.chooseMission(m.id), { class: `mission-card ${player.missionId === m.id ? 'selected' : ''}`, disabled: Boolean(player.flight) })));
 }
 
 // Linha do tempo das etapas do voo.
@@ -219,8 +211,10 @@ export function milestoneTrack(player, missionId = player.missionId) {
     ])));
 }
 
-export function logPanel(state) {
-  return el('div', { class: 'panel log' }, [el('h3', { style: 'margin-top:0' }, '📓 Diário da missão'), el('ul', {}, state.log.map((l) => el('li', {}, l)))]);
+// Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
+export function logPanel(state, viewer) {
+  const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
+  return el('div', { class: 'panel log' }, [el('h3', { style: 'margin-top:0' }, '📓 Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
 }
 
 export function glossary(open = false) {

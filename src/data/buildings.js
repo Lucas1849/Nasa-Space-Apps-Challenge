@@ -13,7 +13,7 @@ export const USE_FEE = 6;              // taxa paga ao dono para usar o prédio 
 export const BUILDINGS = {
   lab: {
     id: 'lab', name: 'Laboratório', icon: '🧪',
-    effect: '+1 de tecnologia por turno, por nível.',
+    effect: '+1 de tecnologia a cada Ano novo, por nível.',
     useEffect: { tech: 1 }, useText: '+1 de tecnologia',
   },
   factory: {
@@ -28,7 +28,7 @@ export const BUILDINGS = {
   },
   sponsor: {
     id: 'sponsor', name: 'Patrocinador', icon: '🤝',
-    effect: '+4 de verba por turno, por nível (fraco de propósito).',
+    effect: '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
     useEffect: { funds: 8 }, useText: '+8 de verba',
   },
 };

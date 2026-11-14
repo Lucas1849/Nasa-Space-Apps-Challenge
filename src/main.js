@@ -25,7 +25,10 @@ function wrap(fn, after) {
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
   startGame: wrap(game.startGame),
-  rollAndMove: wrap(game.rollAndMove),
+  rollDice: wrap(game.rollDice),
+  moveBy: wrap(game.moveBy),
+  chooseDilemma: wrap(game.chooseDilemma),
+  spyOn: wrap(game.spyOn),
   buyItem: wrap(game.buyItem),
   sellItem: wrap(game.sellItem),
   chooseLauncher: wrap(game.chooseLauncher),
@@ -38,6 +41,8 @@ const actions = {
   requestBailout: wrap(game.requestBailout),
   launch: wrap(game.launch, showLaunchOverlay),
   advanceFlight: wrap(game.advanceFlight),
+  // Atalho de depuração no console: rola e anda com o primeiro dado.
+  rollAndMove: wrap(game.rollAndMove),
   chooseStageOption: wrap(game.chooseStageOption),
   endTurn: wrap(game.endTurn),
   newGame: wrap(() => { state = createInitialState(); }),

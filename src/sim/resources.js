@@ -61,5 +61,8 @@ export function priceFor(player, itemId) {
   return Math.max(1, Math.round(base * (1 - discountFor(player) / 100)));
 }
 
+// Nível de tecnologia exigido. Lançadores (têm `reach`) recebem o ajuste do lado (data/sides.js).
+export const requiredTech = (player, item) => Math.max(1, (item.minTech || 0) + (item.reach ? player.launcherTech || 0 : 0));
+
 // Peça ou lançador bloqueado pela tecnologia da agência?
-export const isLocked = (player, item) => (item.minTech || 0) > (player.tech || 0);
+export const isLocked = (player, item) => requiredTech(player, item) > (player.tech || 0);

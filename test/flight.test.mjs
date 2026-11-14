@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createInitialState, createPlayer } from '../src/sim/state.js';
 import {
-  startGame, launch, advanceFlight, chooseStageOption, buyItem, sellItem, chooseLauncher, chooseOrbit, chooseMission,
+  startGame, launch, advanceFlight, chooseStageOption, buyItem, chooseLauncher, chooseOrbit, chooseMission,
 } from '../src/sim/actions.js';
 import { simulate, checkDesign } from '../src/sim/simulate.js';
 import { stageRisk, stageOptions, missionRisk, flightPlan } from '../src/sim/flight.js';
@@ -52,20 +52,18 @@ test('lançar resolve a subida na hora e libera a oficina para a próxima nave',
   assert.equal(p.spacecraft.launcherId, 'small');   // lançador e órbita pré-escolhidos
 });
 
-test('missão LEO completa: subida + entrada em órbita = cumprida, com recorde', () => {
+test('missão LEO completa: subida + entrada em órbita = cumprida', () => {
   const state = readyState();
   launch(state, noFailure);
   assert.equal(advanceFlight(state, noFailure), null);
   const p = state.players[0];
   assert.equal(p.flight.pending.stageId, 'orbit_insertion');
-  assert.equal(p.flight.pending.eventId, null); // sem casa de risco e sem evento garantido
+  assert.equal(p.flight.pending.eventId, null); // sem casa de evento e sem imprevisto garantido
   chooseStageOption(state, 0, noFailure); // seguir
   assert.equal(state.screen, 'report');
   assert.equal(p.lastResult.success, true);
   assert.equal(p.completed[0].missionId, 'first_satellite');
-  assert.equal(state.records.first_satellite.playerId, 0);
-  assert.equal(p.missionId, null); // escolhe a próxima missão
-  assert.match(chooseMission(state, 'first_satellite'), /já cumpriu/);
+  assert.equal(chooseMission(state, 'living_being'), null); // sandbox: qualquer missão
 });
 
 test('falha na subida: nave perdida, dados de falha reduzem o risco da próxima', () => {
@@ -94,20 +92,35 @@ test('proteção absorve a falha de uma etapa', () => {
   assert.equal(p.shields, 0);
 });
 
-test('abortar devolve as peças, que revendem pela metade', () => {
+test('não existe abortar: falha no meio vira missão de consolação com crédito parcial', () => {
   const state = readyState();
   launch(state, noFailure);
   advanceFlight(state, noFailure);
   const p = state.players[0];
-  const abortIndex = stageOptions(p, p.flight.pending).findIndex((o) => o.kind === 'abort');
-  chooseStageOption(state, abortIndex, noFailure);
-  assert.equal(p.lastResult.aborted, true);
-  assert.equal(p.flight, null);
-  assert.equal(p.spacecraft.instruments.length, 1);
-  assert.equal(p.spacecraft.flown, true);
+  const options = stageOptions(p, p.flight.pending);
+  assert.ok(options.every((o) => o.kind !== 'abort'));
   const funds = p.funds;
-  sellItem(state, 'solar_small');
-  assert.equal(p.funds, funds + 4); // painel pequeno custa 8: metade
+  chooseStageOption(state, 0, alwaysFail);
+  assert.equal(p.lastResult.success, false);
+  assert.match(p.lastResult.consolation, /Crédito parcial/);
+  assert.ok(p.funds > funds);
+  assert.equal(p.failureData.power, 1);
+});
+
+test('falha na subida não tem consolação', () => {
+  const state = readyState();
+  launch(state, alwaysFail);
+  assert.equal(state.players[0].lastResult.consolation, null);
+});
+
+test('revisão paga reduz o risco da etapa', () => {
+  const state = readyState();
+  launch(state, noFailure);
+  advanceFlight(state, noFailure);
+  const p = state.players[0];
+  const [go, review] = stageOptions(p, p.flight.pending);
+  assert.equal(review.kind, 'review');
+  assert.ok(review.risk.total < go.risk.total);
 });
 
 test('carga perto do limite do foguete aumenta o risco da subida', () => {
@@ -134,12 +147,22 @@ test('opção arriscada do imprevisto soma à chance de falha e mostra o motivo'
   const p = createPlayer(0, 'T', 'first_satellite');
   p.flight = { missionId: 'first_satellite', craft: p.spacecraft };
   const opts = stageOptions(p, { stageId: 'orbit_insertion', eventId: 'solar_storm' });
-  assert.equal(opts.length, 3); // 2 opções do evento + abortar
+  assert.equal(opts.length, 2); // as 2 opções do evento
   assert.ok(opts[1].risk.total > opts[0].risk.total); // "manter tudo ligado" é mais arriscado
   assert.ok(opts[1].risk.parts.some((x) => /arriscada/.test(x.text)));
 });
 
-test('casa de risco no tabuleiro vira o imprevisto da próxima etapa', () => {
+test('dilema "lançar assim mesmo" aumenta o risco da próxima subida, só uma vez', () => {
+  const state = readyState();
+  const p = state.players[0];
+  const base = stageRisk(p, 'ascent').total;
+  p.launchRisk = 0.12;
+  assert.ok(stageRisk(p, 'ascent').total > base);
+  launch(state, noFailure);
+  assert.equal(p.launchRisk, 0);
+});
+
+test('casa de evento no tabuleiro vira o imprevisto da próxima etapa', () => {
   const state = readyState();
   launch(state, noFailure);
   state.players[0].flight.tileEvent = 'debris';
