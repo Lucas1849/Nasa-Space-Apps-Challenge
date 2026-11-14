@@ -1,5 +1,7 @@
 # Ideia do jogo (v2)
 
+> Existe uma versão mais recente em [`IDEIA-v3.md`](IDEIA-v3.md). Este arquivo continua aqui como histórico.
+
 > Status: **em discussão**. A v1 era só um ponto de partida. Esta versão junta o que foi conversado depois.
 > O que entra até o prazo está na seção 9. O resto é roadmap.
 
