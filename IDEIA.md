@@ -18,6 +18,13 @@ Jogo de tabuleiro por turnos, 2D, no navegador, na **corrida espacial da Guerra 
 
 O tabuleiro **não é o jogo principal**. Ele serve para conseguir recursos, tomar decisões, visitar lojas e sofrer eventos de sorte. O centro do jogo continua sendo a **engenharia da nave** e a decisão de **quando lançar**.
 
+### Tensão central
+> **Lançar agora (barato e arriscado) ou esperar melhorar (seguro, mas os rivais avançam)?**
+
+Se esperar não custar nada, todo mundo espera e o jogo não tem decisão. Por isso o **custo de esperar** é a **corrida visível**: todos veem o progresso dos rivais, e **quem lança primeiro leva o bônus de degrau** (seção 8).
+
+**Teste de coerência:** toda mecânica do jogo deve mudar essa decisão. Se não muda, é detalhe e vai para o roadmap.
+
 ## 3. Ciclo de cada turno
 1. **Joga o dado e anda no tabuleiro** (recursos, loja, evento, prédio).
 2. **Avança na missão**, escolhendo uma ação: pesquisar, montar ou melhorar a nave, ou **tentar lançar**.
@@ -39,6 +46,15 @@ O tabuleiro é circular e compartilhado. Tipos de casa:
 | **Espionagem** | Descobre a nave de um rival ou atrapalha a missão dele em voo |
 
 A **volta completa** no tabuleiro dá uma verba fixa pequena, para ninguém travar.
+
+### Contratos entre jogadores
+Para incentivar a troca, os dois lados precisam ganhar:
+
+> **Contrato:** o jogador A compra uma peça (ou paga um upgrade) para o jogador B. B recebe com **desconto ou bônus extra**, e A ganha **dinheiro ou pontos de tecnologia** em troca.
+
+- Os dois saem melhor do que sozinhos, então vale propor.
+- Tem dilema: ajudar um rival o deixa mais perto de ganhar.
+- Uma regra só, com um botão "propor contrato". Sem sistema de negociação livre.
 
 ## 5. Prédios e tecnologia
 **Tecnologia é um número** que sobe todo turno:
@@ -115,15 +131,36 @@ Missões inspiradas na Guerra Fria:
 
 Cada missão é uma tabela pequena (degraus, requisitos, efeito do bônus). **Adicionar missão nova é só preencher dados**, sem código novo.
 
-## 9. O que entra até o prazo (proposta)
-O time já tem uma base jogável (tabuleiro, oficina, simulação, 3 missões). O prazo é curto, então a sugestão é **escolher só 1 ou 2** itens abaixo, os que mais mostram trade-off:
+### Fim da partida e curva de tensão
+- **Vitória:** o primeiro a concluir o **degrau final** da sua missão ganha.
+- **Limite de rodadas:** se ninguém conseguir, ganha quem completou **mais degraus**. O número de rodadas é definido depois de testar o jogo.
+- **Sem eliminação:** se faltar dinheiro, o jogador pega um **socorro de emergência** (ganha verba, mas perde tecnologia ou verba futura).
+- **Curva:** os degraus escalam sozinhos. O primeiro é barato e seguro, o último é caro e arriscado, e o custo de falhar sobe junto.
 
-1. **Prédios com upgrade + tecnologia como número + peças bloqueadas por nível** (seções 5 e 6).
-2. **Voo com eventos ligados às casas** (seção 7).
+## 9. Prioridades
+O foco agora é **fazer o jogo fazer sentido**. Acabamento, tutorial, modo solo, tempo de partida e camada educativa extra vêm depois de o jogo estar pronto e testado.
 
-Depois, se sobrar tempo: degraus com bônus e dados de falha (seção 8).
+O time já tem uma base jogável (tabuleiro, oficina, simulação, 3 missões). Ordem de prioridade:
 
-O resto vai como **roadmap** na submissão.
+1. **Tensão central fechada** (lançar vs esperar, com a corrida visível como custo de esperar).
+2. **Loop de turno claro** (o que o jogador faz, em ordem).
+3. **Trade-offs da nave** funcionando e visíveis na tela.
+4. **Degraus, bônus e dados de falha** (seção 8).
+5. **Contratos entre jogadores** (seção 4).
+6. O resto (prédios e tecnologia mais elaborados, voo com eventos detalhados) conforme sobra tempo.
+
+### Teste de coerência
+| Sistema | Muda a decisão "lanço agora ou espero"? |
+|---|---|
+| Tecnologia e laboratório | Sim: dá motivo para esperar |
+| Peças bloqueadas por tecnologia | Sim: reforça o motivo para esperar |
+| Degraus com bônus | Sim: dá motivo para lançar cedo |
+| Dados de falha | Sim: torna lançar cedo menos punitivo |
+| Corrida visível | Sim: é o custo de esperar |
+| Eventos no voo | Sim: risco de lançar |
+| Contratos | Sim: ajudam ou atrapalham o prazo de alguém |
+| Casas de dinheiro nerfadas | Sim: tentação com custo |
+| Espionagem, facções, árvore Civ | Não: roadmap |
 
 ## 10. Roadmap (depois do prazo)
 - Árvore de tecnologia com ramos (estilo Civ)
@@ -142,7 +179,8 @@ O resto vai como **roadmap** na submissão.
 - **Tom:** focar em ciência e engenharia, sem glorificar o conflito da Guerra Fria.
 
 ## 12. Perguntas em aberto
-- Quais itens da seção 9 vamos fazer até o prazo?
+- Quanto tempo dura uma partida e quantas rodadas é o limite? (definir depois de testar)
+- Modo solo (contra bots ou contra a meta) e tutorial: como será? (depois do jogo pronto)
 - Quantos níveis tem cada prédio e quanto custa cada upgrade?
 - Revenda de peças: como funciona exatamente?
 - O voo tem quantos turnos em cada missão?
