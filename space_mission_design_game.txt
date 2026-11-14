@@ -1,0 +1,1021 @@
+=================================================================
+NASA SPACE APPS CHALLENGE 2026
+Challenge: SPACE MISSION DESIGN GAME
+Fonte: https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game/
+Capturado em: 2026-11-14
+=================================================================
+
+-----------------------------------------------------------------
+1. METADADOS DO DESAFIO
+-----------------------------------------------------------------
+Evento: 2026 NASA Space Apps Challenge
+Dificuldade: Intermediate / Beginner-Youth
+Assunto (Subjects): Games
+Link para entrar no desafio: https://www.spaceappschallenge.org/2026/challenges/space-mission-design-game//?tab=teams
+
+Abas da página: Details | Resources | Teams
+
+-----------------------------------------------------------------
+2. RESUMO DO DESAFIO
+-----------------------------------------------------------------
+Projetar uma missão espacial exige lidar com demandas concorrentes: objetivos da
+missão, design da espaçonave, instrumentos científicos, veículos de lançamento,
+orçamento, energia, massa, comunicações e restrições orbitais. Para estudantes
+que raramente experimentam uma missão completa (do conceito à operação), esses
+trade-offs permanecem abstratos.
+
+O desafio: criar um jogo interativo que permita aos participantes projetar,
+gerenciar e simular uma missão espacial completa, tomando decisões de
+engenharia, administrando recursos limitados e avaliando como cada escolha
+afeta o sucesso da missão.
+
+-----------------------------------------------------------------
+3. BACKGROUND (CONTEXTO)
+-----------------------------------------------------------------
+Missões espaciais são sistemas complexos nos quais objetivos científicos,
+requisitos de engenharia, recursos disponíveis e restrições operacionais devem
+funcionar juntos. Projetar uma missão envolve decisões sobre espaçonave,
+instrumentos científicos, veículo de lançamento, órbita, energia, massa,
+comunicações, orçamento e tempo de vida da missão. Uma decisão que melhora um
+aspecto pode criar limitações em outro (ex.: um instrumento mais capaz aumenta
+o valor científico, mas também aumenta massa, consumo de energia, volume de
+dados e custo).
+
+Aprender design de missões espaciais costuma ficar restrito a exercícios
+teóricos, pois estudantes e aspirantes a engenheiros raramente têm acesso a um
+ambiente para experimentar uma missão completa, do conceito à operação.
+Ferramentas existentes geralmente focam em tópicos isolados (mecânica
+orbital, design de espaçonave, lançamentos de foguetes) sem mostrar como esses
+elementos interagem como um sistema completo. Isso deixa uma lacuna entre
+aprender conceitos espaciais isolados e entender como equipes de missão tomam
+decisões de engenharia integradas.
+
+Um jogo interativo pode ajudar a preencher essa lacuna, permitindo que os
+participantes experimentem, tomem decisões, encontrem restrições e aprendam
+com missões bem e malsucedidas. Jogadores podem projetar missões
+individualmente ou colaborar em equipes de até 4 pessoas, cada participante
+contribuindo para a estratégia da missão. Abordagens possíveis: planejamento
+de missão, configuração de espaçonave, seleção de instrumentos, gestão de
+recursos, seleção orbital, planejamento de lançamento, comunicações e
+simulação de missão. Alternativas criativas são encorajadas, desde que
+preservem os trade-offs fundamentais do design real de missões espaciais.
+
+-----------------------------------------------------------------
+4. OBJETIVOS
+-----------------------------------------------------------------
+Criar um "Space Mission Design Game" interativo que permita aos participantes
+vivenciar o processo de projetar e gerenciar uma missão espacial completa.
+Pode permitir jogo individual ou em equipe de até 4 pessoas, trabalhando juntos
+para tomar decisões estratégicas e alcançar o melhor desempenho de missão
+possível.
+
+O jogo poderia permitir:
+- Definir um objetivo de missão
+- Estabelecer requisitos de missão
+- Projetar uma espaçonave
+- Selecionar instrumentos científicos
+- Escolher veículo de lançamento e órbita
+- Gerenciar restrições-chave: orçamento, massa, energia, comunicações, dados e
+  tempo de vida da missão
+
+Os jogadores devem perceber como suas decisões afetam outras partes da missão
+e entender os trade-offs do design real de missões espaciais.
+
+Uma solução forte pode incluir:
+- Jogo/simulação interativa funcional com interface de usuário clara
+- Sistema de configuração de missão
+- Mecanismos de gestão de recursos
+- Funcionalidade de colaboração/multiplayer para até 4 participantes
+- Sistema de simulação e avaliação de missão
+- Feedback sobre desempenho da missão, recompensando decisões de engenharia
+  eficazes, gestão eficiente de recursos, colaboração bem-sucedida e alcance
+  dos objetivos da missão
+
+Participantes são encorajados a criar mecânicas de jogo, visualizações,
+sistemas de pontuação e cenários de missão criativos.
+
+-----------------------------------------------------------------
+5. CONSIDERAÇÕES POTENCIAIS (OPCIONAIS)
+-----------------------------------------------------------------
+
+5.1 Design de jogo e experiência
+- Acessível a participantes com diferentes níveis de conhecimento em ciência
+  e engenharia espacial
+- Suporte a modo single-player e em equipe (até 4 participantes)
+- Membros da equipe podem ter responsabilidades diferentes: planejamento de
+  missão, design de espaçonave, ciência, comunicações, gestão de recursos
+- Objetivos e feedback claros, ajudando a entender por que a missão teve
+  sucesso ou falhou
+- Jogo interativo, permitindo modificar o design da missão e simular várias
+  vezes
+- Sistema de pontuação recompensando sucesso da missão, valor científico, uso
+  eficiente de recursos e boa tomada de decisão
+- Diferentes níveis de dificuldade, tipos de missão ou cenários
+
+5.2 Design de missão
+- Participantes começam definindo um objetivo de missão antes das decisões de
+  espaçonave e engenharia
+- Toda decisão de design importante deve ter uma consequência (ex.: mais
+  instrumentos = mais capacidade científica, mas também mais massa, energia,
+  custo e dados)
+- Demonstrar que raramente existe uma única solução perfeita — diferentes
+  combinações de espaçonave, instrumentos, órbitas e veículos de lançamento
+  podem atingir o mesmo objetivo
+- Incluir restrições realistas: orçamento limitado, massa da espaçonave,
+  energia disponível, capacidade de comunicação e tempo de vida da missão
+
+5.3 Espaçonave e payload
+- Componentes da espaçonave: estrutura, sistemas de energia, baterias,
+  comunicações, computadores de bordo, controle de atitude e instrumentos
+  científicos
+- Instrumentos científicos com características diferentes: massa, consumo de
+  energia, custo, geração de dados e valor científico
+- Permitir escolher entre componentes simples e avançados conforme o nível de
+  dificuldade
+
+5.4 Órbita e lançamento
+- Oferecer várias opções orbitais e explicar suas características básicas
+- Mostrar como a órbita escolhida afeta cobertura, oportunidades de
+  observação, comunicações, tempo de vida da missão, etc.
+- Veículos de lançamento com diferentes capacidades de carga, custos e
+  capacidades orbitais
+- Verificar compatibilidade entre massa da espaçonave, órbita escolhida e
+  veículo de lançamento
+
+5.5 Gestão de recursos
+Principais recursos sugeridos:
+- Massa: massa total da espaçonave e payload
+- Energia (Power): energia disponível para operar sistemas e instrumentos
+- Orçamento (Budget): recursos financeiros para desenvolver e operar a missão
+- Dados (Data): quantidade de informação gerada pelos instrumentos
+- Comunicações: capacidade da espaçonave de transmitir dados às estações
+  terrestres
+- Tempo (Time): tempo planejado de desenvolvimento e vida operacional da
+  missão
+(Considerar quais recursos são mais críticos para a missão específica)
+
+5.6 Colaboração
+- Até 4 participantes no modo em equipe
+- Membros com papéis/responsabilidades diferentes, decidindo coletivamente
+- Situações em que a equipe precisa negociar prioridades concorrentes
+- O resultado final da missão pode depender de quão bem a equipe coordena suas
+  decisões
+
+5.7 Valor educacional
+- Conceitos científicos e de engenharia explicados em termos simples
+- Conceitos complexos (altitude orbital, capacidade de carga, consumo de
+  energia, taxa de dados, comunicações) introduzidos pelo próprio jogo
+- Incluir explicações curtas, tutoriais, indicadores visuais ou recursos de
+  aprendizagem opcionais
+- Ensinar por que uma decisão afeta o desempenho da missão, não apenas indicar
+  se está certa ou errada
+
+5.8 Outras features possíveis
+- Múltiplos cenários de missão com objetivos diferentes
+- Eventos aleatórios ou restrições inesperadas
+- Diferentes níveis de dificuldade
+- Modelos de espaçonave realistas ou simplificados
+- Visualizações interativas de espaçonaves
+- Dashboards de missão mostrando consumo de recursos em tempo real
+- Leaderboards ou rankings de missão
+- Relatórios de missão gerados ao final de cada simulação
+- Capacidade de salvar, compartilhar e comparar designs de missão
+- Missões cooperativas para equipes de até 4 participantes
+- Cenários competitivos (equipes diferentes projetando missões para o mesmo
+  objetivo)
+- Modo sandbox, sem restrições predefinidas
+- Análise pós-missão explicando por que a missão teve sucesso ou falhou
+
+Nota da página: "Para dados e recursos relacionados a este desafio, consulte a
+aba Resources no topo da página. Mais recursos podem ser adicionados antes do
+hackathon começar."
+
+=================================================================
+6. ABA "RESOURCES" — RECURSOS OFICIAIS DA NASA E PARCEIROS
+=================================================================
+Aviso legal da NASA (presente na aba): A NASA não endossa nenhuma entidade
+não-governamental dos EUA e não é responsável por informações contidas em
+sites não-governamentais dos EUA. Para esses sites, os participantes devem
+cumprir quaisquer parâmetros de uso de dados daquele site específico.
+
+-----------------------------------------------------------------
+6.1 NASA DATA & RESOURCES
+-----------------------------------------------------------------
+
+[1] Design and Develop Science Missions (PDF)
+URL: https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf?emrc=a454cf
+Descrição: Visão geral da abordagem de engenharia de sistemas usada para
+desenvolver missões científicas espaciais. Explica como uma missão progride
+de uma necessidade científica inicial até a definição de requisitos, design,
+verificação e implementação. Identifica quatro segmentos principais de missão:
+  - Launch segment: veículo de lançamento e serviços necessários para colocar
+    a missão no espaço.
+  - Space segment: espaçonave, instrumentos, orbitadores, landers ou rovers
+    usados para conduzir a missão.
+  - Ground segment: estações terrestres e instalações de controle de missão
+    responsáveis por comunicação, recepção de dados e gestão da missão.
+  - User segment: cientistas e outros usuários que analisam e aplicam os
+    dados da missão.
+
+[2] General Mission Analysis Tool (GMAT)
+URL: https://software.nasa.gov/software/GSC-19468-1
+Descrição: Software de código aberto, de nível empresarial, desenvolvido para
+apoiar design, análise, otimização e navegação de missões espaciais.
+Desenvolvido em colaboração entre NASA, indústria privada, academia e outros
+contribuidores. Oferece ambiente abrangente para modelar e analisar
+trajetórias de espaçonaves em diversos cenários: órbita baixa da Terra,
+órbitas geoestacionárias e altamente elípticas, missões lunares, trajetórias
+em pontos de libração, transferências interplanetárias e exploração de espaço
+profundo.
+Permite modelar espaçonaves, sistemas de propulsão, trajetórias, manobras e
+outros componentes de missão usando modelos físicos de alta fidelidade. Usos:
+propagação de órbita, otimização de trajetória, determinação de órbita,
+simulação de dados de navegação, análise de janelas de lançamento,
+planejamento de manobras e avaliação de cenários/trade-offs de engenharia.
+Também oferece visualização de parâmetros de missão via gráficos, relatórios
+e outras saídas analíticas.
+
+[3] Concept Maturity Levels (CMLs)
+URL: https://dataverse.jpl.nasa.gov/dataset.xhtml?persistentId=hdl:2014/44299
+Descrição: Artigo que apresenta os CMLs, um framework desenvolvido pelo Jet
+Propulsion Laboratory (JPL) da NASA para medir e desenvolver progressivamente
+a maturidade de um conceito de missão espacial antes de entrar na formulação
+formal do projeto. O framework divide o desenvolvimento da missão em estágios,
+de CML 1 (ideia inicial de missão) até níveis cada vez mais detalhados
+envolvendo análise de viabilidade, estudos de trade-off, "point design",
+planejamento de implementação e engenharia detalhada. O artigo foca
+principalmente em CML 1–4, onde são tomadas as maiores decisões de design.
+
+[4] Mission Design Lab (MDL)
+URL: https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/
+Descrição: Ambiente colaborativo da NASA onde engenheiros e cientistas
+desenvolvem e avaliam rapidamente conceitos de missão espacial, transformando
+uma ideia inicial em um design de missão tecnicamente avaliado. O MDL usa
+diferentes níveis de estudo conforme a maturidade do conceito:
+  - Office Hours: brainstorming rápido e identificação dos principais desafios.
+  - Concept Development: avaliação de viabilidade e risco.
+  - Trade Studies: comparação de diferentes arquiteturas e opções de design de
+    missão.
+  - Point Design: design mais detalhado, incluindo modelos CAD, listas de
+    equipamentos, modelos de engenharia e estimativas de custo.
+Considera a missão completa: órbita e trajetória, espaçonave, comunicações,
+sistemas terrestres, veículo de lançamento, operações de missão e
+planejamento de fim de missão. Também analisa disciplinas-chave: energia,
+propulsão, térmica, estruturas, aviônica, comunicações, controle de atitude,
+software, confiabilidade, custo e risco.
+
+[5] NASA Mission Viz
+URL: https://nasa.github.io/mission-viz/
+Descrição: Ambiente de visualização interativo, baseado na web, projetado para
+representar e explorar conceitos de missão espacial e trajetórias. Apresenta
+uma representação tridimensional do ambiente espacial, na qual corpos
+celestes, espaçonaves e trajetórias de missão podem ser examinados
+visualmente. Permite explorar características espaciais e temporais de uma
+missão, incluindo o movimento da espaçonave ao longo de trajetórias
+predefinidas e suas relações com corpos celestes relevantes. Útil para design
+de missões espaciais e educação, pois comunica conceitos de órbita,
+posicionamento de espaçonave, corpos celestes e eventos de missão de forma
+visual e intuitiva.
+
+[6] A Learning Game About Telescopes
+URL: https://science.nasa.gov/mission/webb/game-build-it-yourself/
+Descrição: Simulação educacional em que o usuário assume o papel de um
+cientista responsável por projetar um telescópio espacial. Demonstra como
+objetivos científicos determinam as características de engenharia de uma
+missão espacial. O jogador seleciona objetivos científicos que o satélite
+deve investigar e, com base neles, deve selecionar comprimentos de onda,
+instrumentos científicos e sistemas ópticos apropriados (opções restritas:
+algumas ficam indisponíveis quando incompatíveis cientificamente/
+tecnologicamente com os objetivos escolhidos). O jogo tem três níveis de
+complexidade crescente; em níveis mais altos o jogador pode selecionar
+múltiplos objetivos científicos e correspondentes comprimentos de onda,
+instrumentos e configurações ópticas — introduzindo a ideia de que missões
+mais ambiciosas exigem decisões de engenharia mais complexas e coordenadas.
+Após o design, o jogador "lança" o satélite via sequência animada e o jogo
+apresenta a configuração resultante, resultados científicos baseados no
+design, e identifica missões reais da NASA com características semelhantes.
+
+[7] Cubesat 101 - Basic Concepts and Processes for First-Time CubeSat Developers (PDF)
+URL: https://www3.nasa.gov/sites/default/files/atoms/files/nasa_csli_cubesat_101_508.pdf
+Descrição: Documento criado para desenvolvedores de missões CubeSat
+(principalmente CSLI). Guia abrangente com conceitos básicos de cada fase de
+uma missão CubeSat, do ConOps ao lançamento e operação.
+
+[8] Visualize a Space Mission Using Virtual Reality (desafio Space Apps 2023)
+URL: https://www.spaceappschallenge.org/2023/challenges/visualize-a-space-mission-using-virtual-reality/
+Descrição: Desafio do NASA Space Apps Challenge de 2023, focado em tornar
+missões espaciais complexas mais fáceis de entender por meio de realidade
+virtual (VR) interativa. Classificado como adequado para beginners/youth,
+intermediários e avançados, com foco em jogos, software, exploração espacial
+e planetas/lua.
+O desafio pedia o desenvolvimento de uma aplicação VR interativa capaz de
+visualizar uma missão espacial completa, incluindo:
+  - Mission concept: o que a espaçonave pretende realizar.
+  - Orbital trajectories: como a espaçonave viaja pelo espaço (órbita
+    terrestre, transferências Terra-Lua, órbitas planetárias ou trajetórias
+    de espaço profundo).
+  - Mission timeline: sequência e tempo dos principais eventos e operações
+    da missão.
+  - Three-dimensional visualization: permitindo explorar e entender melhor as
+    relações espaciais e a dinâmica da missão.
+
+-----------------------------------------------------------------
+6.2 SPACE AGENCY PARTNER RESOURCES
+-----------------------------------------------------------------
+
+[9] CSA (Canadian Space Agency) — Digital Games and Activities
+URL: https://www.asc-csa.gc.ca/eng/youth-educators/digital-games-and-activities.asp
+Descrição: Coleção da CSA de jogos digitais, e-books, vídeos e atividades
+práticas, projetada para aprendizes de todas as idades. Recursos interativos
+que tornam a ciência e exploração espacial acessíveis, engajantes e
+divertidas, destacando o papel do Canadá no espaço.
+
+=================================================================
+7. RODAPÉ / CRÉDITOS DA PÁGINA
+=================================================================
+NASA Space Apps é financiado pelo NASA's Science Mission Directorate
+(https://science.nasa.gov/) através de contrato com:
+- Booz Allen Hamilton — https://www.boozallen.com/
+- Mindgrub — https://www.mindgrub.com/
+- SecondMuse — https://www.secondmuse.com/
+
+Copyright © 2026 NASA
+Privacy Policy: https://www.nasa.gov/about/highlights/HP_Privacy.html
+Legal: https://www.spaceappschallenge.org/legal/
+Contact: https://www.spaceappschallenge.org/contact-us/
+Resources (geral do site): https://www.spaceappschallenge.org/resources/
+  - Participant FAQs: https://www.spaceappschallenge.org/resources/participant-faqs/
+  - Participant Guides: https://www.spaceappschallenge.org/resources/
+
+Redes sociais (#SpaceApps):
+- Facebook: https://www.facebook.com/spaceappschallenge
+- Twitter/X: https://www.twitter.com/spaceapps
+- Instagram: https://www.instagram.com/nasa_spaceapps
+- YouTube: https://www.youtube.com/nasaspaceappschallenge
+
+Comunidade / dúvidas: Space Apps Connect — https://github.com/nasa/spaceapps
+
+=================================================================
+8. ABA "TEAMS" — DIRETÓRIO DE EQUIPES DESTE DESAFIO
+=================================================================
+Correção em relação à primeira versão deste documento: a aba Teams NÃO é só
+uma tela de conta — é um diretório público/buscável de equipes especificamente
+formadas para o desafio "Space Mission Design Game".
+
+8.1 Estrutura da aba
+- Botão "Create a Team" (criar uma equipe nova para este desafio)
+- Barra de busca: "Search for teams in this challenge"
+- Filtros disponíveis:
+  • Local Event (evento local do participante)
+  • Looking For Members (só equipes buscando integrantes) — ativo por padrão
+  • Desired Skills (habilidades desejadas pela equipe) — lista extensa, entre
+    outras: Agriculture, Animation, Artificial Intelligence & Machine
+    Learning, Arts & Multimedia, Astrophysics, Business & Economics, Coding,
+    Data Analysis, Data Management, Data Visualization, Design, Disaster
+    Response, Earth Orbit, Earth Science, Education, Ergonomics & Human
+    Factors, Extrasolar Objects, Flora & Fauna, Forecasting, Games, Graphic
+    Design, Habitats, Hardware, Human Exploration, Manmade Satellites, Mars,
+    Moon, Planets & Moons, Pollution, Satellites, Software, Space
+    Exploration, Space Weather, Statistics, Storytelling, Sun,
+    Videography/Photography, Virtual Reality, Waste & Resources, Weather,
+    Web Development, Writing & Communications
+  • Languages Spoken — lista extensa de idiomas (Albanian, Arabic, Armenian,
+    Bengali, Bosnian, Bulgarian, Burmese, Chinese, Czech, Danish, Dutch,
+    English, Farsi, Finnish, French, Gaelic, German, Greek, Haitian, Hebrew,
+    Hindi, Hungarian, Icelandic, Indonesian, Italian, Japanese, Korean,
+    Lithuanian, Other, Polish, Portuguese, Russian, Serbian, Sicilian,
+    Spanish, Swahili, Swedish, Tagalog, Tahitian, Thai, Tibetan, Turkish,
+    Ukrainian, Vietnamese, Welsh, Yiddish)
+
+8.2 Volume de dados (no momento da captura, 2026-11-14)
+"Currently returning 2050 teams" — ou seja, 2050 equipes já cadastradas e
+buscando membros só para este desafio.
+
+Cada card de equipe mostra: nome da equipe, status ("Seeking Members"),
+localização (cidade/país ou "Universal Event, Anywhere in the World"),
+challenge ("Space Mission Design Game"), e, quando preenchido pela equipe,
+Desired Skills & Interests e Languages Spoken.
+
+Exemplos reais (primeiras entradas da lista, ordem alfabética/padrão do site):
+  - "00001 Great Team" — Universal Event, Anywhere in the World — skills:
+    Astrophysics, Coding, Games, Graphic Design, Software, Space Exploration,
+    Storytelling — idioma: English
+  - "00-1AstroNova" — Sakhir, Bahrain
+  - "07ZKO" — Universal Event, Anywhere in the World
+  - "0AstroGamers0" — Muğla, Turkey — skills: Animation, AI & Machine
+    Learning, Coding, Design, Earth Orbit, Education, etc. — idiomas:
+    English, Turkish
+  - "0_Play Space_0" — Houston, TX, United States
+  - "10X" — Mysore, India
+  - (e assim por diante, até completar as 2050 equipes retornadas)
+
+8.3 Por que não listei as 2050 equipes inteiras aqui
+É uma lista viva (muda a cada novo cadastro/edição de equipe), com dados de
+outros participantes (não são "recursos do desafio" nem conteúdo oficial da
+NASA) — despejar as 2050 entradas num .txt estático não teria muita utilidade
+prática e ficaria desatualizado rapidamente. Se você quiser, posso:
+  a) extrair a lista completa das 2050 equipes (nome, local, skills, idiomas)
+     em um CSV/txt separado; ou
+  b) filtrar só equipes do Brasil, ou só as que buscam uma skill específica;
+     ou
+  c) só confirmar os dados da sua própria equipe ("The Goats", conforme seu
+     perfil logado).
+Me diga qual opção prefere.
+
+=================================================================
+9. CONTEÚDO COMPLETO DE CADA LINK DE RECURSO (visitado um por um)
+=================================================================
+Acessei cada um dos 9 links listados na seção 6 e documentei o conteúdo real
+de cada página/arquivo (não só a descrição que aparecia na aba Resources).
+
+-----------------------------------------------------------------
+9.1 [Link 1] Design and Develop Science Missions — É UM SLIDE DECK (25 slides)
+URL: https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf?emrc=a454cf
+-----------------------------------------------------------------
+Título: "Design and Develop Science Missions" — Webinar "Access to Space for
+All Systems Engineering Webinar Series", 26 de março de 2025.
+Autora/palestrante: Julie Levri, Flight Systems Engineer (www.nasa.gov/smallsat-institute).
+25 slides no total. Estrutura:
+
+- Slide 1: Capa.
+- Slide 2: "Useful References" — 7 referências, entre elas: NASA System
+  Engineering Handbook (SP-2016-6105 Rev 2), Concept of Operations Outline
+  (Appendix S), NPR 7123.1 (Systems Engineering Processes and Requirements),
+  NPR 7120.5 (Space Flight Program and Project Management Requirements), NPR
+  7120.8 (Research and Technology Program and Project Mgmt Requirements), NPR
+  8705.4 (Risk Classification for NASA Payloads), NASA Science Mission
+  Directorate, System Engineering Curriculum Intro (NTRS 20210021839).
+- Slide 3: "Webinar Overview" — o webinar cobre: que segmentos compõem uma
+  missão científica, que passos/processos são usados para projetar e
+  desenvolver uma missão científica, e exemplos de design de missão científica.
+- Slide 4-5: "What is defined as a science mission?" — Para a NASA, uma
+  missão científica (gerida pela Science Mission Directorate/SMD) é uma
+  missão espacial focada em pesquisa e exploração científica, cobrindo: Earth
+  science, Heliophysics, Planetary science, Astrophysics — com o objetivo de
+  avançar o entendimento científico e beneficiar a humanidade. Inclui
+  infográfico "Science by the Numbers": ~10.000 cientistas financiados, ~3.000
+  prêmios selecionados competitivamente, ~$600M concedidos anualmente em
+  pesquisa; ~$397M investidos anualmente em desenvolvimento tecnológico; 24
+  missões de observação da Terra operando + 23 futuras; 57 missões
+  SmallSats/CubeSats de ciência + 10 demos tecnológicas; 11 missões de foguetes
+  de sondagem lançadas + 43 em desenvolvimento; 134 missões indo da formulação
+  a operações estendidas; 2 missões de balão lançadas + 52 em desenvolvimento.
+- Slide 6: Infográfico "Operating & Future Science Fleet" (créd. "About NASA
+  Science", março 2025) — mapa completo de dezenas de missões científicas
+  ativas/futuras da NASA organizadas por disciplina (Heliophysics, Earth
+  Observations, Planetary, Astrophysics, Biological & Physical), incluindo
+  nomes como Hubble, Webb, Chandra, Roman, Europa Clipper, JUICE, Dragonfly,
+  Parker Solar Probe, Perseverance, Mars Sample Return, etc.
+- Slides 7-9: "What segments make up a science mission?" — define os 4
+  segmentos (iguais aos já citados na seção 6.1 deste documento): Launch,
+  Space, Ground, User.
+- Slide 10: "Big Picture Process to Design & Develop a Space Mission" —
+  fluxo de 6 etapas: Identify Need & Goals → Define Concept → Define
+  Requirements → Design → Build & Verify → Implement.
+- Slides 11-23: Exemplo real completo aplicando cada etapa do processo à
+  missão "BioNutrients" (experimento da ISS sobre produção de nutrientes com
+  leveduras geneticamente modificadas, usando o pacote BioNutrients-2):
+  • Need & Goals: permitir produção rápida, segura e confiável de nutrientes
+    dietéticos usando mínima massa/potência/volume em missões de longa duração.
+    Metas do BioNutrients-2: (1) permitir crescimento de leveduras, (2)
+    produzir beta-caroteno na ISS, (3) reduzir massa e volume vs. BioNutrients-1.
+  • Concept of Operations: segmentos aplicados — Launch (NG-18 até a ISS, bag
+    soft-stowed em temperatura ambiente), Space (experimento na ISS: amostras
+    hidratadas, incubadas, congeladas e devolvidas), Ground (cientistas
+    monitoram em tempo real), User (cientistas processam e analisam amostras
+    congeladas). Fluxo "User Segment" detalhado em 5 passos: Delivery → Thaw →
+    Empty and Wash → Centrifuge → Analyze.
+  • Requirements: requisitos quantitativos reais, ex.: ≥3µg beta-caroteno/mL
+    de amostra retornada; ≥1mg de peso seco de célula por amostra; zero
+    contaminação microbiana; <250g por recipiente de amostra; <300mL de volume
+    total ocupado (comparado ao BioNutrients-1).
+  • Design (Hardware): bag de produção FEP (Fluorinated Ethylene Propylene),
+    fabricante Instant Systems, duas espessuras (3mil para levedura, 5mil para
+    iogurte/kefir), válvula needle-free swabable barb valve, sistema de
+    rotulagem por código de cores indicando espessura e config (built on
+    Earth -001 ou na ISS -002).
+  • Design (Experiment): fotos reais da tripulação na ISS fazendo hidratação,
+    incubação e congelamento das amostras.
+  • Build & Verify: fabricação e esterilização do hardware, carregamento com
+    organismo e meio de cultura, montagem final.
+  • Implement: execução na ISS com cientistas/engenheiros em console durante
+    as operações do experimento, prontos para dúvidas da tripulação ou
+    anomalias.
+- Slides 24-25: "What are examples of a science missions?" — lista de
+  exemplos reais com links: NASA's PUNCH (Polarimeter to Unify the Corona and
+  Heliosphere — constelação de 4 smallsats observando a coroa solar em 3D);
+  PILOT (Plasma Imaging, LOcal measurement, and Tomographic experiment — 34
+  satélites estudando a magnetosfera terrestre); NASA's Dawn Mission (primeira
+  sonda a orbitar dois corpos pequenos: Vesta e Ceres); Mars Moon Sampler
+  (Phobos/Deimos Lunar Lander, classe New Frontiers); Artemis Program (série
+  de missões incluindo Artemis X, logística lunar e permanência de longo
+  prazo de astronautas na Lua). Última slide: "Questions?" com logo NASA e
+  www.nasa.gov/smallsat-institute/.
+
+-----------------------------------------------------------------
+9.2 [Link 2] General Mission Analysis Tool (GMAT)
+URL: https://software.nasa.gov/software/GSC-19468-1
+-----------------------------------------------------------------
+Página: "General Mission Analysis Tool (GMAT) Version R2025a (GSC-19468-1)"
+no NASA Software Catalog.
+Categoria: Design And Integration Tools | Número de referência: GSC-19468-1 |
+Tipo de licença: Open Source | Sistemas operacionais: Windows, Linux, Mac OS.
+Descrição oficial: o GMAT é o único sistema de software open source,
+multi-missão e de nível empresarial do mundo para design, otimização e
+navegação de missões espaciais. Suporta regimes de voo desde órbita baixa da
+Terra até missões lunares, de ponto de libração e de espaço profundo.
+Desenvolvido por equipe de contribuidores da NASA, indústria privada e
+público/privado; usado para suporte real a missões, estudos de engenharia,
+educação e engajamento público.
+Contato: hq-dl-t2-ops-center@mail.nasa.gov
+Botão "Download Now" disponível na página (link de download do instalador).
+
+-----------------------------------------------------------------
+9.3 [Link 3] Concept Maturity Levels (CMLs) — ARTIGO TÉCNICO COMPLETO (17 pág.)
+URL: https://dataverse.jpl.nasa.gov/dataset.xhtml?persistentId=hdl:2014/44299
+-----------------------------------------------------------------
+Dataset no JPL Open Repository (Dataverse), versão 2.0.
+Título do artigo: "Space Mission Concept Development Using Concept Maturity
+Levels"
+Autores: Randii R. Wessen, Chester Borden, John Ziemer, Johnny Kwok — Jet
+Propulsion Laboratory, Caltech, Pasadena, CA 91109.
+Publicado em: AIAA SPACE 2013 Conference & Exposition, San Diego, Califórnia,
+10-12 de setembro de 2013. Arquivo: 13-3547_A1b.pdf (Adobe PDF, 1.4 MB, 17
+páginas, 2.282 downloads registrados).
+
+ABSTRACT (resumo do artigo): Nos últimos cinco anos (à época, pré-2013),
+especialistas em formulação de pré-projetos do JPL desenvolveram e
+implementaram um método para medir e comunicar a maturidade de conceitos de
+missão espacial. Equipes de desenvolvimento de conceito de missão usam esse
+método e ferramentas associadas antes de conceitos entrarem na Fase de
+Formulação (Fase A/B). A estrutura organizadora é o Concept Maturity Level
+(CML), um sistema de classificação para caracterizar os vários níveis de
+maturidade de um conceito. A força principal dos CMLs é a capacidade de
+evoluir conceitos de missão guiados por um conjunto incremental de
+necessidades de avaliação. As definições de CML foram expandidas em uma
+matriz para identificar a amplitude e profundidade de análise necessárias
+para um conceito alcançar um nível específico de maturidade. Essa matriz
+permite avaliação e comunicação aprimoradas, endereçando dimensões
+fundamentais (objetivos científicos, design de missão, risco técnico,
+organização do projeto, custo, conformidade de exportação, etc.) associadas
+à evolução do conceito de missão. O artigo foca nas fases iniciais Pre-Phase
+A, representadas pelos CMLs 1-4 (CMLs 5 e 6 já são bem definidos por
+guidelines de AO/CSR da NASA e pela NPR 7120.5E).
+
+AS 9 CONCEPT MATURITY LEVELS (definição completa, conforme o artigo):
+  CML 1 — Cocktail Napkin: as questões científicas foram bem articuladas, o
+    tipo de observação científica necessária foi proposto, e um esboço de
+    alto nível do conceito de missão e objetivos foi criado. A essência do
+    que torna a ideia única e significativa foi capturada.
+  CML 2 — Initial Feasibility: a ideia é expandida e questionada sob os
+    pontos de vista científico, técnico e programático. Objetivos de nível
+    inferior foram especificados, parâmetros-chave de desempenho
+    quantificados e cálculos básicos realizados (cálculos de primeira ordem
+    para determinar a viabilidade do conceito).
+  CML 3 — Trade Space: exploração feita em torno dos objetivos científicos e
+    trade-offs arquiteturais entre o sistema da espaçonave, sistema terrestre
+    e design de missão, para entender a relação entre retorno científico,
+    custo e risco.
+  CML 4 — Point Design: um design e custo específicos que entregam a ciência
+    desejada foram selecionados dentro do trade space, definidos até o nível
+    dos principais subsistemas com margens e reservas aceitáveis. Trades de
+    subsistemas foram realizados.
+  CML 5 — Baseline Concept: abordagem de implementação definida, incluindo
+    parceiros, modo de contratação, abordagem de integração e teste, custo e
+    cronograma. Nível de maturidade necessário para escrever uma proposta
+    NASA Step 1 (projetos competidos) ou realizar uma Mission Concept Review
+    (projetos designados/assigned).
+  CML 6 — Integrated Concept: detalhes expandidos sobre elementos técnicos,
+    de gestão, custo e outros do conceito de missão foram definidos e
+    documentados. Um NASA Step 2 CSR (Concept Study Report) está nesse nível
+    de maturidade. Não há marco correspondente para projetos assigned.
+  CML 7 — Preliminary Implementation Baseline: requisitos de sistema e
+    subsistema preliminares e análises, margens e reservas demonstradas (e
+    aceitáveis), demonstrações de prototipagem e tecnologia, avaliações de
+    risco e planos de mitigação completados. Nível necessário para missões
+    competidas realizarem sua Preliminary Mission System Review (PMSR) e para
+    projetos assigned realizarem sua Mission Definition Review (MDR).
+  CML 8 — PDR (Integrated Baseline): design e planejamento compatíveis com
+    uma Preliminary Design Review (PDR).
+  CML 9 — CDR: design e planejamento compatíveis com uma Critical Design
+    Review (CDR).
+Conclusão do artigo: essa estrutura, em primeira ordem, é uma construção
+sequencial, desenvolvida para dar estrutura à Pre-Phase A, onde antes não
+existia nenhuma. Permite que arquitetos de missão comuniquem o quanto de
+progresso foi incorporado a um conceito, saibam quanto trabalho de design
+ainda falta para amadurecer um conceito até a Fase A (Concept & Technology
+Phase), e comparem conceitos de missão com níveis comparáveis de esforço de
+design.
+Referências do artigo incluem: NPR 7120.5E, NPR 7120.8 Appendix J (TRLs),
+dois artigos anteriores dos mesmos autores sobre "Measuring the Maturity of
+Robotic Planetary Mission Concepts" (AIAA 2009 e SpaceOps 2010), e um artigo
+sobre "JPL Innovation Foundry" (Acta Astronautica, 2013).
+Licença do arquivo: Creative Commons CC0 1.0 Universal (domínio público).
+
+-----------------------------------------------------------------
+9.4 [Link 4] Mission Design Lab (MDL) — página bem mais detalhada que o resumo
+URL: https://etd.gsfc.nasa.gov/capabilities/integrated-design-center/mission-design-lab/
+-----------------------------------------------------------------
+Página do Goddard Engineering and Technology Directorate (GSFC/NASA).
+
+O que o MDL oferece: ambiente de engenharia colaborativa para desenvolvimento
+de designs de voo espacial e conceitos de arquitetura. Os componentes-chave
+(pessoas, processo, ferramentas e instalação) resultam em uma atmosfera
+dinâmica e responsiva que permite desenvolvimento acelerado de produtos de
+design sob medida para a necessidade do cliente. Os CMLs (definidos pelo JPL,
+ver seção 9.3) servem de ferramenta padronizada para avançar os designs;
+estudos do IDC (Integrated Design Center) podem ser ajustados para apoiar
+maturação de conceito do CML 1 ao CML 4.
+
+Opções de estudo (4 níveis):
+  1. Office Hours — ~1h, sem/baixa preparação. Sessão de brainstorming,
+     identifica "tall poles" (maiores desafios) e estudos de trade-off
+     chave, recomenda próximos passos e ponto de contato para suporte de
+     engenharia inicial.
+  2. Concept Development — alguns meios-dias. Produtos potenciais:
+     viabilidade de conceito, avaliação de risco. Escopo informado pelo CML.
+  3. Tailored Trade Study — duração variável. Produtos potenciais: Concept,
+     ConOps, resumo de recursos, Trade Tree, possível custo ROM (Rough Order
+     of Magnitude).
+  4. Point Design Study — 6 dias. Produtos: CAD, MEL (Master Equipment
+     List), modelos de engenharia, custo CEMA. Critério de entrada: "passar"
+     no checklist de CML.
+
+Capacidades do MDL: design de órbita LEO, GEO, libração, retrógrada, drift
+away, lunar e espaço profundo; missões com espaçonave única, constelações,
+voo em formação ou sistemas distribuídos; desenvolvimento de conceito de
+sistema terrestre (serviços e produtos); acomodações de veículo de
+lançamento; considerações de fim de missão (de-orbit controlado/não
+controlado, reconhecimento e pouso, retorno de amostra, etc.).
+
+Disciplinas de engenharia do MDL (equipe multidisciplinar): Attitude Control,
+Mission Cost, Propulsion, Avionics, Mechanical Designer, Reliability, Flight
+Dynamics, Flight Software, Mechanical Systems, Orbital Debris, Radiation
+Environment, Structural, Communications, Mission Operations, Power Systems,
+Thermal.
+
+Produtos de exemplo do MDL: diagramas de blocos do sistema da espaçonave,
+análise de órbita, análise de sistema de comunicação e solo, acomodações do
+sistema de lançamento, Master Equipment List (MEL) da espaçonave,
+empacotamento mecânico/modelo CAD, modelos 3D de conceito de observatório.
+
+Contato: formulário "Goddard Front Door Connection" para parcerias; formulário
+de "pergunta geral" para dúvidas ao ETD.
+
+-----------------------------------------------------------------
+9.5 [Link 5] NASA Mission Viz — repositório com vários web-apps e tutoriais
+URL: https://nasa.github.io/mission-viz/
+-----------------------------------------------------------------
+Título da página: "Mission Visualization" — repositório "Web-based Space
+Mission Visualization (WSMV)" (github.com/nasa/mission-viz).
+Contém demonstrações de Orrery (modelo do sistema solar) e tutoriais para
+representar trajetórias orbitais.
+
+Web-Apps disponíveis:
+  1. Ontology-based Orrery — página HTML com modelo 3D embutido do sistema
+     solar, com parâmetros orbitais keplerianos expressos como classe de
+     órbita a partir de uma "Space Situational Awareness Ontology". Criado
+     com a biblioteca JavaScript X3DOM.
+  2. Orrery and orbital parameters table — página HTML gerada em R, com
+     modelo 3D do sistema solar e tabela de parâmetros orbitais planetários.
+  3. Orrery with Potentially Hazardous Asteroids — página HTML com modelo 3D
+     interativo e animado dos planetas internos + 50 asteroides
+     potencialmente perigosos (PHA). Criado com X3DOM; implementa um
+     propagador orbital original baseado no livro "Orbital Mechanics, Theory
+     and Applications" de Tom Logsdon.
+  4. Earth Moon Mission Visualization — página HTML com modelo 3D animado e
+     interativo de uma espaçonave se movendo de uma órbita terrestre para
+     uma órbita lunar. Também feito com X3DOM.
+
+Tutoriais disponíveis:
+  a. How to design a 3D elliptical orbit — página HTML gerada em R com
+     modelos 3D interativos de órbitas elípticas; explica como transformar
+     uma elipse 2D em órbita 3D e implementar um propagador orbital.
+  b. Web-based Space Mission Visualization Tutorial Series — página com
+     links para tutoriais em PDF e as demonstrações interativas acima.
+  c. Importing data into an ontology and exporting JSON-LD — apresentação
+     explicando como importar dados do Excel para uma ontologia no Protégé.
+  d. Generate a table and 3D plot using R.
+  e. A vision for a community developed web-based orrery.
+
+Seção "Ontology": link para a "Space Situational Awareness Ontology"
+desenvolvida por Robert Rovetto, e para o artigo "An Ontology-Based Virtual
+Orrery".
+
+-----------------------------------------------------------------
+9.6 [Link 6] A Learning Game About Telescopes ("Build It Yourself")
+URL: https://science.nasa.gov/mission/webb/game-build-it-yourself/
+-----------------------------------------------------------------
+Página do site science.nasa.gov (seção Webb Telescope).
+Título do jogo: "Build It Yourself: Satellite!" (aprovado pela revisão de
+produtos educacionais da NASA em 2013).
+Descrição: ensina que requisitos científicos direcionam o design e a
+engenharia da missão de um telescópio. O jogador escolhe que ciência seu
+satélite vai estudar, e então decide quais comprimentos de onda, instrumentos
+e ópticas vão ajudar a aprender mais sobre a ciência escolhida. Após lançar
+o satélite, o jogador vê sua aparência final e descobre qual missão real da
+NASA tem dados parecidos com a que ele criou. Cobre missões astronômicas
+reais desde os anos 1980 até hoje.
+
+Dicas de jogo ("Playing Hints"): considerar quais tópicos científicos e
+comprimentos de onda são complementares; o número de opções disponíveis é
+limitado; opções acinzentadas/indisponíveis indicam escolhas cientificamente
+ou tecnologicamente inviáveis; dá pra mudar escolhas até o lançamento usando
+botões voltar/avançar; combinar coisas incompatíveis pode resultar numa
+"bagunça" de satélite; recomenda começar pelo Nível 1 (missão menor) e
+evoluir até o Nível 3 (missões maiores).
+
+Requisitos de tela: mínimo 1024x768, feito para tablets/laptops/desktops,
+geralmente não compatível com celular (exceto telas grandes, em paisagem,
+com scroll).
+Acessibilidade: o jogo em si não tem acessibilidade embutida, mas possui um
+transcript completo com o fluxo e todas as informações do jogo.
+Seções do transcript: "Satellite Options", "Level 1/2/3 Science Results",
+"Information For Educators" (o jogo foi aprovado pela revisão educacional da
+NASA em 2013).
+Outro jogo relacionado sugerido na página: "Scope It Out" — ensina conceitos
+básicos de design de telescópios (o telescópio Webb tem muito em comum com
+telescópios tubulares simples); inclui introdução a tipos de telescópios e
+duas interações de "matching" de telescópios.
+
+-----------------------------------------------------------------
+9.7 [Link 7] Cubesat 101 — MANUAL TÉCNICO DE 96 PÁGINAS (não é slide, é manual)
+URL: https://www3.nasa.gov/sites/default/files/atoms/files/nasa_csli_cubesat_101_508.pdf
+-----------------------------------------------------------------
+IMPORTANTE: diferente do item 9.1, este NÃO é um slide deck — é um manual/
+guia técnico extenso de 96 páginas. Dado o tamanho, documentei a estrutura
+completa (sumário) e o conteúdo integral da introdução; os demais capítulos
+estão resumidos pelo próprio título das seções (auto-explicativos) em vez de
+transcritos página por página.
+
+Título completo: "CubeSat 101: Basic Concepts and Processes for First-Time
+CubeSat Developers"
+Publicado por: NASA CubeSat Launch Initiative (CSLI) — "For Public Release",
+revisão datada de outubro de 2017.
+Produzido sob contrato pela: California Polytechnic State University, San
+Luis Obispo (Cal Poly) CubeSat Systems Engineer Lab.
+Mais informações: http://go.nasa.gov/CubeSat_initiative
+
+SUMÁRIO COMPLETO (96 páginas):
+  Acknowledgments .......................................... ii
+  1. Introduction ........................................... 1
+     1.1 CubeSats
+     1.2 CubeSat Dispenser Systems
+         1.2.1 3U Dispensers
+         1.2.2 6U Dispensers
+     1.3 Launch Vehicles (LVs) — aka: Rockets
+  2. [Ciclo de vida/processo de missão CubeSat, com cronogramas estimados]
+     2.4 CubeSat Design (1-6 months) ........................ 15
+     2.5 Development and Submittal of Proposal in Response to CSLI Call
+         (3-4 months) ....................................... 17
+     2.6 Selection and Manifesting (1-36 months) .............. 18
+     2.7 Mission Coordination (9-18 months) .................. 19
+     2.8 Regulatory Licensing (4-6 months) ................... 20
+     2.9 Flight-Specific Documentation Development and Submittal
+         (10-12 months) ..................................... 21
+     2.10 Ground Station Design, Development, and Testing
+          (2-12 months) ..................................... 22
+     2.11 CubeSat Hardware Fabrication and Testing (2-12 months) 23
+     2.12 Mission Readiness Reviews (Half-Day) ................ 25
+     2.13 CubeSat-to-Dispenser Integration and Testing (2 days) 26
+     2.14 Dispenser-to-Launch Vehicle Integration (1 day) ...... 27
+     2.15 Launch (1 day) ...................................... 28
+     2.16 Mission Operations (variable, up to 20 years) ........ 29
+  3. Mission Models .......................................... 31
+     3.1 NASA-Procured Launch Vehicle Mission Model ............ 32
+     3.2 Operationally Responsive Space (ORS) Rideshare Mission Model . 34
+     3.3 National Reconnaissance Office (NRO) Rideshare Mission Model . 35
+  4. Requirement Sources for Launch ........................... 39
+     4.1 Mission-Specific Interface Control Documents (ICDs) .... 40
+     4.2 Launch Services Program (LSP) — Program-Level Requirements . 40
+     4.3 CubeSat Design Specifications (CDS) .................. 40
+     4.4 Dispenser Standards/Specifications ................... 41
+     4.5 Federal Statutes ..................................... 41
+     4.6 Range Safety Requirements ............................ 42
+  5. Licensing Procedures .................................... 43
+     5.1 Radio Frequency (RF) Licensing ....................... 43
+     5.2 Remote Sensing ....................................... 51
+  6. Flight Certification Documentation ...................... 53
+     6.1 Orbital Debris Mitigation Compliance .................. 54
+     6.2 Transmitter Surveys ................................... 55
+     6.3 Materials List ....................................... 55
+     6.4 Mass Properties Report ............................... 56
+     6.5 Battery Report ....................................... 57
+     6.6 Dimensional Verifications ............................ 57
+     6.7 Electrical Report .................................... 58
+     6.8 Venting Analysis ..................................... 58
+     [... 6.9, 6.10 ...]
+     6.11 Safety Package Inputs (e.g., Missile System Prelaunch Safety
+          Package, Flight Safety Panel) ...................... 64
+  Appendices ............................................... 65
+     A. List of Abbreviations ................................ 65
+     B. Glossary ............................................. 66
+     C. Templates ............................................ 69
+        1. ODAR Inputs ........................................ 69
+        2. CubeSat Components ODAR Template .................... 71
+        3. Transmitter Survey .................................. 72
+        4. Materials List ...................................... 74
+        5. Compliance Letter ................................... 77
+        6. CubeSat Acceptance Checklists ....................... 79
+     D. Technical Reference Documents for CubeSat Requirements .. 84
+     E. Notional Timeline of Events/Deliverables ................ 85
+
+CONTEÚDO INTEGRAL DO CAPÍTULO 1 (Introduction, texto real do documento):
+"How do you start a CubeSat project? As popular as CubeSats have become,
+it's surprising how little information is out there to help someone just
+entering the field. That's why this document was created—to lay out
+everything you need to take a great CubeSat idea and make it into an actual
+spacecraft that is launched into orbit. If you've been involved in the
+CubeSat world for a while, this guide will be a good reference for anything
+on which you might need a refresher. However, this guide is written for
+first-time CubeSat developers, and especially for CubeSats being developed
+at educational institutions. So, if this is your first foray into CubeSats,
+you'll want to read through carefully to get an idea of the scope and the
+amount of work this project will require."
+
+Histórico (também no Capítulo 1): os CubeSats começaram como um esforço
+colaborativo em 1999 entre Jordi Puig-Suari, professor da California
+Polytechnic State University (Cal Poly), e Bob Twiggs, professor do Space
+Systems Development Laboratory (SSDL) da Stanford University. A intenção
+original do projeto era prover acesso econômico ao espaço para a comunidade
+científica universitária — e teve sucesso: hoje muitas grandes universidades
+têm programas espaciais próprios, e não só elas: escolas de ensino médio,
+fundamental e até primário já iniciaram seus próprios programas CubeSat.
+
+Resumo do restante dos capítulos (pelos títulos de seção, auto-explicativos):
+- Cap. 1 também define o que é um CubeSat, os sistemas "dispenser" (3U e 6U)
+  que ejetam o CubeSat do veículo de lançamento, e os veículos de lançamento
+  (foguetes) usados.
+- Cap. 2 é o maior: detalha cada fase do ciclo de vida de uma missão CubeSat
+  do CSLI, com estimativas de duração (de meses a ~20 anos de operação),
+  cobrindo design, proposta, seleção, coordenação de missão, licenciamento
+  regulatório, documentação de voo, estação terrestre, fabricação/teste de
+  hardware, revisões de prontidão, integração com dispenser e veículo de
+  lançamento, o lançamento em si, e operações da missão.
+- Cap. 3 descreve os 3 modelos de missão possíveis: lançamento procurado pela
+  NASA, rideshare via Operationally Responsive Space (ORS), e rideshare via
+  National Reconnaissance Office (NRO).
+- Cap. 4 lista as fontes de requisitos para lançamento (ICDs, requisitos do
+  Launch Services Program, especificações de design do CubeSat, padrões de
+  dispenser, estatutos federais, requisitos de segurança de range).
+- Cap. 5 detalha os procedimentos de licenciamento: Radio Frequency (RF) —
+  a maior subseção do documento (páginas 43-51) — e Remote Sensing.
+- Cap. 6 detalha a documentação de certificação de voo exigida: mitigação de
+  detritos orbitais, pesquisas de transmissor, lista de materiais, relatório
+  de propriedades de massa, relatório de bateria, verificações dimensionais,
+  relatório elétrico, análise de ventilação, e inputs de pacote de segurança
+  (ex.: Missile System Prelaunch Safety Package, Flight Safety Panel).
+- Apêndices: lista de abreviações, glossário, 6 templates prontos para uso
+  (ODAR inputs, ODAR de componentes CubeSat, pesquisa de transmissor, lista
+  de materiais, carta de conformidade, checklists de aceitação), documentos
+  de referência técnica, e um cronograma nocional (notional timeline) de
+  eventos e entregáveis de ponta a ponta do projeto.
+
+Se quiser o conteúdo verbatim de algum capítulo específico (ex: Cap. 2 inteiro,
+ou o glossário), me avise — abro e transcrevo essa parte específica.
+
+-----------------------------------------------------------------
+9.8 [Link 8] Visualize a Space Mission Using Virtual Reality (Space Apps 2023)
+URL: https://www.spaceappschallenge.org/2023/challenges/visualize-a-space-mission-using-virtual-reality/
+-----------------------------------------------------------------
+Esse é outro desafio do Space Apps (edição 2023), com estrutura de abas igual
+à do desafio atual (Details/Resources/Teams). Documentei as duas abas.
+
+ABA DETAILS:
+Dificuldade: Advanced / Intermediate / Beginner-Youth
+Assuntos: Games, Planets & Moons, Software, Space Exploration
+
+SUMMARY: Imagine um satélite orbitando a Terra, ou uma missão Terra-Lua que
+exige manobra de transferência orbital, ou uma espaçonave em órbita cíclica
+entre Terra e Marte, ou uma sonda de espaço profundo atravessando o cinturão
+de asteroides. Entender e visualizar missões espaciais sofisticadas não é
+fácil! O desafio: criar uma aplicação de realidade virtual interativa que
+permita visualizar uma missão espacial incluindo conceito de missão,
+trajetórias orbitais e cronograma da missão.
+
+BACKGROUND: no passado, apresentações de missão usavam slides com imagens da
+espaçonave e desenhos 2D da trajetória orbital. Mais recentemente, animações
+3D geradas por computador mostram a espaçonave se movendo. A proposta: e se a
+missão fosse apresentada em um modelo de realidade virtual embutido numa
+página web? As pessoas poderiam interagir com o modelo (rotacionar, dar pan,
+zoom), e versões mais avançadas permitiriam controlar velocidade/direção
+para simular manobras orbitais. Um globo digital representaria um planeta/lua
+como contexto; um "orrery" virtual (modelo do sistema solar) daria contexto
+para missões de espaço profundo. Ferramentas citadas: NASA's Web WorldWind
+(globo digital gratuito) e o GMAT (que gera série temporal de coordenadas
+cartesianas). Não existe um "orrery" virtual genérico e reutilizável
+comparável aos globos digitais — esse era o gap que o desafio buscava
+preencher.
+
+OBJECTIVES: criar uma aplicação de realidade virtual interativa, dentro de
+um navegador web, que visualize conceito de missão, trajetórias orbitais e
+cronograma — embutida numa página web hospedada em serviço gratuito.
+
+POTENTIAL CONSIDERATIONS (por nível, com exemplos de abordagem):
+  - Beginner: aprender a usar o GMAT ou desenhar uma órbita elíptica 3D
+    (tutorial em 3 partes disponível nos recursos).
+  - Intermediate (opção 1): visualizar trajetórias orbitais usando um globo
+    digital (ex.: NASA's Web WorldWind, que tem API para adicionar formas a
+    camadas).
+  - Intermediate (opção 2): criar um "orrery" virtual e visualizar um "Earth-
+    Mars cycler" — conceito de uma espaçonave em trajetória cíclica entre
+    Terra e Marte, funcionando como um "transporte público": tripulações
+    partiriam da órbita terrestre para encontrar o cycler e desembarcar perto
+    de Marte. Poderia incluir uma segunda espaçonave defasada 180°.
+  - Advanced: criar um "orrery" virtual incluindo cinturão de asteroides, com
+    design de missões de espaço profundo que incluam manobra de "fly-by"
+    planetário (slingshot) para ganhar momento ao passar por Marte ou Vênus;
+    opcionalmente, função de upload de arquivo com série temporal de
+    coordenadas cartesianas da trajetória.
+
+ABA RESOURCES (desse desafio de 2023):
+Recursos NASA:
+  - NASA Eyes (exemplos excelentes de "orreries")
+  - NASA Software Catalog — página de visualização de missão espacial
+    baseada na web
+  - General Mission Analysis Tool (GMAT), versão 2018
+  - Space Mission Design Tools (sugestão: buscar nessa página pela versão
+    GMAT R2020a)
+  - Web WorldWind
+Outros recursos (não-NASA):
+  - Web-based Space Mission Visualization Index Page (links para demos e
+    tutoriais)
+  - Web-based Mission Visualization Software (página README do repositório,
+    com links para demos 3D de orreries e tutoriais)
+  - Web-based Space Mission Visualization (tutorial em 3 partes sobre como
+    criar web-apps que visualizam trajetória orbital)
+  - Elliptical Orbit Simulator (tutorial de design de órbita elíptica)
+  - Tutorial for Web-based Space Mission Visualization (tutorial em 3 partes
+    + visão para um sistema de visualização de missão baseado na web)
+  - Ontology-driven Orrery (orrery do sistema solar interno feito com a
+    biblioteca Three.js, interativo)
+  - Interactive Orrery (orrery interativo feito em R)
+  - Web-Based Space Mission Visualization System (documento de visão para um
+    orrery virtual)
+  - Inner Solar System (orrery animado e interativo com asteroides
+    potencialmente perigosos/PHA)
+  - The Orbit Plotting Module — pykep documentation (biblioteca Python da
+    ESA — a Agência Espacial Europeia co-patrocina o International Space
+    Apps Challenge; repositório de propriedade da ESA)
+Recursos de parceiro (CSA - Canadian Space Agency):
+  - "The Vection Virtual Reality Experiment" — artigo sobre aplicações de VR
+    em missões espaciais
+  - "Investment in VR for space missions" / "Canadian firm developing
+    immersive virtual reality camera systems for space exploration" —
+    release de notícia sobre a empresa canadense Felix and Paul Studios
+    desenvolvendo tecnologia de câmera VR para apoiar missões espaciais
+Termos de busca sugeridos na página (para quem quiser pesquisar por conta
+própria): bibliotecas gráficas 3D gratuitas, APIs 3D baseadas em navegador,
+engines de jogo multiplataforma, globos digitais alternativos ao Web
+WorldWind, termos sobre trajetórias orbitais (elipse, parábola, hipérbole),
+otimização multidisciplinar (ex.: Hohmann transfer, pacote Python Dymos), e
+sobre realidade virtual.
+
+-----------------------------------------------------------------
+9.9 [Link 9] CSA — Digital Games and Activities (lista completa dos 11 itens)
+URL: https://www.asc-csa.gc.ca/eng/youth-educators/digital-games-and-activities.asp
+-----------------------------------------------------------------
+Página da Canadian Space Agency (CSA). Subtítulo: "Digital games, e-books,
+and activities for all ages to learn more about space." Última modificação
+registrada no rodapé da página: 2025-11-26.
+
+Lista completa dos 11 jogos/atividades listados na página (cada um com link
+próprio):
+  1. Tomatosphere Adventure — jogo no Minecraft Education; ensina como
+     funciona a fotossíntese e deixa o jogador cultivar tomates no planeta
+     Marte.
+  2. Game – Mission: Astronaut — complete missões e minigames sobre
+     treinamento de astronauta, viver e trabalhar no espaço, a Lua, o
+     Telescópio Webb, saúde e nutrição, e muito mais.
+  3. Exploring Earth — explore o planeta usando fotos tiradas por astronautas
+     do espaço e imagens de satélites.
+  4. Game – RADARSAT Constellation Mission — ajude um fazendeiro, um capitão
+     e um socorrista a cumprir suas missões usando imagens do RADARSAT.
+  5. Game – OSIRIS-REx — ajude a espaçonave OSIRIS-REx a selecionar o melhor
+     local no asteroide Bennu para coletar uma amostra que será trazida à
+     Terra.
+  6. The Explorers Club e-books — embarque numa aventura espacial através de
+     histórias inspiradas em astronautas canadenses.
+  7. Quizzes — teste seu conhecimento sobre espaço, ciência e astronautas com
+     quizzes divertidos.
+  8. 3D printing models — baixe arquivos para imprimir em 3D seus próprios
+     modelos em miniatura na escola, biblioteca local ou "maker space".
+  9. Astronaut cutouts — use o recurso de "cutout" pra descobrir como você
+     ficaria vestido de astronauta.
+  10. Puzzle: Canada from space — monte um quebra-cabeça digital de um
+      mosaico do Canadá criado com imagens do RADARSAT-2.
+  11. Playlists — descubra músicas novas ou aproveite canções nostálgicas nas
+      playlists da Canadian Space Agency.
+
+Seção "Explore further" (links adicionais no rodapé da página): "Objective:
+Moon", "Activities and experiments", "Printables".
+
+=================================================================
+10. OBSERVAÇÃO FINAL
+=================================================================
+A própria página avisa: "More resources may be added before the hackathon
+begins" — ou seja, a lista de recursos pode crescer antes do hackathon
+começar. Vale revisitar a aba Resources mais perto da data do evento.
+=================================================================
+FIM DO DOCUMENTO
+=================================================================
