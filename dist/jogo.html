@@ -1,0 +1,3364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070b18">
+  <meta name="description" content="Space Mission Design Game: monte uma missão espacial com recursos limitados e descubra por que ela deu certo ou errado. NASA Space Apps Challenge 2026.">
+  <title>Space Mission Design Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+/* =========================================================
+   Space Mission Design Game — tema visual
+   Variáveis em :root; a equipe de UI troca cores aqui.
+   ========================================================= */
+:root {
+  --bg: #070b18;
+  --bg-2: #0d1430;
+  --panel: rgba(255, 255, 255, 0.045);
+  --panel-strong: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.10);
+  --fg: #e8edff;
+  --muted: #8d97ba;
+  --accent: #38bdf8;
+  --accent-2: #818cf8;
+  --amber: #fbbf24;
+  --ok: #34d399;
+  --danger: #fb7185;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --font: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; color: var(--fg); font-family: var(--font); line-height: 1.45;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+/* Degradê do fundo numa camada fixa própria: não é redesenhado ao rolar a página
+   (background-attachment: fixed forçava repintar a tela inteira a cada rolagem). */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(1200px 700px at 15% -10%, #1b2a6b 0%, transparent 60%),
+              radial-gradient(900px 600px at 110% 20%, #3b1d6b 0%, transparent 55%),
+              linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 60%);
+}
+
+/* Campo de estrelas (CSS puro, sem imagens), estático, numa camada fixa só (body::after).
+   Desempenho: as estrelas animadas repintavam a tela inteira a cada quadro (~16 fps com a tela parada).
+   Estáticas, são desenhadas uma vez e o jogo roda a 60 fps. */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .6;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 60% 70%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 80% 20%, #cfe3ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 35% 85%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 55%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 10% 60%, #ffe9c4 50%, transparent 51%),
+    radial-gradient(1px 1px at 50% 10%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 45%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 15% 75%, rgba(255,255,255,.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 75% 15%, rgba(255,255,255,.6) 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 50%, rgba(255,255,255,.6) 50%, transparent 51%);
+  background-size: 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px, 420px 420px,
+    260px 260px, 260px 260px, 260px 260px;
+}
+
+#app { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 20px 20px 60px; }
+
+h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: .8rem; margin: 26px 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; font-weight: 600; }
+h3 { font-size: 1rem; margin: 16px 0 8px; font-weight: 600; }
+p { margin: 6px 0; }
+.hint { color: var(--muted); font-size: .9rem; }
+.eyebrow { color: var(--accent); text-transform: uppercase; font-size: .75rem; letter-spacing: .14em; font-weight: 600; margin: 0 0 6px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- Botões e inputs ---------- */
+button {
+  font: inherit; font-weight: 600; color: var(--fg); cursor: pointer;
+  background: var(--panel-strong); border: 1px solid var(--line); border-radius: 999px;
+  padding: 10px 18px; transition: transform .12s ease, border-color .12s ease, background .12s ease, box-shadow .12s ease;
+}
+button:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(56, 189, 248, 0.6); box-shadow: 0 6px 18px rgba(56, 189, 248, 0.15); }
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #06101f; border: 0; box-shadow: 0 8px 24px rgba(56, 189, 248, 0.25); }
+button.primary:hover:not(:disabled) { box-shadow: 0 12px 30px rgba(56, 189, 248, 0.35); }
+button.ghost { background: transparent; }
+button.selected { border-color: var(--accent); background: rgba(56, 189, 248, 0.14); box-shadow: inset 0 0 0 1px var(--accent); }
+button.small { padding: 7px 12px; font-size: .85rem; }
+button.danger { color: var(--danger); }
+
+input, select {
+  font: inherit; color: var(--fg); background: var(--panel-strong); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 10px 12px; outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+select option { background: #0f1736; }
+
+.row { display: flex; gap: 10px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+.row.wrap button { text-align: left; border-radius: var(--radius-sm); }
+/* Sem backdrop-filter: o desfoque era recalculado a cada quadro sobre as estrelas em movimento.
+   O fundo um pouco mais opaco dá o mesmo efeito de vidro escuro. */
+.panel { background: rgba(16, 22, 46, 0.82); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+/* A entrada animada só acontece quando a TELA muda, não a cada clique (ver main.js). */
+.screen.enter { animation: rise .25s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* ---------- HUD (barra superior nas telas de jogo) ---------- */
+.hud { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 16px; margin: -8px -8px 18px; border-radius: var(--radius);
+  background: rgba(7, 11, 24, 0.94); border: 1px solid var(--line); }
+.hud .who { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #06101f; box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+.c0 { background: #38bdf8; } .c1 { background: #fbbf24; } .c2 { background: #34d399; } .c3 { background: #f472b6; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--panel-strong); border: 1px solid var(--line); font-size: .85rem; }
+.chip .num { font-weight: 700; }
+.hud .spacer { flex: 1; }
+.hud .steps { display: flex; gap: 6px; font-size: .75rem; color: var(--muted); }
+.hud .steps span { padding: 4px 9px; border-radius: 999px; border: 1px solid transparent; }
+.hud .steps .on { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.12); }
+
+/* ---------- Setup ---------- */
+.hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: center; padding: 30px 0 10px; }
+.hero h1 { font-size: clamp(2rem, 4.5vw, 3.4rem); line-height: 1.05; }
+.hero h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero .lead { font-size: 1.1rem; color: #c3ccf0; max-width: 54ch; }
+.hero-art { aspect-ratio: 4 / 3; }
+.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.step { padding: 14px 16px; }
+.step .n { font-family: var(--mono); color: var(--accent); font-size: .8rem; }
+.step strong { display: block; margin: 4px 0 2px; }
+.step p { color: var(--muted); font-size: .9rem; margin: 0; }
+
+.mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.mission-card { text-align: left; border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; height: 100%; }
+.mission-card .icon { font-size: 1.6rem; }
+.mission-card strong { font-size: 1rem; }
+.mission-card .diff { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.mission-card .goal { color: var(--muted); font-size: .85rem; font-weight: 400; }
+.mission-card.selected .diff { color: var(--accent); }
+
+.player-row { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; margin: 10px 0; }
+.player-row .avatar { width: 40px; height: 40px; }
+.toggle { display: inline-flex; gap: 10px; align-items: center; color: var(--muted); cursor: pointer; padding: 8px 0; }
+.toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
+.count-btns button { min-width: 44px; }
+
+/* ---------- Tabuleiro em anel ---------- */
+.board-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.ring { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, minmax(110px, auto)); gap: 10px; }
+.tile { position: relative; padding: 12px; border-radius: var(--radius); background: var(--panel); border: 1px solid var(--line); min-height: 110px; display: flex; flex-direction: column; justify-content: space-between; transition: box-shadow .2s, transform .2s; }
+.tile .t-icon { font-size: 1.4rem; }
+.tile .t-label { font-weight: 600; font-size: .9rem; line-height: 1.2; }
+.tile .t-sub { font-size: .75rem; color: var(--muted); }
+.tile-funds { border-color: rgba(52, 211, 153, 0.35); } .tile-funds .t-sub { color: var(--ok); }
+.tile-tax { border-color: rgba(251, 113, 133, 0.4); } .tile-tax .t-sub { color: var(--danger); }
+.tile-event { border-color: rgba(251, 191, 36, 0.4); } .tile-event .t-sub { color: var(--amber); }
+.tile-catchup { border-color: rgba(56, 189, 248, 0.4); } .tile-catchup .t-sub { color: var(--accent); }
+.tile-start { border-color: rgba(255,255,255,0.3); }
+.tile.active { box-shadow: 0 0 0 2px var(--accent), 0 0 30px rgba(56,189,248,.35); transform: translateY(-2px); }
+.pawns { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.pawn { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: .7rem; font-weight: 700; color: #06101f; box-shadow: 0 2px 6px rgba(0,0,0,.4); animation: pop .3s ease; }
+@keyframes pop { from { transform: scale(.4); } to { transform: scale(1); } }
+.ring-center { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 12px; }
+.die { font-size: 3rem; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.die.rolling { animation: shake .5s ease; }
+@keyframes shake { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-20deg) scale(1.1); } 50% { transform: rotate(15deg); } 75% { transform: rotate(-10deg) scale(1.05); } }
+.ring-center .label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+.milestones { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.milestones li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; color: var(--muted); font-size: .9rem; }
+.milestones li::before { content: '○'; color: var(--muted); font-size: 1.1rem; line-height: 1.2; }
+.milestones li.done { color: var(--fg); }
+.milestones li.done::before { content: '●'; color: var(--ok); }
+.milestones strong { display: block; }
+.milestones small { color: var(--muted); }
+
+.log { font-size: .86rem; max-height: 260px; overflow: auto; }
+.log ul { margin: 0; padding: 0; list-style: none; }
+.log li { padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--muted); }
+.log li:first-child { color: var(--fg); }
+
+/* ---------- Oficina ---------- */
+.workshop-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 22px; align-items: start; }
+.side { position: sticky; top: 76px; display: grid; gap: 12px; }
+.spacecraft-box { position: relative; background: radial-gradient(ellipse at 50% 60%, rgba(56,189,248,.12) 0%, transparent 60%), rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; overflow: hidden; }
+.spacecraft-box::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 0 96%, rgba(56,189,248,.06) 96%), repeating-linear-gradient(90deg, transparent 0 39px, rgba(255,255,255,.03) 39px 40px); pointer-events: none; }
+.spacecraft { width: 100%; height: auto; display: block; max-height: 260px; }
+.spacecraft-box .caption { position: absolute; left: 14px; bottom: 10px; font-size: .75rem; color: var(--muted); font-family: var(--mono); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; transition: border-color .15s, transform .15s; }
+.card:hover { border-color: rgba(255,255,255,0.2); }
+.card.owned { border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.06); }
+.card-head { display: flex; align-items: center; gap: 10px; }
+.card .icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 1.3rem; background: var(--panel-strong); border: 1px solid var(--line); flex-shrink: 0; }
+.card-head strong { font-size: .95rem; line-height: 1.2; }
+.badge { margin-left: auto; background: var(--accent); color: #06101f; border-radius: 999px; padding: 1px 9px; font-size: .78rem; font-weight: 700; font-family: var(--mono); }
+.pills { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.pill { font-size: .74rem; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); font-family: var(--mono); }
+.pill.gain { color: var(--ok); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
+.pill.lose { color: var(--amber); border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.08); }
+.card .row { margin: 4px 0 0; }
+.price { font-family: var(--mono); }
+
+/* Medidores */
+.gauges { display: grid; gap: 9px; }
+.gauge { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline; font-size: .85rem; }
+.gauge .g-label { color: var(--muted); }
+.gauge .g-value { font-family: var(--mono); font-weight: 700; font-size: .85rem; }
+.gauge .bar { grid-column: 1 / -1; height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
+.gauge .fill { height: 100%; border-radius: 999px; background: var(--ok); transition: width .3s ease, background .3s; }
+.gauge .mark { position: absolute; top: -2px; width: 2px; height: 11px; background: #fff; opacity: .7; }
+.gauge.bad .fill { background: var(--danger); }
+.gauge.bad .g-value { color: var(--danger); }
+.gauge.warn .fill { background: var(--amber); }
+
+.checklist { list-style: none; padding: 0; margin: 0; font-size: .86rem; display: grid; gap: 4px; }
+.checklist li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.checklist li.ok { color: #b9c3e6; }
+.checklist li.bad { color: var(--danger); }
+.checklist li.warn { color: var(--amber); }
+.checklist li span:first-child { font-weight: 700; }
+
+.glossary { font-size: .88rem; }
+.glossary summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.glossary dl { margin: 10px 0 0; }
+.glossary dt { font-weight: 600; margin-top: 8px; }
+.glossary dd { margin: 0 0 4px; color: var(--muted); }
+
+/* ---------- Voo (evento) ---------- */
+.flight { max-width: 900px; margin: 0 auto; text-align: center; padding-top: 30px; }
+.flight .alarm { font-size: 4rem; animation: pulse 1.2s ease-in-out infinite; display: inline-block; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.flight h1 { color: var(--amber); }
+.event-text { font-size: 1.1rem; max-width: 64ch; margin: 14px auto 0; color: #d6ddf7; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 20px; text-align: left; }
+.option { display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
+.option:hover { transform: translateY(-2px); border-color: var(--accent); }
+.option strong { font-size: 1.02rem; }
+.option .consequence { color: var(--amber); font-size: .88rem; font-family: var(--mono); }
+
+/* ---------- Relatório ---------- */
+.report-head { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; padding: 24px; position: relative; overflow: hidden; }
+.report-head .stamp { position: absolute; right: -10px; top: -14px; font-size: 7rem; opacity: .08; transform: rotate(-12deg); pointer-events: none; }
+.report.success .report-head { border-color: rgba(52,211,153,.5); background: linear-gradient(135deg, rgba(52,211,153,.12), transparent 60%); }
+.report.failure .report-head { border-color: rgba(251,113,133,.5); background: linear-gradient(135deg, rgba(251,113,133,.12), transparent 60%); }
+.report.success h1 { color: var(--ok); } .report.failure h1 { color: var(--danger); }
+.score { text-align: center; padding: 10px 22px; border-radius: var(--radius); background: rgba(0,0,0,.25); border: 1px solid var(--line); }
+.score .big { font-family: var(--mono); font-size: 2.6rem; font-weight: 700; line-height: 1; }
+.score .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+.report-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; align-items: start; margin-top: 18px; }
+.reasons { margin: 0; padding-left: 20px; }
+.reasons li { margin: 8px 0; }
+.lesson { border-left: 3px solid var(--accent); margin-top: 14px; }
+.lesson p { margin: 4px 0; }
+
+/* ---------- Overlay de lançamento ---------- */
+.launch-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 100%, #1b2a6b 0%, var(--bg) 70%); animation: fadeIn .3s ease; }
+.launch-overlay .rocket { font-size: 5rem; animation: liftoff 1.4s cubic-bezier(.4,0,.6,1) forwards; }
+.launch-overlay .count { position: absolute; top: 18%; font-family: var(--mono); font-size: 4rem; font-weight: 700; color: var(--accent); animation: tick 1.4s steps(1) forwards; }
+.launch-overlay .flame { position: absolute; bottom: 0; left: 50%; width: 40vw; height: 30vh; transform: translateX(-50%); background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,.6) 0%, rgba(251,113,133,.25) 40%, transparent 70%); animation: flame 1.4s ease-out forwards; }
+@keyframes liftoff { 0% { transform: translateY(40vh) scale(.9); } 30% { transform: translateY(30vh) scale(1); } 100% { transform: translateY(-80vh) scale(.6); } }
+@keyframes tick { 0% { content: '3'; } }
+@keyframes flame { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scaleY(2); } }
+@keyframes fadeIn { from { opacity: 0; } }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 60; background: var(--danger); color: #06101f; padding: 10px 18px; border-radius: 999px; font-weight: 700; box-shadow: var(--shadow); animation: rise .25s ease; }
+.banner { padding: 10px 14px; border-radius: var(--radius-sm); background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.4); }
+
+/* ---------- IDEIA v2: anel de 16 casas, corrida, agência, voo em etapas ---------- */
+.ring.ring-16 { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(92px, auto)); gap: 8px; }
+.ring-16 .tile { min-height: 92px; padding: 9px; }
+.ring-16 .tile .t-icon { font-size: 1.2rem; }
+.ring-16 .tile .t-label { font-size: .78rem; }
+.ring-16 .tile .t-sub { font-size: .68rem; }
+.ring-16 .ring-center { grid-column: 2 / 5; grid-row: 2 / 5; }
+.tile-tech { border-color: rgba(167, 139, 250, 0.45); } .tile-tech .t-sub { color: #c4b5fd; }
+.tile-shop { border-color: rgba(52, 211, 153, 0.35); } .tile-shop .t-sub { color: var(--ok); }
+.tile-hazard { border-color: rgba(251, 113, 133, 0.4); background: rgba(251, 113, 133, 0.05); } .tile-hazard .t-sub { color: var(--danger); }
+.tile-repair { border-color: rgba(56, 189, 248, 0.4); } .tile-repair .t-sub { color: var(--accent); }
+.tile-lot { border-style: dashed; }
+.tile.owned { border-style: solid; border-width: 2px; }
+.tile.owned.o0 { border-color: #38bdf8; } .tile.owned.o1 { border-color: #fbbf24; } .tile.owned.o2 { border-color: #34d399; } .tile.owned.o3 { border-color: #f472b6; }
+.tile-decision { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius-sm); background: rgba(0,0,0,.25); border: 1px solid var(--line); max-width: 420px; }
+.side-stack { display: grid; gap: 12px; }
+.chip.small { padding: 2px 8px; font-size: .75rem; }
+.chip.year { border-color: var(--accent); }
+
+.pbar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+.pbar .fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width .4s ease; }
+.pbar.done .fill { background: var(--ok); }
+.race-row { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.race-row:last-child { border-bottom: 0; }
+.race-row.current strong { color: var(--accent); }
+.race-meta { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.records { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: .86rem; }
+.records li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.records li.taken span:first-child { color: var(--amber); }
+.buildings { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; }
+.buildings li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; font-size: .86rem; }
+.buildings .b-icon { font-size: 1.3rem; }
+.buildings small { display: block; }
+.swap { margin-top: 10px; font-size: .88rem; }
+.swap summary { cursor: pointer; color: var(--accent); }
+.swap .mission-grid { margin-top: 10px; }
+.tag { font-size: .72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.ok { color: var(--ok); border-color: rgba(52,211,153,.4); }
+.tag.accent { color: var(--accent); border-color: rgba(56,189,248,.45); }
+.card.locked { opacity: .6; }
+.lock { font-size: .8rem; color: var(--muted); font-family: var(--mono); }
+.objective-cards .card p { font-size: .92rem; }
+.risk-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: .84rem; }
+.risk-list small { display: block; color: var(--muted); font-family: var(--mono); font-size: .74rem; }
+
+.stage-track { list-style: none; padding: 0; margin: 14px auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.stage-track li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+.stage-track li.done { color: var(--ok); border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.08); }
+.stage-track li.fail { color: var(--danger); border-color: rgba(251,113,133,.5); background: rgba(251,113,133,.08); }
+.stage-track li.now { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.12); }
+.flight .alarm.calm { animation: none; }
+.flight h1.ok { color: var(--ok); }
+.option .risk-big { font-family: var(--mono); font-size: 1.3rem; font-weight: 700; color: var(--danger); }
+.option .risk-big.safe { color: var(--ok); }
+.option.abort { border-style: dashed; }
+.option.disabled { opacity: .5; cursor: not-allowed; }
+.stage-log { padding-left: 0; list-style: none; display: grid; gap: 10px; }
+.stage-log li { display: grid; gap: 3px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--panel); }
+.stage-log li.ok strong { color: var(--ok); } .stage-log li.bad strong { color: var(--danger); }
+.stage-log small { font-size: .8rem; }
+.history a { color: var(--accent); font-size: .85rem; }
+
+/* ---------- IDEIA v3: escadas, dados, espionagem, troca de dispositivo ---------- */
+.tile-spy { border-color: rgba(167, 139, 250, 0.45); background: rgba(167, 139, 250, 0.05); } .tile-spy .t-sub { color: #c4b5fd; }
+.tile-event .t-sub { color: var(--amber); }
+.ladder { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; counter-reset: step; }
+.ladder li { display: grid; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); color: var(--muted); }
+.ladder li.done { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.06); }
+.ladder li.now { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.08); }
+.ladder.compact li { padding: 4px 8px; font-size: .85rem; }
+.dice-choice { display: grid; gap: 8px; justify-items: center; }
+.die.small { font-size: 1.6rem; vertical-align: middle; }
+.tile-decision.dilemma { border-color: rgba(251,191,36,.45); }
+.intel { color: var(--accent) !important; }
+.gain-text { display: block; color: var(--ok); margin-top: 6px; }
+.lose-text { display: block; color: var(--amber); }
+.cards.sides .card-head small { margin-left: auto; }
+.handoff { min-height: 70vh; display: grid; place-items: center; }
+.handoff-card { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 40px; max-width: 480px; }
+.handoff-card .avatar { font-size: 1.6rem; }
+.hud .chip small { color: var(--muted); }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 900px) {
+  .hero, .workshop-grid, .report-grid, .board-layout { grid-template-columns: 1fr; }
+  .side { position: static; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .hud .steps { display: none; }
+}
+@media (max-width: 600px) {
+  .ring.ring-16 { gap: 4px; grid-template-rows: repeat(5, minmax(64px, auto)); }
+  .ring-16 .tile { min-height: 64px; padding: 5px; }
+  .ring-16 .tile .t-sub, .ring-16 .tile .t-label { display: none; }
+  .ring-16 .tile .t-icon { font-size: 1.1rem; }
+  .pawn { width: 16px; height: 16px; font-size: .6rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+</style>
+</head>
+<body>
+  <main id="app"></main>
+  <script>
+(() => {
+'use strict';
+const __mods = {};
+// ---- src/data/history.js
+__mods["src/data/history.js"] = (() => {
+// Calendário da corrida espacial (IDEIA.md v3 seção 3): 3 rodadas = 1 ano, começando em 1957.
+// Os marcos reais foram conferidos nas páginas de história da NASA (links em `source`).
+// Usamos só o ano: algumas páginas divergem no dia exato.
+// `sides` = ano em que cada lado cumpriu a missão de verdade (null = nunca). O bot do modo solo
+// segue estes anos, com variação de um ano para mais ou para menos.
+
+const START_YEAR = 1957;
+const END_YEAR = 1969;          // Apollo 11: limite da partida
+const ROUNDS_PER_YEAR = 3;
+const MAX_ROUNDS = (END_YEAR - START_YEAR + 1) * ROUNDS_PER_YEAR; // 39 rodadas
+
+const yearOf = (round) => START_YEAR + Math.floor((round - 1) / ROUNDS_PER_YEAR);
+const isNewYear = (round) => (round - 1) % ROUNDS_PER_YEAR === 0;
+
+// Cartão "Na história real", mostrado no relatório de sucesso e no fim da partida.
+const REAL_HISTORY = {
+  first_satellite: {
+    year: 1957,
+    sides: { ussr: 1957, usa: 1958 },
+    text: 'Sputnik 1 (URSS, 1957) foi o primeiro satélite artificial: só um transmissor de rádio. Os EUA responderam com o Explorer 1 em 1958, que descobriu os cinturões de radiação de Van Allen.',
+    source: 'https://www.nasa.gov/history/explorer-1-overview/',
+  },
+  living_being: {
+    year: 1957,
+    sides: { ussr: 1957, usa: 1961 },
+    text: 'Sputnik 2 (URSS, 1957) levou a cadela Laika, o primeiro animal em órbita; a cápsula não tinha como voltar. Os EUA puseram o chimpanzé Enos em órbita em 1961 e o trouxeram de volta.',
+    source: 'https://www.nasa.gov/history/a-brief-history-of-animals-in-space/',
+  },
+  weather_watch: {
+    year: 1960,
+    sides: { usa: 1960, ussr: null },
+    text: 'TIROS-1 (EUA, 1960) foi o primeiro satélite meteorológico, em órbita baixa. Em 1966, o ATS-1 fez a primeira foto da Terra a partir da órbita geoestacionária.',
+    source: 'https://www.nasa.gov/history/90-years-of-our-changing-views-of-earth/',
+  },
+  lunar_probe: {
+    year: 1959,
+    sides: { ussr: 1959, usa: 1964 },
+    text: 'Luna 2 (URSS, 1959) foi a primeira espaçonave a atingir a Lua. A Ranger 7 (EUA, 1964) mandou milhares de fotos de perto antes do impacto, que ajudaram a escolher os locais de pouso da Apollo.',
+    source: 'https://www.nasa.gov/history/60-years-ago-ranger-7-photographs-the-moon/',
+  },
+  space_station: {
+    year: 1971,
+    sides: { ussr: 1971, usa: 1973 },
+    text: 'Salyut 1 (URSS, 1971) foi a primeira estação espacial. Os EUA lançaram o Skylab em 1973. Manter gente viva por semanas exige energia contínua e suporte de vida confiável.',
+    source: 'https://www.nasa.gov/missions/station/50-years-ago-launch-of-salyut-the-worlds-first-space-station/',
+  },
+  crewed_moon: {
+    year: 1968,
+    sides: { usa: 1968, ussr: null },
+    text: 'Apollo 8 (EUA, 1968) levou a primeira tripulação à órbita da Lua e a trouxe de volta. O pouso veio com a Apollo 11, em 1969. A URSS nunca levou tripulação à Lua.',
+    source: 'https://www.nasa.gov/mission/apollo-8/',
+  },
+};
+
+const EPILOGUE = 'Em 1975, a missão Apollo-Soyuz acoplou uma nave americana e uma soviética em órbita. A corrida virou cooperação.';
+
+return { START_YEAR, END_YEAR, ROUNDS_PER_YEAR, MAX_ROUNDS, yearOf, isNewYear, REAL_HISTORY, EPILOGUE };
+})();
+
+// ---- src/sim/state.js
+__mods["src/sim/state.js"] = (() => {
+// Estado central do jogo. A UI lê daqui; a simulação calcula a partir daqui.
+// Cada decisão do jogador altera este objeto e tem consequência nos recursos.
+// ATENÇÃO: valores iniciais FICTÍCIOS.
+const { yearOf } = __mods["src/data/history.js"];
+
+const STARTING_FUNDS = 60;
+const SANDBOX_FUNDS = 999;
+const SANDBOX_TECH = 99;
+const YEARLY_BUDGET = 40;     // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
+const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
+const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
+const BAILOUT_TECH_COST = 2;
+const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
+const SPY_COST = 12;          // espionagem: uma vez por ano
+
+const emptySpacecraft = () => ({
+  instruments: [],     // ids de data/instruments.js (pode repetir)
+  parts: [],           // ids de data/parts.js (pode repetir)
+  launcherId: null,    // ver data/launchers.js
+  orbitId: null,       // ver data/orbits.js
+});
+
+function createPlayer(id, name, missionId = null) {
+  return {
+    id,
+    name,
+    bot: false,            // rival automático do modo solo (segue o calendário histórico)
+    side: null,            // 'usa' | 'ussr' (data/sides.js)
+    step: 0,               // degraus da escada já cumpridos
+    missionId,             // missão atual = degrau atual da escada
+    position: 0,           // casa atual do tabuleiro
+    funds: STARTING_FUNDS, // verba disponível
+    tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
+    launcherTech: 0,       // ajuste do lado no nível exigido pelos lançadores
+    discount: 0,           // % de desconto na próxima compra (evento ou degrau)
+    shields: 0,            // proteções contra falha no voo
+    launchRisk: 0,         // risco extra na próxima subida (dilema "lançar assim mesmo")
+    milestones: [],        // `${missionId}:${milestoneId}` já concedidos (bônus só uma vez por missão)
+    completed: [],         // [{ missionId, year, science }] degraus cumpridos
+    bestStage: {},         // { missionId: etapas superadas no melhor voo } (etapas contam)
+    failureData: {},       // { sistema: n } falhas anteriores; reduzem o risco desse sistema
+    buildings: { lab: 0, factory: 0, control: 0, sponsor: 0 }, // nível de cada prédio
+    intel: {},             // { rivalId: { year, ... } } o que o espião descobriu
+    lastSpyYear: null,
+    spacecraft: emptySpacecraft(),
+    flight: null,          // voo em andamento (sim/actions.js)
+    launches: 0,
+    lastResult: null,      // último resultado de missão (relatório)
+    // Controle do turno
+    rolled: false,         // já andou no tabuleiro neste turno
+    flightAdvanced: false, // já avançou o voo neste turno
+    launchedThisTurn: false,
+    bailouts: 0,
+  };
+}
+
+function createInitialState() {
+  return {
+    screen: 'setup',       // setup -> handoff -> board <-> workshop -> flight -> report -> ... -> gameover
+    sandbox: false,        // modo sandbox: sem tabuleiro, verba livre, só a oficina
+    players: [],           // inclui o bot do modo solo (bot: true)
+    turn: 0,               // índice do jogador da vez
+    round: 1,              // 3 rodadas = 1 ano (data/history.js)
+    log: [],               // [{ text, who }] who = id do jogador (privado) ou null (público)
+    sideFirsts: {},        // { `${lado}:${missionId}`: playerId } primeiro do lado em cada degrau
+    lots: {},              // { tileId: { ownerId, buildingId } } prédios no tabuleiro
+    dice: null,            // [a, b] dados rolados aguardando escolha
+    pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
+    pendingDilemma: null,  // { id } carta de dilema aguardando escolha
+    winners: [],
+    gameOver: false,
+  };
+}
+
+const currentPlayer = (state) => state.players[state.turn];
+const humans = (state) => state.players.filter((p) => !p.bot);
+
+// Diário. Com rival escondido, cada mensagem é privada do jogador (who) ou pública (who = null).
+function pushLog(state, text, who = null) {
+  state.log.unshift({ text: state.sandbox ? text : `[${yearOf(state.round)}] ${text}`, who });
+  if (state.log.length > 60) state.log.length = 60;
+}
+
+return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
+})();
+
+// ---- src/board/board.js
+__mods["src/board/board.js"] = (() => {
+// Camada do TABULEIRO (IDEIA.md v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
+// O tabuleiro alimenta a engenharia: verba, tecnologia, desconto, proteção, prédios e informação.
+// Funções puras, sem DOM. Recebem `rng` para os testes serem determinísticos.
+// ATENÇÃO: valores FICTÍCIOS para balanceamento. Casas de dinheiro são fracas de propósito.
+//
+// Tipos de casa:
+//   start    largada (volta completa dá verba)
+//   funds    verba (positiva ou negativa)
+//   event    carta de dilema (em solo) ou imprevisto na próxima etapa (com a nave em voo)
+//   tech     cooperação científica: +tecnologia
+//   shop     feira de fornecedores: desconto na próxima compra
+//   lot      terreno: construir prédio ou usar o prédio do rival
+//   spy      espionagem: paga para ver o estado de um rival (uma vez por ano)
+//   repair   oficina de reparos: +1 proteção contra falha
+//   catchup  choque do Sputnik: verba de recuperação para quem está atrás
+// As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
+
+const TILES = [
+  { id: 0, type: 'start', label: 'Largada', funds: 10 },
+  { id: 1, type: 'lot', label: 'Terreno livre' },
+  { id: 2, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
+  { id: 3, type: 'event', label: 'Evento' },
+  { id: 4, type: 'spy', label: 'Espionagem' },
+  { id: 5, type: 'lot', label: 'Terreno livre' },
+  { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
+  { id: 7, type: 'event', label: 'Evento' },
+  { id: 8, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
+  { id: 9, type: 'lot', label: 'Terreno livre' },
+  { id: 10, type: 'shop', label: 'Feira de fornecedores', discount: 15 },
+  { id: 11, type: 'event', label: 'Evento' },
+  { id: 12, type: 'repair', label: 'Oficina de reparos', shield: 1 },
+  { id: 13, type: 'lot', label: 'Terreno livre' },
+  { id: 14, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
+  { id: 15, type: 'event', label: 'Evento' },
+];
+
+function rollDie(rng = Math.random) {
+  return 1 + Math.floor(rng() * 6);
+}
+
+// Move o jogador e devolve nova posição + se passou pela largada.
+function movePlayer(player, steps) {
+  const raw = player.position + steps;
+  const position = raw % TILES.length;
+  const passedStart = raw >= TILES.length;
+  return { ...player, position, passedStart };
+}
+
+// Aplica o efeito automático da casa. Devolve { player, messages[] }.
+// `isLast` = jogador com menos progresso (recebe a verba do choque do Sputnik).
+function applyTile(player, tile, { isLast = false } = {}) {
+  const messages = [];
+  const p = { ...player };
+
+  if (p.passedStart && tile.type !== 'start') {
+    p.funds += TILES[0].funds;
+    messages.push(`Passou pela largada: +${TILES[0].funds} de verba.`);
+  }
+
+  switch (tile.type) {
+    case 'start':
+    case 'funds':
+      p.funds += tile.funds;
+      messages.push(`${tile.label}: ${tile.funds >= 0 ? '+' : ''}${tile.funds} de verba.`);
+      break;
+    case 'tech':
+      p.tech = (p.tech || 0) + tile.tech;
+      messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
+      break;
+    case 'shop':
+      p.discount = Math.max(p.discount || 0, tile.discount);
+      messages.push(`${tile.label}: ${tile.discount}% de desconto na próxima compra.`);
+      break;
+    case 'repair':
+      p.shields = (p.shields || 0) + tile.shield;
+      messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);
+      break;
+    case 'catchup':
+      if (isLast) {
+        p.funds += tile.funds;
+        messages.push(`${tile.label}: o governo libera verba de recuperação, +${tile.funds}.`);
+      } else {
+        messages.push(`${tile.label}: só vale para quem está atrás na corrida.`);
+      }
+      break;
+    default:
+      break;
+  }
+
+  p.funds = Math.max(0, p.funds);
+  delete p.passedStart;
+  return { player: p, messages };
+}
+
+return { TILES, rollDie, movePlayer, applyTile };
+})();
+
+// ---- src/data/instruments.js
+__mods["src/data/instruments.js"] = (() => {
+// Instrumentos científicos. ATENÇÃO: valores FICTÍCIOS/aproximados, só para balanceamento.
+// Não representam instrumentos reais da NASA. Unidades arbitrárias do jogo.
+// Trade-off central do desafio: mais ciência custa massa, energia, dinheiro e gera mais dados.
+// Campos iguais aos de parts.js para a soma de recursos ser uniforme.
+// minTech = nível de tecnologia da agência para poder comprar (esperar desbloqueia peças melhores).
+
+const INSTRUMENTS = {
+  camera: { id: 'camera', name: 'Câmera óptica', mass: 5, power: 8, powerGen: 0, cost: 10, commsRate: 0, dataRate: 6, science: 4, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'camera' },
+  hires_camera: { id: 'hires_camera', name: 'Câmera de alta resolução', mass: 12, power: 18, powerGen: 0, cost: 28, commsRate: 0, dataRate: 14, science: 9, lifeSupport: false, lifetimeBonus: 0, minTech: 4, visual: 'camera_large' },
+  spectrometer: { id: 'spectrometer', name: 'Espectrômetro', mass: 12, power: 20, powerGen: 0, cost: 25, commsRate: 0, dataRate: 4, science: 8, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'spectro' },
+  magnetometer: { id: 'magnetometer', name: 'Magnetômetro', mass: 3, power: 4, powerGen: 0, cost: 8, commsRate: 0, dataRate: 1, science: 3, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'boom' },
+  radio_beacon: { id: 'radio_beacon', name: 'Transmissor de rádio (bip)', mass: 2, power: 2, powerGen: 0, cost: 4, commsRate: 0, dataRate: 1, science: 2, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'beacon' },
+};
+
+return { INSTRUMENTS };
+})();
+
+// ---- src/data/parts.js
+__mods["src/data/parts.js"] = (() => {
+// Peças da espaçonave que NÃO são instrumentos: energia, comunicação, suporte de vida, propulsão.
+// ATENÇÃO: valores FICTÍCIOS, em unidades arbitrárias do jogo, só para balanceamento.
+// Regra do IDEIA.md: nenhum item é só bônus. Cada peça gera algo e custa massa/energia/dinheiro.
+//
+// powerGen      = energia gerada; power = energia consumida
+// commsRate     = capacidade de transmitir dados por turno
+// lifeSupport   = habilita missões com ser vivo a bordo
+// lifetimeBonus = anos a mais de vida útil (manutenção de órbita, reserva de energia)
+// minTech       = nível de tecnologia da agência para poder comprar (IDEIA.md seção 5)
+// visual        = como aparece no desenho da espaçonave (ui/spacecraft.js)
+
+const PARTS = {
+  solar_small: { id: 'solar_small', name: 'Painel solar pequeno', mass: 4, power: 0, powerGen: 15, cost: 8, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'panel' },
+  solar_large: { id: 'solar_large', name: 'Painel solar grande', mass: 10, power: 0, powerGen: 40, cost: 20, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 2, visual: 'panel_large' },
+  battery: { id: 'battery', name: 'Bateria', mass: 6, power: 0, powerGen: 8, cost: 10, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 1, minTech: 1, visual: 'battery' },
+  antenna_basic: { id: 'antenna_basic', name: 'Antena básica', mass: 2, power: 3, powerGen: 0, cost: 6, commsRate: 4, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'antenna' },
+  antenna_dish: { id: 'antenna_dish', name: 'Antena parabólica', mass: 8, power: 10, powerGen: 0, cost: 22, commsRate: 12, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'dish' },
+  thruster: { id: 'thruster', name: 'Propulsor de manutenção de órbita', mass: 6, power: 4, powerGen: 0, cost: 14, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 3, minTech: 2, visual: 'thruster' },
+  life_support: { id: 'life_support', name: 'Cápsula com suporte de vida', mass: 25, power: 15, powerGen: 0, cost: 40, commsRate: 0, dataRate: 1, science: 2, lifeSupport: true, lifetimeBonus: 0, minTech: 2, visual: 'capsule' },
+};
+
+return { PARTS };
+})();
+
+// ---- src/data/orbits.js
+__mods["src/data/orbits.js"] = (() => {
+// Órbitas. ATENÇÃO: valores qualitativos simplificados para o jogo.
+// commsPenalty = quanto a distância reduz a capacidade de comunicação (0 = nada, 0.5 = metade).
+// baseLifetime = anos de vida útil sem manutenção (órbita baixa decai pelo atrito da atmosfera).
+// Trade-off: órbita mais distante rende mais ciência em certas missões, mas comunica pior.
+
+const ORBITS = {
+  leo: { id: 'leo', name: 'Órbita baixa (LEO)', description: 'Perto da Terra: comunicação fácil, mas o atrito da atmosfera derruba o satélite em poucos anos.', commsPenalty: 0, scienceBonus: 0, baseLifetime: 2 },
+  geo: { id: 'geo', name: 'Órbita geoestacionária (GEO)', description: 'Alta e fixa sobre um ponto: ótima cobertura e vida longa, lançamento mais caro.', commsPenalty: 0.2, scienceBonus: 1, baseLifetime: 8 },
+  moon: { id: 'moon', name: 'Órbita lunar', description: 'Longe da Terra: comunicação difícil, ciência inédita.', commsPenalty: 0.5, scienceBonus: 3, baseLifetime: 4 },
+};
+
+return { ORBITS };
+})();
+
+// ---- src/data/launchers.js
+__mods["src/data/launchers.js"] = (() => {
+// Veículos de lançamento. ATENÇÃO: valores FICTÍCIOS, não são foguetes reais.
+// maxMass = carga máxima (unidades do jogo); reach = órbitas que consegue atingir.
+// minTech = nível de tecnologia da agência para poder usar.
+// Trade-off: foguete maior cabe mais carga, mas custa muito mais e exige mais tecnologia.
+
+const LAUNCHERS = {
+  small: { id: 'small', name: 'Lançador pequeno', maxMass: 40, cost: 20, reach: ['leo'], minTech: 1 },
+  medium: { id: 'medium', name: 'Lançador médio', maxMass: 120, cost: 50, reach: ['leo', 'geo'], minTech: 3 },
+  heavy: { id: 'heavy', name: 'Lançador pesado', maxMass: 300, cost: 110, reach: ['leo', 'geo', 'moon'], minTech: 5 },
+};
+
+return { LAUNCHERS };
+})();
+
+// ---- src/sim/resources.js
+__mods["src/sim/resources.js"] = (() => {
+// Cálculo dos recursos da espaçonave: massa, energia, custo, dados, comunicação, ciência, vida útil.
+// Funções puras (sem DOM) para facilitar teste e ensaiar o balanceamento.
+const { INSTRUMENTS } = __mods["src/data/instruments.js"];
+const { PARTS } = __mods["src/data/parts.js"];
+const { ORBITS } = __mods["src/data/orbits.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+
+const CATALOG = { ...INSTRUMENTS, ...PARTS };
+
+function itemsOf(player) {
+  const { instruments, parts } = player.spacecraft;
+  return [...instruments, ...parts].map((id) => CATALOG[id]).filter(Boolean);
+}
+
+// Totais brutos da espaçonave (sem considerar órbita nem lançador).
+function totalsFor(player) {
+  const items = itemsOf(player);
+  const sum = (key) => items.reduce((acc, item) => acc + (item[key] || 0), 0);
+  return {
+    mass: sum('mass'),
+    powerUse: sum('power'),
+    powerGen: sum('powerGen'),
+    cost: sum('cost'),
+    data: sum('dataRate'),
+    comms: sum('commsRate'),
+    science: sum('science'),
+    lifetimeBonus: sum('lifetimeBonus'),
+    lifeSupport: items.some((i) => i.lifeSupport),
+  };
+}
+
+// Totais efetivos, já com o efeito da órbita e o limite do lançador.
+function effectiveTotals(player) {
+  const t = totalsFor(player);
+  const orbit = ORBITS[player.spacecraft.orbitId];
+  const launcher = LAUNCHERS[player.spacecraft.launcherId];
+  const commsEffective = orbit ? Math.floor(t.comms * (1 - orbit.commsPenalty)) : t.comms;
+  return {
+    ...t,
+    commsEffective,
+    scienceEffective: t.science + (orbit ? orbit.scienceBonus : 0),
+    lifetime: (orbit ? orbit.baseLifetime : 0) + t.lifetimeBonus,
+    maxMass: launcher ? launcher.maxMass : null,
+    launchCost: launcher ? launcher.cost : 0,
+    powerBalance: t.powerGen - t.powerUse,
+  };
+}
+
+const FACTORY_DISCOUNT_PER_LEVEL = 10; // % por nível da Fábrica (data/buildings.js)
+const MAX_DISCOUNT = 50;
+
+// Desconto total em %: desconto de uma compra (evento, milestone) + Fábrica (permanente).
+function discountFor(player) {
+  const factory = (player.buildings?.factory || 0) * FACTORY_DISCOUNT_PER_LEVEL;
+  return Math.min(MAX_DISCOUNT, (player.discount || 0) + factory);
+}
+
+// Preço de um item para o jogador, já com desconto acumulado.
+function priceFor(player, itemId) {
+  const base = CATALOG[itemId].cost;
+  return Math.max(1, Math.round(base * (1 - discountFor(player) / 100)));
+}
+
+// Nível de tecnologia exigido. Lançadores (têm `reach`) recebem o ajuste do lado (data/sides.js).
+const requiredTech = (player, item) => Math.max(1, (item.minTech || 0) + (item.reach ? player.launcherTech || 0 : 0));
+
+// Peça ou lançador bloqueado pela tecnologia da agência?
+const isLocked = (player, item) => requiredTech(player, item) > (player.tech || 0);
+
+return { CATALOG, itemsOf, totalsFor, effectiveTotals, FACTORY_DISCOUNT_PER_LEVEL, MAX_DISCOUNT, discountFor, priceFor, requiredTech, isLocked };
+})();
+
+// ---- src/data/missions.js
+__mods["src/data/missions.js"] = (() => {
+// Missões da corrida espacial (ver IDEIA.md). Adicionar missão nova = preencher dados, sem código novo.
+// ATENÇÃO: valores FICTÍCIOS, só para balanceamento. Não são requisitos de missões históricas.
+//
+// needs: o que a espaçonave precisa entregar para a missão contar como cumprida.
+//   science     = valor científico mínimo (soma dos instrumentos + bônus da órbita)
+//   comms       = capacidade mínima de comunicação efetiva
+//   lifeSupport = exige cápsula com suporte de vida
+//   lifetime    = anos mínimos de operação (vida útil da órbita + bônus de peças)
+// orbit: órbita onde a missão precisa ser executada (define as etapas do voo, ver data/stages.js).
+// extraStages: etapas a mais no fim do voo (ex.: retorno da tripulação).
+// Cada jogador cumpre cada missão no máximo uma vez. O primeiro do mundo leva o recorde.
+//
+// Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
+// Efeitos possíveis (só 3 tipos): 'funds' (+ verba), 'discount' (% de desconto na loja), 'shield' (proteção contra falha).
+
+const milestones = (ready, launch, done) => [
+  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'funds', value: 20 } },
+  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'discount', value: 10 } },
+  { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
+];
+
+const MISSIONS = {
+  first_satellite: {
+    id: 'first_satellite',
+    name: 'Primeiro satélite',
+    difficulty: 'fácil',
+    orbit: 'leo',
+    goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
+    needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
+    milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
+  },
+  living_being: {
+    id: 'living_being',
+    name: 'Ser vivo em órbita',
+    difficulty: 'médio',
+    orbit: 'leo',
+    goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
+    needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
+    milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
+  },
+  weather_watch: {
+    id: 'weather_watch',
+    name: 'Satélite meteorológico',
+    difficulty: 'médio',
+    orbit: 'geo',
+    goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
+    needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
+    milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
+  },
+  lunar_probe: {
+    id: 'lunar_probe',
+    name: 'Sonda lunar',
+    difficulty: 'difícil',
+    orbit: 'moon',
+    goal: 'Chegar à Lua e enviar dados científicos de lá.',
+    needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
+    milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
+  },
+  space_station: {
+    id: 'space_station',
+    name: 'Estação espacial',
+    difficulty: 'difícil',
+    orbit: 'leo',
+    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
+    needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
+    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+  },
+  crewed_moon: {
+    id: 'crewed_moon',
+    name: 'Tripulação na Lua',
+    difficulty: 'muito difícil',
+    orbit: 'moon',
+    goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
+    needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
+    extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
+    milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
+  },
+};
+
+return { MISSIONS };
+})();
+
+// ---- src/sim/simulate.js
+__mods["src/sim/simulate.js"] = (() => {
+// Simulação da missão: recebe o jogador e devolve resultado + lista de motivos.
+// O relatório precisa EXPLICAR por que deu certo ou errado (é o que a banca avalia).
+// Função pura. `rng` injetável para testes.
+// ATENÇÃO: regras e números FICTÍCIOS para balanceamento, não modelam física real.
+const { effectiveTotals } = __mods["src/sim/resources.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { ORBITS } = __mods["src/data/orbits.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+
+const FAILURE_CHANCE = 0.15; // chance base de falha aleatória de componente (sem escudo)
+
+// Checagens de projeto, sem aleatoriedade. Usadas na oficina (preview) e na simulação.
+// `modifiers` vem das decisões em voo (ex.: lifetimeDelta) e só é usado pela simulação.
+// Devolve { ok, designOk, checks: [{ id, ok, hard, text }], totals }.
+//   hard = true: impede o sucesso. hard = false ("leve"): só reduz a ciência entregue.
+function checkDesign(player, modifiers = {}) {
+  const mission = MISSIONS[player.missionId];
+  const t = effectiveTotals(player);
+  const orbit = ORBITS[player.spacecraft.orbitId];
+  const launcher = LAUNCHERS[player.spacecraft.launcherId];
+  const checks = [];
+  const add = (id, ok, okText, failText, hard = true) => checks.push({ id, ok, hard, text: ok ? okText : failText });
+
+  add('launcher', Boolean(launcher), `Lançador: ${launcher?.name}.`, 'Nenhum lançador escolhido.');
+  add('orbit', Boolean(orbit), `Órbita: ${orbit?.name}.`, 'Nenhuma órbita escolhida.');
+
+  if (launcher && orbit) {
+    add('reach', launcher.reach.includes(orbit.id),
+      `O ${launcher.name} alcança a ${orbit.name}.`,
+      `O ${launcher.name} não alcança a ${orbit.name}. Escolha um lançador maior ou uma órbita mais baixa.`);
+    add('mass', t.mass <= launcher.maxMass,
+      `Massa ${t.mass}/${launcher.maxMass}: cabe no lançador.`,
+      `Massa ${t.mass} excede a capacidade ${launcher.maxMass} do lançador. Tire peças ou use um lançador maior.`);
+  }
+
+  if (orbit && mission) {
+    add('mission_orbit', orbit.id === mission.orbit,
+      `A órbita é a exigida pela missão.`,
+      `A missão "${mission.name}" exige a ${ORBITS[mission.orbit].name}, não a ${orbit.name}.`);
+  }
+
+  add('power', t.powerBalance >= 0,
+    `Energia: gera ${t.powerGen}, consome ${t.powerUse}. Sobra ${t.powerBalance}.`,
+    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione painel solar ou bateria, ou remova instrumentos.`);
+
+  add('comms', t.commsEffective >= t.data,
+    `Comunicação ${t.commsEffective} dá conta dos ${t.data} de dados gerados.`,
+    `Os instrumentos geram ${t.data} de dados, mas a comunicação efetiva é ${t.commsEffective}${orbit?.commsPenalty ? ` (a ${orbit.name} reduz o sinal em ${orbit.commsPenalty * 100}%)` : ''}. Metade da ciência se perde: melhore a antena.`,
+    false);
+
+  if (mission) {
+    add('science', t.scienceEffective >= mission.needs.science,
+      `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
+      `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
+    add('mission_comms', t.commsEffective >= mission.needs.comms,
+      `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
+      `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+    if (mission.needs.lifeSupport) {
+      add('life', t.lifeSupport, 'Suporte de vida a bordo.', 'A missão exige cápsula com suporte de vida.');
+    }
+    const lifetime = t.lifetime + (modifiers.lifetimeDelta || 0);
+    add('lifetime', lifetime >= mission.needs.lifetime,
+      `Vida útil ${lifetime} ano(s): atende aos ${mission.needs.lifetime} exigidos.`,
+      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} propulsor de manutenção ou bateria estendem a vida.`);
+  }
+
+  // `modifiers.launched`: avaliação depois do voo, o lançamento já foi pago.
+  if (!modifiers.launched) {
+    add('funds', player.funds >= t.launchCost,
+      `Verba ${player.funds} cobre o lançamento (${t.launchCost}).`,
+      `Verba ${player.funds} não cobre o custo de lançamento ${t.launchCost}. Jogue mais rodadas no tabuleiro ou use um lançador mais barato.`);
+  }
+
+  const hardOk = checks.filter((c) => c.hard).every((c) => c.ok);
+  // "Projeto pronto" ignora verba: o projeto está certo, só falta dinheiro para lançar.
+  const designOk = checks.filter((c) => c.hard && c.id !== 'funds').every((c) => c.ok);
+  return { ok: hardOk, designOk, checks, totals: t };
+}
+
+// Simula o lançamento e a operação.
+// `modifiers` = consequências da decisão em voo: { sciencePenalty, failChance, lifetimeDelta }.
+// `randomFailure: false` desliga a falha aleatória única: no jogo com voo em etapas, o risco
+// já foi sorteado etapa por etapa (sim/flight.js) e aqui só sobra a avaliação final da operação.
+// Devolve { success, score, reasons, checks, totals, usedShield, scienceDelivered }.
+function simulate(player, { rng = Math.random, modifiers = {}, randomFailure: allowRandom = true } = {}) {
+  const { ok, checks, totals } = checkDesign(player, modifiers);
+  const reasons = checks.filter((c) => !c.ok && c.hard).map((c) => c.text);
+  let usedShield = false;
+
+  // Falha aleatória só acontece se o projeto estava certo; escudo protege uma vez.
+  let randomFailure = false;
+  if (ok && allowRandom) {
+    const chance = FAILURE_CHANCE + (modifiers.failChance || 0);
+    if (rng() < chance) {
+      if ((player.shields || 0) > 0) {
+        usedShield = true;
+        reasons.push('Um componente falhou, mas a redundância do projeto (proteção) salvou a missão.');
+      } else {
+        randomFailure = true;
+        reasons.push(modifiers.failChance
+          ? 'A decisão arriscada em voo custou caro: falha de componente durante a operação.'
+          : 'Falha aleatória de componente durante a operação. Proteções contra falha (eventos e milestones) evitariam isso.');
+      }
+    }
+  }
+
+  const success = ok && !randomFailure;
+  const commsOk = checks.find((c) => c.id === 'comms')?.ok ?? true;
+  let scienceDelivered = commsOk ? totals.scienceEffective : Math.floor(totals.scienceEffective / 2);
+  if (modifiers.sciencePenalty) scienceDelivered = Math.floor(scienceDelivered * (1 - modifiers.sciencePenalty));
+
+  // Pontuação: premia ciência entregue, verba poupada e massa enxuta (uso eficiente de recursos).
+  const fundsLeft = modifiers.launched ? player.funds : player.funds - totals.launchCost;
+  const score = success
+    ? scienceDelivered * 10 + Math.max(0, fundsLeft) + Math.max(0, (totals.maxMass || 0) - totals.mass)
+    : 0;
+
+  if (success) {
+    reasons.unshift(`Missão cumprida: ${scienceDelivered} de ciência entregue.`);
+    if (!commsOk) reasons.push('Metade da ciência se perdeu por falta de comunicação.');
+    if (modifiers.sciencePenalty) reasons.push(`A decisão em voo custou ${modifiers.sciencePenalty * 100}% da ciência.`);
+  }
+
+  return { success, score, reasons, checks, totals, usedShield, scienceDelivered };
+}
+
+return { FAILURE_CHANCE, checkDesign, simulate };
+})();
+
+// ---- src/data/events.js
+__mods["src/data/events.js"] = (() => {
+// Eventos de voo: acontecem entre o lançamento e o relatório e exigem uma decisão.
+// Inspirado em como missões reais lidam com imprevistos (tempestade solar, detritos, corte de verba).
+// Cada opção tem consequência; a "lição" explica o porquê no relatório.
+// ATENÇÃO: probabilidades e penalidades FICTÍCIAS para balanceamento.
+//
+// Efeitos possíveis em `effect`:
+//   sciencePenalty  fração da ciência perdida (0.25 = perde 25%)
+//   failChance      chance EXTRA de falha total (soma à chance base da simulação)
+//   funds           verba ganha/perdida na hora
+//   lifetimeDelta   anos a mais/menos de vida útil
+//   needsPart       se o jogador tiver essa peça, o efeito vira `effectWithPart`
+
+const FLIGHT_EVENTS = {
+  solar_storm: {
+    id: 'solar_storm',
+    title: 'Tempestade solar',
+    text: 'O Sol lançou uma rajada de partículas carregadas na direção da sua espaçonave. A eletrônica pode ser danificada.',
+    options: [
+      {
+        label: 'Desligar os instrumentos até passar (modo seguro)',
+        effect: { sciencePenalty: 0.25 },
+        lesson: 'Entrar em "modo seguro" custa dias de ciência, mas protege a eletrônica. Missões reais fazem isso com frequência.',
+      },
+      {
+        label: 'Manter tudo ligado e torcer',
+        effect: { failChance: 0.35 },
+        lesson: 'Partículas de alta energia podem travar computadores e queimar circuitos. Sem blindagem, o risco de perder a missão é alto.',
+      },
+    ],
+  },
+  debris: {
+    id: 'debris',
+    title: 'Alerta de detrito espacial',
+    text: 'O rastreamento em solo prevê uma passagem próxima de um fragmento de foguete antigo.',
+    options: [
+      {
+        label: 'Fazer manobra de desvio (gasta propelente)',
+        effect: { lifetimeDelta: -1 },
+        lesson: 'Cada manobra gasta propelente que faria a manutenção da órbita mais tarde, encurtando a vida útil. Por isso missões carregam margem de combustível.',
+      },
+      {
+        label: 'Manter a órbita (a chance de colisão é pequena)',
+        effect: { failChance: 0.3 },
+        lesson: 'Mesmo pequena, uma colisão a milhares de km/h destrói a espaçonave. Operadores reais manobram quando o risco passa de 1 em 10.000.',
+      },
+    ],
+  },
+  budget_cut: {
+    id: 'budget_cut',
+    title: 'Corte no orçamento de operações',
+    text: 'O governo reduziu a verba de operações. Manter a equipe de solo trabalhando vai custar do seu caixa.',
+    options: [
+      {
+        label: 'Pagar 15 de verba para manter as operações',
+        effect: { funds: -15 },
+        lesson: 'Operar uma missão custa todo ano: estações de solo, equipe e análise de dados. Esse custo entra no orçamento desde o projeto.',
+      },
+      {
+        label: 'Reduzir a equipe e encerrar a missão mais cedo',
+        effect: { lifetimeDelta: -2 },
+        lesson: 'Encurtar a missão economiza dinheiro, mas pode deixar de cumprir o tempo mínimo que a ciência exigia.',
+      },
+    ],
+  },
+  antenna_stuck: {
+    id: 'antenna_stuck',
+    title: 'Antena principal travou',
+    text: 'A antena não abriu completamente após o lançamento. A comunicação ficou limitada.',
+    options: [
+      {
+        label: 'Usar a antena reserva, se houver',
+        needsPart: ['antenna_basic', 'antenna_dish'],
+        needsCount: 2,
+        effectWithPart: { sciencePenalty: 0 },
+        effect: { sciencePenalty: 0.5 },
+        lesson: 'Redundância (duas antenas) salva a missão. Sem reserva, metade dos dados científicos nunca chega à Terra. Foi o que aconteceu com a sonda Galileo.',
+      },
+      {
+        label: 'Tentar reabrir com ciclos de aquecimento e giro',
+        effect: { failChance: 0.2 },
+        lesson: 'Tentativas de destravar mecanismos no espaço são arriscadas e consomem energia e tempo, sem garantia.',
+      },
+    ],
+  },
+};
+
+// Escolhe um evento aleatório. `rng` injetável para testes.
+function pickEvent(rng = Math.random) {
+  const list = Object.values(FLIGHT_EVENTS);
+  return list[Math.floor(rng() * list.length)];
+}
+
+// Resolve o efeito de uma opção para um jogador (considera peça reserva, se exigida).
+function resolveOption(option, player) {
+  if (option.needsPart) {
+    const all = [...player.spacecraft.parts, ...player.spacecraft.instruments];
+    const count = all.filter((id) => option.needsPart.includes(id)).length;
+    if (count >= (option.needsCount || 1)) return option.effectWithPart;
+  }
+  return option.effect;
+}
+
+return { FLIGHT_EVENTS, pickEvent, resolveOption };
+})();
+
+// ---- src/data/stages.js
+__mods["src/data/stages.js"] = (() => {
+// Etapas do voo por destino (proposta do Henrique, IDEIA.md seção 13.4).
+// A subida acontece no turno do lançamento. Cada etapa seguinte acontece num turno depois,
+// então destinos distantes ficam mais tempo em voo, com mais eventos e mais risco.
+// ATENÇÃO: riscos FICTÍCIOS para balanceamento.
+//
+// system = subsistema testado na etapa. Uma falha gera "dados de falha" desse sistema,
+//          que reduzem o risco dele na próxima tentativa (passo Verify do ciclo da NASA).
+// guaranteedEvent = sempre tem imprevisto nessa etapa (pontos-chave do voo nunca ficam vazios).
+// consolation = missão de consolação (IDEIA.md v3 seção 7): se a etapa falha, a nave ainda cumpre um
+//               objetivo menor e dá crédito parcial. Não existe "abortar".
+
+const STAGES = {
+  ascent: { id: 'ascent', name: 'Subida', system: 'launch', baseRisk: 0.08, icon: '🚀', text: 'O foguete atravessa a atmosfera com a carga no topo.' },
+  orbit_insertion: { id: 'orbit_insertion', name: 'Entrada em órbita', system: 'power', baseRisk: 0.05, icon: '🛰️', text: 'A espaçonave abre os painéis e liga os sistemas.',
+    consolation: 'A nave ficou numa órbita baixa demais, mas transmitiu dados de engenharia por alguns dias antes de reentrar.' },
+  transfer: { id: 'transfer', name: 'Transferência', system: 'power', baseRisk: 0.07, icon: '🌀', text: 'Longa viagem até o destino, dependendo de energia o tempo todo.',
+    consolation: 'A nave ficou presa em órbita da Terra, mas testou os sistemas por semanas: dados preciosos para a próxima.' },
+  geo_arrival: { id: 'geo_arrival', name: 'Chegada à GEO', system: 'comms', baseRisk: 0.06, icon: '📡', text: 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.', guaranteedEvent: true,
+    consolation: 'A nave parou numa órbita alta errada, mas mediu a radiação dos cinturões de Van Allen.' },
+  lunar_arrival: { id: 'lunar_arrival', name: 'Chegada à Lua', system: 'comms', baseRisk: 0.10, icon: '🌙', text: 'Entrar em órbita lunar e falar com a Terra a 384 mil km.', guaranteedEvent: true,
+    consolation: 'A nave não entrou em órbita lunar, mas fez um sobrevoo e mandou fotos de perto da Lua.' },
+  crew_return: { id: 'crew_return', name: 'Retorno da tripulação', system: 'life', baseRisk: 0.10, icon: '🪂', text: 'Trazer a tripulação viva de volta à Terra.', guaranteedEvent: true,
+    consolation: 'A cápsula fez um pouso de emergência longe da área prevista. A tripulação foi resgatada, mas a missão não conta.' },
+};
+
+const CONSOLATION_FUNDS = 8; // crédito parcial em verba (+1 de tecnologia, como toda falha)
+
+// Plano de voo por órbita de destino. Missões podem somar etapas (ex.: retorno da tripulação).
+const FLIGHT_PLANS = {
+  leo: ['ascent', 'orbit_insertion'],
+  geo: ['ascent', 'transfer', 'geo_arrival'],
+  moon: ['ascent', 'transfer', 'lunar_arrival'],
+};
+
+const SYSTEM_NAMES = { launch: 'lançamento', power: 'energia', comms: 'comunicação', life: 'suporte de vida' };
+
+const FAILURE_DATA_BONUS = 0.05; // cada falha anterior no mesmo sistema tira 5% de risco
+const MAX_FAILURE_DATA = 3;      // no máximo −15%
+const MIN_RISK = 0.02;           // nada no espaço tem risco zero
+const MAX_RISK = 0.9;
+const STAGE_BONUS = 4;           // verba por etapa superada (etapas contam, mesmo se falhar depois)
+const REVIEW_COST = 10;          // "gastar a reserva": pagar revisão extra antes da etapa
+const REVIEW_RISK_CUT = 0.08;
+
+return { STAGES, CONSOLATION_FUNDS, FLIGHT_PLANS, SYSTEM_NAMES, FAILURE_DATA_BONUS, MAX_FAILURE_DATA, MIN_RISK, MAX_RISK, STAGE_BONUS, REVIEW_COST, REVIEW_RISK_CUT };
+})();
+
+// ---- src/sim/flight.js
+__mods["src/sim/flight.js"] = (() => {
+// Risco de cada etapa do voo, calculado pelos atributos da nave e explicado parcela por parcela.
+// É aqui que o jogador vê que o trade-off feito na oficina mudou o resultado (IDEIA.md seção 7):
+//   "18%: risco base 8% · carga perto do limite +10%"
+// Funções puras, sem DOM. ATENÇÃO: números FICTÍCIOS para balanceamento.
+const { effectiveTotals } = __mods["src/sim/resources.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { FLIGHT_EVENTS, resolveOption } = __mods["src/data/events.js"];
+const { STAGES, FLIGHT_PLANS, SYSTEM_NAMES, FAILURE_DATA_BONUS, MAX_FAILURE_DATA, MIN_RISK, MAX_RISK, REVIEW_COST, REVIEW_RISK_CUT } = __mods["src/data/stages.js"];
+
+const CONTROL_RISK_CUT = 0.03; // por nível do Controle de missão
+
+// Sequência de etapas da missão (ex.: ['ascent', 'transfer', 'lunar_arrival', 'crew_return']).
+function flightPlan(missionId) {
+  const mission = MISSIONS[missionId];
+  if (!mission) return [];
+  return [...FLIGHT_PLANS[mission.orbit], ...(mission.extraStages || [])];
+}
+
+const count = (player, ids) => [...player.spacecraft.parts, ...player.spacecraft.instruments]
+  .filter((id) => ids.includes(id)).length;
+
+// Risco de uma etapa. `extra` = { failChance, label } (decisão do evento) e { riskCut, cutLabel } (revisão paga).
+// Devolve { total, parts: [{ text, value }] }. value positivo aumenta o risco, negativo reduz.
+function stageRisk(player, stageId, extra = {}) {
+  const stage = STAGES[stageId];
+  const t = effectiveTotals(player);
+  const parts = [{ text: `risco base da etapa "${stage.name}"`, value: stage.baseRisk }];
+  const add = (text, value) => parts.push({ text, value });
+
+  switch (stage.system) {
+    case 'launch':
+      if (t.maxMass && t.mass > 0.85 * t.maxMass) add(`carga perto do limite do foguete (${t.mass}/${t.maxMass})`, 0.10);
+      if (player.launchRisk) add('defeito conhecido que não foi corrigido', player.launchRisk);
+      break;
+    case 'power':
+      if (t.powerBalance < 5) add(`energia sem margem (sobra ${t.powerBalance})`, 0.10);
+      if (count(player, ['battery'])) add('bateria de reserva', -0.05);
+      break;
+    case 'comms':
+      if (t.commsEffective < t.data) add(`antena sobrecarregada (${t.data} de dados para ${t.commsEffective} de comunicação)`, 0.10);
+      if (count(player, ['antenna_basic', 'antenna_dish']) >= 2) add('antena reserva (redundância)', -0.05);
+      break;
+    case 'life':
+      if (t.powerBalance < 10) add(`suporte de vida com pouca energia sobrando (${t.powerBalance})`, 0.10);
+      break;
+    default:
+      break;
+  }
+
+  const fd = Math.min(player.failureData?.[stage.system] || 0, MAX_FAILURE_DATA);
+  if (fd) add(`dados de falha anteriores em ${SYSTEM_NAMES[stage.system]} (${fd})`, -FAILURE_DATA_BONUS * fd);
+  const control = player.buildings?.control || 0;
+  if (control) add(`Controle de missão nível ${control}`, -CONTROL_RISK_CUT * control);
+  if (extra.failChance) add(extra.label || 'decisão arriscada', extra.failChance);
+  if (extra.riskCut) add(extra.cutLabel || 'revisão extra', -extra.riskCut);
+
+  const sum = parts.reduce((s, p) => s + p.value, 0);
+  const total = Math.round(Math.min(MAX_RISK, Math.max(MIN_RISK, sum)) * 100) / 100;
+  return { total, parts };
+}
+
+const pct = (x) => `${Math.round(x * 100)}%`;
+
+// "18%: risco base 8% · carga perto do limite +10%"
+function describeRisk(risk) {
+  const items = risk.parts.map((p, i) => (i === 0 ? `${p.text} ${pct(p.value)}` : `${p.text} ${p.value > 0 ? '+' : '−'}${pct(Math.abs(p.value))}`));
+  return `${pct(risk.total)}: ${items.join(' · ')}`;
+}
+
+// A nave que está voando. Ao lançar, a nave sai da oficina (p.spacecraft fica livre para montar
+// a próxima) e vai para p.flight.craft. Risco e avaliação final usam esta "visão" do jogador.
+function flyer(player) {
+  if (!player.flight) return player;
+  return { ...player, missionId: player.flight.missionId, spacecraft: player.flight.craft };
+}
+
+// Opções do jogador numa etapa do voo. Não existe "abortar" (IDEIA.md v3 seção 7): se a etapa falhar,
+// a nave tenta uma missão de consolação. Com imprevisto: as 2 opções do evento.
+// Sem imprevisto: seguir ou gastar a reserva de verba para reduzir o risco.
+// Cada opção já traz o risco calculado e explicado, para o jogador decidir vendo o porquê.
+function stageOptions(player, pending) {
+  const ship = flyer(player);
+  const { stageId, eventId } = pending;
+  if (eventId) {
+    const event = FLIGHT_EVENTS[eventId];
+    return event.options.map((opt) => {
+      const effect = resolveOption(opt, ship) || {};
+      return {
+        kind: 'event',
+        label: opt.label,
+        effect,
+        risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: 'decisão arriscada no imprevisto' }),
+        lesson: opt.lesson,
+      };
+    });
+  }
+  return [
+    { kind: 'go', label: 'Seguir com a etapa', effect: {}, risk: stageRisk(ship, stageId), lesson: null },
+    {
+      kind: 'review',
+      label: `Gastar a reserva: revisão extra (${REVIEW_COST} de verba)`,
+      effect: { funds: -REVIEW_COST },
+      risk: stageRisk(ship, stageId, { riskCut: REVIEW_RISK_CUT, cutLabel: 'revisão extra paga' }),
+      disabled: player.funds < REVIEW_COST,
+      lesson: 'Revisões e testes extras custam dinheiro, mas pegam defeitos antes que virem falhas.',
+    },
+  ];
+}
+
+// Chance de concluir o voo inteiro sem decisões arriscadas (produto das etapas). Usada na oficina
+// para mostrar o risco ANTES de lançar: é a decisão "lanço agora ou espero melhorar".
+function missionRisk(player) {
+  const plan = flightPlan(player.missionId);
+  const stages = plan.map((id) => ({ id, name: STAGES[id].name, risk: stageRisk(player, id) }));
+  const success = stages.reduce((s, st) => s * (1 - st.risk.total), 1);
+  return { stages, total: Math.round((1 - success) * 100) / 100 };
+}
+
+return { CONTROL_RISK_CUT, flightPlan, stageRisk, pct, describeRisk, flyer, stageOptions, missionRisk };
+})();
+
+// ---- src/data/sides.js
+__mods["src/data/sides.js"] = (() => {
+// Lados da Guerra Fria e escadas de missões (IDEIA.md v3 seção 2). A win con é completar a escada do
+// próprio lado: cada degrau é uma nave nova; tecnologia, prédios, verba e bônus persistem.
+// Agências são do jogador; o lado só define a escada, uma vantagem pequena e uma fraqueza pequena.
+// ATENÇÃO: vantagens e fraquezas FICTÍCIAS, para balanceamento. Sem bandeiras nem marcas.
+//
+// launcherTech = ajuste no nível de tecnologia exigido pelos lançadores (−1 = foguetes fortes cedo).
+// A ordem e o degrau final da URSS estão "a definir" na v3; aqui o final é a Lua para os dois lados
+// (a corrida à Lua). Mudar a escada é só trocar a lista.
+
+const SIDES = {
+  usa: {
+    id: 'usa',
+    name: 'EUA',
+    icon: '🦅',
+    ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
+    focus: 'Foguete pesado e suporte de vida',
+    advantage: 'Mais verba: +20 no início e +5 por ano.',
+    weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
+    startFunds: 20,
+    yearlyBonus: 5,
+    launcherTech: 1,
+  },
+  ussr: {
+    id: 'ussr',
+    name: 'URSS',
+    icon: '⭐',
+    ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
+    focus: 'Vida no espaço e energia contínua',
+    advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
+    weakness: 'Orçamento mais apertado: −5 de verba por ano.',
+    startFunds: 0,
+    yearlyBonus: -5,
+    launcherTech: -1,
+  },
+};
+
+const STEP_BONUS_FIRST = 20; // primeiro do lado a cumprir o degrau
+const STEP_BONUS_LATER = 8;  // quem cumpre depois, no mesmo lado, leva menos
+
+const ladderOf = (player) => SIDES[player.side]?.ladder || [];
+
+// Lados sorteados de forma equilibrada: 1 jogador = um lado (o bot fica com o outro);
+// 2 = lados diferentes; 3 ou 4 = 2 contra 1 ou 2 contra 2.
+function drawSides(n, rng = Math.random) {
+  const first = rng() < 0.5 ? 'usa' : 'ussr';
+  const other = first === 'usa' ? 'ussr' : 'usa';
+  const sides = Array.from({ length: n }, (_, i) => (i % 2 === 0 ? first : other));
+  for (let i = sides.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [sides[i], sides[j]] = [sides[j], sides[i]];
+  }
+  return sides;
+}
+
+return { SIDES, STEP_BONUS_FIRST, STEP_BONUS_LATER, ladderOf, drawSides };
+})();
+
+// ---- src/sim/progress.js
+__mods["src/sim/progress.js"] = (() => {
+// Progresso de cada agência na escada do próprio lado (IDEIA.md v3 seções 2 e 11).
+// Função pura. Usada para o fim da partida, o desempate e o apoio a quem está atrás.
+const { ladderOf } = __mods["src/data/sides.js"];
+const { flightPlan } = __mods["src/sim/flight.js"];
+
+// Degraus cumpridos + metade da fração do melhor voo no degrau atual (etapas contam no desempate).
+function ladderProgress(player) {
+  const ladder = ladderOf(player);
+  const steps = Math.min(player.step || 0, ladder.length);
+  const current = ladder[steps];
+  const partial = current ? ((player.bestStage?.[current] || 0) / flightPlan(current).length) / 2 : 0;
+  return {
+    steps,
+    total: ladder.length,
+    current: current || null,
+    pct: ladder.length ? Math.min(1, (steps + partial) / ladder.length) : 0,
+    done: ladder.length > 0 && steps >= ladder.length,
+  };
+}
+
+return { ladderProgress };
+})();
+
+// ---- src/data/dilemmas.js
+__mods["src/data/dilemmas.js"] = (() => {
+// Cartas de dilema (IDEIA.md v3 seção 7): a casa de evento sorteia uma carta com ESCOLHA, de acordo
+// com a situação do jogador. Com a nave em voo, a casa vira um imprevisto na próxima etapa do voo
+// (data/events.js). Em solo, valem as cartas abaixo.
+// ATENÇÃO: efeitos FICTÍCIOS para balanceamento. Situações históricas só como inspiração.
+//
+// when: 'idle' (sem peças na oficina), 'building' (montando a nave) ou 'any'.
+// effect: funds, tech, discount (%), shield, launchRisk (risco extra na próxima subida),
+//         rumor (boato sobre um rival), gamble ({ chance, win: effect, lose: effect }).
+
+const DILEMMAS = [
+  {
+    id: 'congress',
+    when: 'any',
+    title: 'O Congresso quer resultados',
+    text: 'Os políticos cobram um resultado visível. Cortar a pesquisa libera dinheiro agora.',
+    options: [
+      { label: 'Cortar o laboratório e mostrar números', effect: { funds: 20, tech: -1 }, lesson: 'Cortar pesquisa resolve o caixa hoje e atrasa as peças melhores de amanhã.' },
+      { label: 'Defender a ciência no Congresso', effect: { funds: -8, tech: 1 }, lesson: 'Investir em pesquisa custa agora e rende tecnologia.' },
+    ],
+  },
+  {
+    id: 'scientists',
+    when: 'any',
+    title: 'Cientistas estrangeiros querem se juntar à agência',
+    text: 'Uma equipe experiente pede para trabalhar com vocês, mas exige laboratório e salários.',
+    options: [
+      { label: 'Contratar a equipe', effect: { funds: -12, tech: 2 }, lesson: 'Gente experiente encurta anos de pesquisa.' },
+      { label: 'Agradecer e recusar', effect: { funds: 5 }, lesson: 'Economizar agora pode deixar a agência para trás depois.' },
+    ],
+  },
+  {
+    id: 'rumor',
+    when: 'any',
+    title: 'Boato na imprensa',
+    text: 'Um jornal diz saber o que a agência rival está fazendo. A fonte é duvidosa.',
+    options: [
+      { label: 'Pagar um analista para investigar (5)', effect: { funds: -5, rumor: true }, lesson: 'Informação sobre o rival ajuda a decidir quando lançar, mas boatos podem estar errados.' },
+      { label: 'Ignorar e seguir o plano', effect: { funds: 3 }, lesson: 'Sem informação, a dúvida sobre o tempo que resta continua.' },
+    ],
+  },
+  {
+    id: 'public_test',
+    when: 'any',
+    title: 'Teste público de motor',
+    text: 'A imprensa quer assistir ao teste de um motor novo. Se der certo, vira propaganda; se der errado, vexame.',
+    options: [
+      { label: 'Fazer o teste ao vivo', effect: { gamble: { chance: 0.6, win: { funds: 15, shield: 1 }, lose: { funds: -10 } } }, lesson: 'Testes em solo pegam defeitos antes do voo, mas custam caro quando falham.' },
+      { label: 'Testar em segredo', effect: { shield: 1, funds: -6 }, lesson: 'Testes discretos dão confiança sem risco de imagem, mas não trazem verba.' },
+    ],
+  },
+  {
+    id: 'supplier_delay',
+    when: 'building',
+    title: 'O fornecedor atrasou uma peça',
+    text: 'A peça que você precisa vai demorar. Dá para esperar ou trocar de fornecedor.',
+    options: [
+      { label: 'Esperar o fornecedor (desconto pelo atraso)', effect: { discount: 20 }, lesson: 'Paciência sai mais barato, mas o tempo também é um recurso.' },
+      { label: 'Trocar por um fornecedor testado (8)', effect: { funds: -8, shield: 1 }, lesson: 'Peça já testada custa mais e reduz a chance de falha.' },
+    ],
+  },
+  {
+    id: 'design_flaw',
+    when: 'building',
+    title: 'Engenheiros acharam um defeito no projeto',
+    text: 'Uma revisão encontrou uma solda suspeita na estrutura. Refazer custa tempo e dinheiro.',
+    options: [
+      { label: 'Refazer a peça (10)', effect: { funds: -10, shield: 1 }, lesson: 'Revisões de projeto existem para pegar falhas antes do lançamento.' },
+      { label: 'Lançar assim mesmo', effect: { launchRisk: 0.12 }, lesson: 'Ignorar um defeito conhecido aumenta o risco da subida.' },
+    ],
+  },
+  {
+    id: 'budget_freeze',
+    when: 'idle',
+    title: 'Orçamento congelado',
+    text: 'Sem nave em construção, o governo ameaça congelar a verba da agência.',
+    options: [
+      { label: 'Prometer um lançamento em breve', effect: { funds: 12, discount: 10 }, lesson: 'Compromissos públicos trazem verba e pressão para lançar.' },
+      { label: 'Aceitar o corte e estudar mais', effect: { funds: -5, tech: 1 }, lesson: 'Um ano mais magro pode virar um projeto mais maduro.' },
+    ],
+  },
+];
+
+// Cartas válidas para a situação do jogador (sempre existe pelo menos uma 'any').
+function dilemmasFor(player) {
+  const building = player.spacecraft.instruments.length + player.spacecraft.parts.length > 0;
+  return DILEMMAS.filter((d) => d.when === 'any' || d.when === (building ? 'building' : 'idle'));
+}
+
+function pickDilemma(player, rng = Math.random) {
+  const list = dilemmasFor(player);
+  return list[Math.floor(rng() * list.length)];
+}
+
+return { DILEMMAS, dilemmasFor, pickDilemma };
+})();
+
+// ---- src/data/buildings.js
+__mods["src/data/buildings.js"] = (() => {
+// Prédios da agência (IDEIA.md seção 5). Constrói ao cair num terreno livre; depois sobe o nível
+// de qualquer lugar, sem precisar de outra casa. Rival que cai no terreno pode pagar para usar o prédio.
+// ATENÇÃO: custos e efeitos FICTÍCIOS para balanceamento.
+//
+// perLevel = efeito por nível. useEffect = o que o rival ganha ao pagar a taxa de uso (uma vez).
+
+const MAX_LEVEL = 3;
+const BUILD_COST = 15;          // nível 1
+const UPGRADE_COST_STEP = 15;   // nível 2 custa 30, nível 3 custa 45 (custo sobe para frear bola de neve)
+const CATCHUP_UPGRADE_DISCOUNT = 0.5; // quem está em último paga metade no upgrade
+const USE_FEE = 6;              // taxa paga ao dono para usar o prédio dele
+
+const BUILDINGS = {
+  lab: {
+    id: 'lab', name: 'Laboratório', icon: '🧪',
+    effect: '+1 de tecnologia a cada Ano novo, por nível.',
+    useEffect: { tech: 1 }, useText: '+1 de tecnologia',
+  },
+  factory: {
+    id: 'factory', name: 'Fábrica', icon: '🏭',
+    effect: '−10% no preço das peças, por nível.',
+    useEffect: { discount: 20 }, useText: '20% de desconto na próxima compra',
+  },
+  control: {
+    id: 'control', name: 'Controle de missão', icon: '🎛️',
+    effect: '−3% de risco em cada etapa do voo, por nível.',
+    useEffect: { shield: 1 }, useText: '1 proteção contra falha',
+  },
+  sponsor: {
+    id: 'sponsor', name: 'Patrocinador', icon: '🤝',
+    effect: '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
+    useEffect: { funds: 8 }, useText: '+8 de verba',
+  },
+};
+
+const upgradeCost = (level) => (level === 0 ? BUILD_COST : UPGRADE_COST_STEP * (level + 1));
+
+return { MAX_LEVEL, BUILD_COST, UPGRADE_COST_STEP, CATCHUP_UPGRADE_DISCOUNT, USE_FEE, BUILDINGS, upgradeCost };
+})();
+
+// ---- src/sim/actions.js
+__mods["src/sim/actions.js"] = (() => {
+// Ações do jogo: cada função altera o estado e devolve uma mensagem de erro (string) ou null.
+// A UI só chama estas funções; a regra de negócio fica aqui (testável sem DOM).
+//
+// Regras da IDEIA.md v3:
+//   - Cada agência é de um lado (EUA ou URSS) e vence completando a ESCADA de missões do lado.
+//   - 3 rodadas = 1 ano. No "Ano novo" cada agência recebe verba e tecnologia.
+//   - Rival escondido: só o espião e os boatos revelam o estado dos outros. Tela de troca entre turnos.
+//   - Solo: o outro lado é um bot que segue o calendário histórico, com variação.
+//
+// Turno:
+//   1. Tabuleiro: rola 2 dados, escolhe um, anda e decide (dilema, prédio, espião).
+//   2. Uma ação, conforme a nave:
+//      - no chão: oficina à vontade e, se quiser, LANÇA (a subida acontece na hora e encerra o turno);
+//      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado); dá para montar a próxima nave.
+//   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
+const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST } = __mods["src/sim/state.js"];
+const { TILES, rollDie, movePlayer, applyTile } = __mods["src/board/board.js"];
+const { CATALOG, priceFor, isLocked, requiredTech } = __mods["src/sim/resources.js"];
+const { checkDesign, simulate } = __mods["src/sim/simulate.js"];
+const { flightPlan, stageRisk, stageOptions, flyer, describeRisk, pct } = __mods["src/sim/flight.js"];
+const { ladderProgress } = __mods["src/sim/progress.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { INSTRUMENTS } = __mods["src/data/instruments.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+const { FLIGHT_EVENTS, pickEvent } = __mods["src/data/events.js"];
+const { STAGES, SYSTEM_NAMES, STAGE_BONUS, FAILURE_DATA_BONUS, CONSOLATION_FUNDS } = __mods["src/data/stages.js"];
+const { SIDES, ladderOf, drawSides, STEP_BONUS_FIRST, STEP_BONUS_LATER } = __mods["src/data/sides.js"];
+const { DILEMMAS, pickDilemma } = __mods["src/data/dilemmas.js"];
+const { BUILDINGS, MAX_LEVEL, upgradeCost, USE_FEE, CATCHUP_UPGRADE_DISCOUNT } = __mods["src/data/buildings.js"];
+const { MAX_ROUNDS, REAL_HISTORY, yearOf, isNewYear } = __mods["src/data/history.js"];
+
+const SPONSOR_FUNDS_PER_LEVEL = 10; // por ano
+const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
+
+// ---------------------------------------------------------------- partida e turno
+
+// setup = [{ name, missionId? }, ...] (1 a 4 agências); options = { sandbox, rng }
+function startGame(state, setup, options = {}) {
+  const rng = options.rng || Math.random;
+  state.sandbox = Boolean(options.sandbox);
+  state.players = setup.map((p, i) => createPlayer(i, p.name || `Agência ${i + 1}`, p.missionId || null));
+  state.turn = 0;
+  state.round = 1;
+  state.log = [];
+  state.sideFirsts = {};
+  state.lots = {};
+  state.dice = null;
+  state.pendingTile = null;
+  state.pendingDilemma = null;
+  state.winners = [];
+  state.gameOver = false;
+  state.lastRoll = null;
+
+  if (state.sandbox) {
+    state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; });
+    state.screen = 'workshop';
+    pushLog(state, 'Modo sandbox: verba livre, tecnologia liberada, sem tabuleiro. Explore os trade-offs à vontade.');
+    return null;
+  }
+
+  const sides = drawSides(state.players.length, rng);
+  state.players.forEach((p, i) => assignSide(p, sides[i]));
+  if (state.players.length === 1) state.players.push(createBot(state.players[0], rng));
+
+  pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
+  state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
+  startTurn(state);
+  state.screen = humans(state).length > 1 ? 'handoff' : 'board';
+  return null;
+}
+
+function assignSide(p, sideId) {
+  const side = SIDES[sideId];
+  p.side = sideId;
+  p.launcherTech = side.launcherTech;
+  p.funds += side.startFunds;
+  p.missionId = side.ladder[0];
+}
+
+// Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
+function createBot(human, rng) {
+  const sideId = human.side === 'usa' ? 'ussr' : 'usa';
+  const bot = createPlayer(1, `Agência rival (${SIDES[sideId].name})`);
+  bot.bot = true;
+  assignSide(bot, sideId);
+  bot.schedule = ladderOf(bot).map((m) => {
+    const real = REAL_HISTORY[m].sides[sideId];
+    return real == null ? null : real + Math.floor(rng() * 3) - 1;
+  });
+  return bot;
+}
+
+// Início do turno. No "Ano novo" (1ª rodada de cada ano): verba e tecnologia.
+function startTurn(state) {
+  const p = currentPlayer(state);
+  p.rolled = false;
+  p.flightAdvanced = false;
+  p.launchedThisTurn = false;
+  state.dice = null;
+  state.pendingTile = null;
+  state.pendingDilemma = null;
+  if (p.bot) return;
+  if (isNewYear(state.round)) {
+    const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
+    const tech = TECH_PER_YEAR + p.buildings.lab;
+    p.funds += funds;
+    p.tech += tech;
+    pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+  }
+}
+
+// Turno do bot: cumpre os degraus cujo ano chegou. Tudo privado (rival escondido).
+function botTurn(state) {
+  const bot = currentPlayer(state);
+  const year = yearOf(state.round);
+  const ladder = ladderOf(bot);
+  while (bot.step < ladder.length && bot.schedule[bot.step] != null && year >= bot.schedule[bot.step]) {
+    const missionId = ladder[bot.step];
+    bot.completed.push({ missionId, year, science: 0 });
+    bot.bestStage[missionId] = flightPlan(missionId).length;
+    bot.step += 1;
+    bot.missionId = ladder[bot.step] || null;
+    pushLog(state, `${bot.name} cumpriu "${MISSIONS[missionId].name}".`, bot.id);
+  }
+}
+
+function endTurn(state) {
+  const p = currentPlayer(state);
+  if (state.sandbox) {
+    state.screen = p.flight ? 'flight' : 'workshop';
+    return null;
+  }
+  if (!p.rolled) return 'Role os dados e ande antes de passar a vez.';
+  if (state.pendingDilemma) return 'Resolva a carta de dilema antes de passar a vez.';
+  if (p.flight?.pending) return 'Decida o imprevisto do voo antes de passar a vez.';
+  if (p.flight && !p.flightAdvanced) return 'Sua nave está em voo: avance uma etapa antes de passar a vez.';
+  advanceTurn(state);
+  return null;
+}
+
+// Passa para o próximo jogador humano; o bot joga sozinho no caminho.
+function advanceTurn(state) {
+  for (;;) {
+    state.turn = (state.turn + 1) % state.players.length;
+    if (state.turn === 0) {
+      endRound(state);
+      if (state.gameOver) return;
+      state.round += 1;
+      if (isNewYear(state.round)) pushLog(state, `Começa o ano de ${yearOf(state.round)}.`);
+    }
+    startTurn(state);
+    if (!currentPlayer(state).bot) break;
+    botTurn(state);
+  }
+  state.screen = humans(state).length > 1 ? 'handoff' : 'board';
+}
+
+// Desempate: progresso na escada, depois degraus, depois ciência entregue, depois verba.
+function rankKey(p) {
+  const prog = ladderProgress(p);
+  return [prog.pct, prog.steps, p.completed.reduce((s, c) => s + c.science, 0), p.funds];
+}
+function compareRank(a, b) {
+  const ka = rankKey(a);
+  const kb = rankKey(b);
+  for (let i = 0; i < ka.length; i += 1) if (ka[i] !== kb[i]) return kb[i] - ka[i];
+  return 0;
+}
+
+// Fim da rodada: termina antes de declarar vencedor, para todos jogarem o mesmo número de turnos.
+function endRound(state) {
+  const done = state.players.filter((p) => ladderProgress(p).done);
+  const timeUp = state.round >= MAX_ROUNDS;
+  if (!done.length && !timeUp) return;
+  const pool = done.length ? done : state.players;
+  const sorted = [...pool].sort(compareRank);
+  state.winners = sorted.filter((p) => compareRank(p, sorted[0]) === 0).map((p) => p.id);
+  state.gameOver = true;
+  state.endReason = done.length ? 'ladder' : 'time';
+  state.screen = 'gameover';
+  const names = state.winners.map((id) => state.players[id].name).join(' e ');
+  pushLog(state, done.length ? `${names} completou a escada de missões!` : `Fim de ${yearOf(state.round)}: vence quem subiu mais degraus (${names}).`);
+}
+
+// ---------------------------------------------------------------- tabuleiro
+
+// Quem está em último na corrida recebe o choque do Sputnik e desconto no upgrade.
+function isLastPlayer(state, player) {
+  return state.players.every((p) => compareRank(player, p) >= 0);
+}
+
+// Rola 2 dados; o jogador escolhe qual usar (IDEIA.md v3: ainda tem sorte, mas ele sente que decidiu).
+function rollDice(state, rng = Math.random) {
+  const p = currentPlayer(state);
+  if (state.sandbox) return 'No modo sandbox não há tabuleiro.';
+  if (p.rolled || state.dice) return 'Você já rolou os dados neste turno.';
+  state.dice = [rollDie(rng), rollDie(rng)];
+  return null;
+}
+
+function moveBy(state, index, rng = Math.random) {
+  const p = currentPlayer(state);
+  if (!state.dice) return 'Role os dados primeiro.';
+  const steps = state.dice[index];
+  if (!steps) return 'Dado inválido.';
+  state.dice = null;
+  const moved = movePlayer(p, steps);
+  const tile = TILES[moved.position];
+  const { player, messages } = applyTile(moved, tile, { isLast: isLastPlayer(state, p) });
+  Object.assign(p, player);
+  p.rolled = true;
+  state.lastRoll = steps;
+  pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
+  messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
+
+  if (tile.type === 'lot') {
+    const lot = state.lots[tile.id];
+    if (!lot) state.pendingTile = { tileId: tile.id, kind: 'build' };
+    else if (lot.ownerId !== p.id) state.pendingTile = { tileId: tile.id, kind: 'use' };
+    else pushLog(state, `${p.name}: este terreno já é seu (${BUILDINGS[lot.buildingId].name}).`, p.id);
+  }
+
+  if (tile.type === 'spy') {
+    if (state.players.length < 2) pushLog(state, `${p.name}: não há rivais para espionar.`, p.id);
+    else if (p.lastSpyYear === yearOf(state.round)) pushLog(state, `${p.name}: o espião já trabalhou este ano.`, p.id);
+    else state.pendingTile = { tileId: tile.id, kind: 'spy' };
+  }
+
+  // Evento: com a nave em voo vira imprevisto na próxima etapa; em solo, carta de dilema.
+  if (tile.type === 'event') {
+    if (p.flight) {
+      const eventId = pickEvent(rng).id;
+      p.flight.tileEvent = eventId;
+      pushLog(state, `${p.name}: sua nave em voo vai enfrentar "${FLIGHT_EVENTS[eventId].title}" na próxima etapa.`, p.id);
+    } else {
+      state.pendingDilemma = { id: pickDilemma(p, rng).id };
+    }
+  }
+  return null;
+}
+
+// Atalho: rola e anda com o primeiro dado (usado nos testes).
+function rollAndMove(state, rng = Math.random) {
+  return rollDice(state, rng) || moveBy(state, 0, rng);
+}
+
+function applyEffect(state, p, e, rng) {
+  if (e.gamble) {
+    const won = rng() < e.gamble.chance;
+    pushLog(state, `${p.name}: ${won ? 'deu certo!' : 'deu errado.'}`, p.id);
+    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng);
+    return;
+  }
+  if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
+  if (e.tech) p.tech = Math.max(0, p.tech + e.tech);
+  if (e.discount) p.discount = Math.max(p.discount, e.discount);
+  if (e.shield) p.shields += e.shield;
+  if (e.launchRisk) p.launchRisk = (p.launchRisk || 0) + e.launchRisk;
+  if (e.rumor) spreadRumor(state, p, rng);
+}
+
+function chooseDilemma(state, index, rng = Math.random) {
+  const p = currentPlayer(state);
+  const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
+  if (!card) return 'Nenhuma carta de dilema pendente.';
+  const option = card.options[index];
+  if (!option) return 'Opção inválida.';
+  state.pendingDilemma = null;
+  pushLog(state, `${p.name} — ${card.title}: "${option.label}". ${option.lesson}`, p.id);
+  applyEffect(state, p, option.effect, rng);
+  return null;
+}
+
+// Boato: informação vaga sobre um rival, às vezes errada.
+function spreadRumor(state, p, rng) {
+  const rivals = state.players.filter((r) => r.id !== p.id);
+  if (!rivals.length) return;
+  const rival = rivals[Math.floor(rng() * rivals.length)];
+  const total = ladderOf(rival).length;
+  const truth = rng() < RUMOR_TRUTH;
+  const shown = truth ? rival.step : Math.max(0, Math.min(total, rival.step + (rng() < 0.5 ? -1 : 1)));
+  p.intel[rival.id] = { year: yearOf(state.round), rumor: true, steps: shown, total };
+  pushLog(state, `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`, p.id);
+}
+
+// Espionagem: paga e vê o estado real de um rival (degrau atual e quanto a nave está pronta).
+function spyOn(state, rivalId) {
+  const p = currentPlayer(state);
+  if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
+  const rival = state.players.find((r) => r.id === rivalId && r.id !== p.id);
+  if (!rival) return 'Rival inválido.';
+  if (p.funds < SPY_COST) return `Verba insuficiente: o espião custa ${SPY_COST}.`;
+  p.funds -= SPY_COST;
+  p.lastSpyYear = yearOf(state.round);
+  p.intel[rival.id] = spyReport(state, rival);
+  state.pendingTile = null;
+  pushLog(state, `${p.name} pagou ${SPY_COST} ao espião para observar ${rival.name}.`, p.id);
+  return null;
+}
+
+function spyReport(state, rival) {
+  const ladder = ladderOf(rival);
+  const report = {
+    year: yearOf(state.round),
+    rumor: false,
+    steps: rival.step,
+    total: ladder.length,
+    mission: rival.missionId ? MISSIONS[rival.missionId].name : null,
+  };
+  if (rival.bot) return { ...report, note: 'Segue o próprio calendário; não dá para ver a oficina.' };
+  if (rival.flight) {
+    return { ...report, mission: MISSIONS[rival.flight.missionId].name, inFlight: true, stage: rival.flight.stageIndex, stages: rival.flight.plan.length };
+  }
+  const checks = checkDesign(rival).checks.filter((c) => c.hard);
+  return { ...report, ready: checks.length ? checks.filter((c) => c.ok).length / checks.length : 0 };
+}
+
+// Terreno livre: constrói um prédio novo (nível 1). Upgrade depois é de qualquer lugar.
+function buildOnLot(state, buildingId) {
+  const p = currentPlayer(state);
+  const pending = state.pendingTile;
+  if (!pending || pending.kind !== 'build') return 'Você não está num terreno livre.';
+  if (!BUILDINGS[buildingId]) return 'Prédio desconhecido.';
+  if (p.buildings[buildingId] > 0) return `Você já tem ${BUILDINGS[buildingId].name}. Suba o nível no painel da agência.`;
+  const cost = upgradeCost(0);
+  if (p.funds < cost) return `Verba insuficiente: construir custa ${cost}.`;
+  p.funds -= cost;
+  p.buildings[buildingId] = 1;
+  state.lots[pending.tileId] = { ownerId: p.id, buildingId };
+  state.pendingTile = null;
+  pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} num terreno.`);
+  return null;
+}
+
+const useFeeFor = (level) => USE_FEE + 2 * (level - 1);
+
+// Prédio de outro jogador: paga a taxa ao dono e recebe o efeito uma vez. Os dois ganham.
+function useRivalBuilding(state) {
+  const p = currentPlayer(state);
+  const pending = state.pendingTile;
+  if (!pending || pending.kind !== 'use') return 'Não há prédio de rival para usar aqui.';
+  const lot = state.lots[pending.tileId];
+  const owner = state.players[lot.ownerId];
+  const building = BUILDINGS[lot.buildingId];
+  const fee = useFeeFor(owner.buildings[lot.buildingId]);
+  if (p.funds < fee) return `Verba insuficiente: a taxa é ${fee}.`;
+  p.funds -= fee;
+  owner.funds += fee;
+  applyEffect(state, p, building.useEffect, Math.random);
+  state.pendingTile = null;
+  pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
+  return null;
+}
+
+function skipTile(state) {
+  state.pendingTile = null;
+  return null;
+}
+
+function upgradeBuilding(state, buildingId) {
+  const p = currentPlayer(state);
+  if (state.sandbox) return 'Prédios não existem no modo sandbox.';
+  const level = p.buildings[buildingId];
+  if (!level) return 'Construa este prédio num terreno livre primeiro.';
+  if (level >= MAX_LEVEL) return 'Este prédio já está no nível máximo.';
+  const cost = upgradeCostFor(state, p, buildingId);
+  if (p.funds < cost) return `Verba insuficiente: o upgrade custa ${cost}.`;
+  p.funds -= cost;
+  p.buildings[buildingId] = level + 1;
+  pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`, p.id);
+  return null;
+}
+
+// Quem está em último paga metade no upgrade (freio contra bola de neve).
+function upgradeCostFor(state, player, buildingId) {
+  const base = upgradeCost(player.buildings[buildingId]);
+  const behind = state.players.length > 1 && isLastPlayer(state, player);
+  return behind ? Math.round(base * CATCHUP_UPGRADE_DISCOUNT) : base;
+}
+
+// Sem eliminação: com pouca verba, a agência pede socorro e perde tecnologia.
+function requestBailout(state) {
+  const p = currentPlayer(state);
+  if (p.funds >= BAILOUT_LIMIT) return `Socorro só com menos de ${BAILOUT_LIMIT} de verba.`;
+  p.funds += BAILOUT_FUNDS;
+  p.tech = Math.max(0, p.tech - BAILOUT_TECH_COST);
+  p.bailouts += 1;
+  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba, −${BAILOUT_TECH_COST} de tecnologia.`, p.id);
+  return null;
+}
+
+// ---------------------------------------------------------------- missão e oficina
+
+// Só no sandbox: no jogo normal a missão é o degrau atual da escada.
+function chooseMission(state, missionId) {
+  const p = currentPlayer(state);
+  if (!state.sandbox) return 'A missão é o próximo degrau da escada do seu lado.';
+  if (!MISSIONS[missionId]) return 'Missão desconhecida.';
+  if (p.flight) return 'Espere a nave em voo terminar a missão antes de trocar.';
+  p.missionId = missionId;
+  pushLog(state, `${p.name} escolheu a missão "${MISSIONS[missionId].name}".`, p.id);
+  checkMilestones(state, p);
+  return null;
+}
+
+function buyItem(state, itemId) {
+  const p = currentPlayer(state);
+  const item = CATALOG[itemId];
+  if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
+  const price = priceFor(p, itemId);
+  if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
+  p.funds -= price;
+  const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
+  bucket.push(itemId);
+  pushLog(state, `${p.name} comprou ${item.name} por ${price}.`, p.id);
+  p.discount = 0; // desconto de evento vale para uma compra (a Fábrica é permanente)
+  checkMilestones(state, p);
+  return null;
+}
+
+// Antes de voar, revende pelo valor cheio (regra do IDEIA.md).
+function sellItem(state, itemId) {
+  const p = currentPlayer(state);
+  const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
+  const idx = bucket.indexOf(itemId);
+  if (idx === -1) return 'Item não está na espaçonave.';
+  bucket.splice(idx, 1);
+  p.funds += CATALOG[itemId].cost;
+  pushLog(state, `${p.name} vendeu ${CATALOG[itemId].name} por ${CATALOG[itemId].cost}.`, p.id);
+  return null;
+}
+
+function chooseLauncher(state, launcherId) {
+  const p = currentPlayer(state);
+  const launcher = LAUNCHERS[launcherId];
+  if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
+  p.spacecraft.launcherId = launcherId;
+  checkMilestones(state, p);
+  return null;
+}
+
+function chooseOrbit(state, orbitId) {
+  const p = currentPlayer(state);
+  p.spacecraft.orbitId = orbitId;
+  checkMilestones(state, p);
+  return null;
+}
+
+// ---------------------------------------------------------------- degraus (milestones)
+
+// Bônus só uma vez por missão (chave `${missionId}:${milestoneId}`). Efeitos: funds, discount, shield.
+function grant(state, player, milestoneId, missionId = player.missionId) {
+  const key = `${missionId}:${milestoneId}`;
+  if (!missionId || player.milestones.includes(key)) return;
+  const ms = MISSIONS[missionId].milestones.find((m) => m.id === milestoneId);
+  player.milestones.push(key);
+  if (ms.effect.type === 'funds') player.funds += ms.effect.value;
+  if (ms.effect.type === 'discount') player.discount = Math.max(player.discount, ms.effect.value);
+  if (ms.effect.type === 'shield') player.shields += ms.effect.value;
+  pushLog(state, `${player.name} atingiu "${ms.name}" (${describeEffect(ms.effect)}).`, player.id);
+}
+
+function describeEffect(effect) {
+  if (effect.type === 'funds') return `+${effect.value} de verba`;
+  if (effect.type === 'discount') return `${effect.value}% de desconto na próxima compra`;
+  return 'proteção contra uma falha';
+}
+
+function checkMilestones(state, player) {
+  if (player.missionId && !player.flight && checkDesign(player).designOk) grant(state, player, 'design_ready');
+}
+
+// ---------------------------------------------------------------- voo em etapas
+
+// Lança: paga o lançador, a nave sai da oficina e a SUBIDA é sorteada na hora (encerra o turno).
+function launch(state, rng = Math.random) {
+  const p = currentPlayer(state);
+  if (!p.missionId) return state.sandbox ? 'Escolha uma missão antes de lançar.' : 'Sua escada já está completa.';
+  if (p.flight) return 'Você já tem uma nave em voo.';
+  if (!state.sandbox && !p.rolled) return 'Ande no tabuleiro antes de lançar.';
+  if (!state.sandbox && p.launchedThisTurn) return 'Só um lançamento por turno.';
+  const design = checkDesign(p);
+  if (!design.ok) return 'O projeto ainda tem pendências: veja a checagem na oficina.';
+  p.funds -= design.totals.launchCost;
+  p.launches += 1;
+  grant(state, p, 'launched');
+  const missionId = p.missionId;
+  p.flight = {
+    missionId,
+    plan: flightPlan(missionId),
+    stageIndex: 0,
+    craft: p.spacecraft,
+    modifiers: { sciencePenalty: 0, lifetimeDelta: 0 },
+    stages: [],
+    pending: null,
+    tileEvent: null,
+    last: null,
+  };
+  // A oficina fica livre para montar a próxima nave (próximo degrau) enquanto esta voa.
+  p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
+  if (!state.sandbox) p.missionId = ladderOf(p)[p.step + 1] || null;
+  p.launchedThisTurn = true;
+  p.flightAdvanced = true;
+  pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
+  const stageId = p.flight.plan[0];
+  const risk = stageRisk(flyer(p), stageId);
+  p.launchRisk = 0; // o defeito ignorado só pesa nesta subida
+  resolveStage(state, p, stageId, risk, { label: 'Lançamento' }, rng);
+  return null;
+}
+
+// Prepara a próxima etapa: imprevisto da casa de evento onde o jogador parou (ou garantido nas chegadas).
+function advanceFlight(state, rng = Math.random) {
+  const p = currentPlayer(state);
+  if (!p.flight) return 'Nenhuma nave em voo.';
+  if (p.flight.pending) { state.screen = 'flight'; return null; }
+  if (!state.sandbox) {
+    if (!p.rolled) return 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto para o voo.';
+    if (p.flightAdvanced) return 'O voo avança uma etapa por turno.';
+  }
+  const stageId = p.flight.plan[p.flight.stageIndex];
+  let eventId = p.flight.tileEvent;
+  if (!eventId && STAGES[stageId].guaranteedEvent) eventId = pickEvent(rng).id;
+  p.flight.tileEvent = null;
+  p.flight.pending = { stageId, eventId: eventId || null };
+  p.flightAdvanced = true;
+  state.screen = 'flight';
+  return null;
+}
+
+const combinePenalty = (a, b) => 1 - (1 - a) * (1 - b);
+
+// O jogador escolheu uma opção da etapa: aplica a consequência e sorteia o risco.
+function chooseStageOption(state, index, rng = Math.random) {
+  const p = currentPlayer(state);
+  const pending = p.flight?.pending;
+  if (!pending) return 'Nenhuma etapa aguardando decisão.';
+  const option = stageOptions(p, pending)[index];
+  if (!option) return 'Opção inválida.';
+  if (option.disabled) return 'Verba insuficiente para esta opção.';
+  const e = option.effect;
+  if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
+  if (e.sciencePenalty) p.flight.modifiers.sciencePenalty = combinePenalty(p.flight.modifiers.sciencePenalty, e.sciencePenalty);
+  if (e.lifetimeDelta) p.flight.modifiers.lifetimeDelta += e.lifetimeDelta;
+  p.flight.pending = null;
+  const event = pending.eventId ? FLIGHT_EVENTS[pending.eventId] : null;
+  resolveStage(state, p, pending.stageId, option.risk, { event, label: option.label, lesson: option.lesson, effect: e }, rng);
+  return null;
+}
+
+// Sorteia a etapa. Proteção absorve uma falha. Falha = nave perdida + dados de falha (+ consolação).
+function resolveStage(state, p, stageId, risk, info, rng) {
+  const stage = STAGES[stageId];
+  let failed = rng() < risk.total;
+  let usedShield = false;
+  if (failed && p.shields > 0) {
+    p.shields -= 1;
+    usedShield = true;
+    failed = false;
+  }
+  const record = {
+    stageId,
+    name: stage.name,
+    risk: risk.total,
+    riskText: describeRisk(risk),
+    causes: risk.parts.filter((x, i) => i > 0 && x.value > 0).map((x) => x.text),
+    success: !failed,
+    usedShield,
+    eventTitle: info.event?.title || null,
+    choice: info.label,
+    lesson: info.lesson || null,
+    effect: info.effect || {},
+  };
+  p.flight.stages.push(record);
+  p.flight.last = record;
+  pushLog(state, `${p.name}: etapa "${stage.name}" ${failed ? 'FALHOU' : 'superada'} (risco ${pct(risk.total)})${usedShield ? ', salva pela proteção' : ''}.`, p.id);
+
+  if (failed) return failMission(state, p, stageId);
+
+  p.flight.stageIndex += 1;
+  const missionId = p.flight.missionId;
+  p.bestStage[missionId] = Math.max(p.bestStage[missionId] || 0, p.flight.stageIndex);
+  if (p.flight.stageIndex >= p.flight.plan.length) return completeMission(state, p);
+  // Etapas contam: cada etapa superada já rende prestígio, mesmo que a nave falhe depois.
+  p.funds += STAGE_BONUS;
+  record.bonus = STAGE_BONUS;
+  state.screen = 'flight';
+  return null;
+}
+
+// Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
+function retarget(state, p) {
+  if (!state.sandbox) p.missionId = ladderOf(p)[p.step] || null;
+}
+
+function failMission(state, p, stageId) {
+  const stage = STAGES[stageId];
+  const flight = p.flight;
+  const ship = flyer(p);
+  p.failureData[stage.system] = (p.failureData[stage.system] || 0) + 1;
+  p.tech += 1;
+  // Missão de consolação: a nave cumpre um objetivo menor e dá crédito parcial (não na subida).
+  if (stage.consolation) p.funds += CONSOLATION_FUNDS;
+  const last = flight.last;
+  p.lastResult = {
+    success: false,
+    missionId: flight.missionId,
+    stages: flight.stages,
+    failedStage: stageId,
+    system: stage.system,
+    reasons: [
+      `A etapa "${stage.name}" falhou: o risco era ${pct(last.risk)}.`,
+      ...(last.causes.length ? [`O que aumentou o risco: ${last.causes.join('; ')}.`] : ['Mesmo um projeto bom tem risco: nada no espaço é garantido.']),
+    ],
+    consolation: stage.consolation ? `${stage.consolation} Crédito parcial: +${CONSOLATION_FUNDS} de verba.` : null,
+    failureLesson: `Dados de falha: na próxima tentativa, o risco de ${SYSTEM_NAMES[stage.system]} cai ${pct(FAILURE_DATA_BONUS)}, e a agência ganhou +1 de tecnologia. Falhar ensina: é o passo "Verify" do ciclo de projeto da NASA.`,
+    checks: checkDesign(ship, { ...flight.modifiers, launched: true }).checks,
+    score: 0,
+    scienceDelivered: 0,
+    craft: flight.craft,
+  };
+  p.flight = null;
+  retarget(state, p);
+  state.screen = 'report';
+  return null;
+}
+
+function completeMission(state, p) {
+  const flight = p.flight;
+  const missionId = flight.missionId;
+  const ship = flyer(p);
+  const result = simulate(ship, { modifiers: { ...flight.modifiers, launched: true }, randomFailure: false });
+  result.missionId = missionId;
+  result.stages = flight.stages;
+  result.craft = flight.craft;
+  const year = yearOf(state.round);
+  result.year = year;
+  if (result.success) {
+    p.completed.push({ missionId, year, science: result.scienceDelivered });
+    grant(state, p, 'mission_complete', missionId);
+    if (!state.sandbox && ladderOf(p)[p.step] === missionId) {
+      p.step += 1;
+      // Primeiro do lado leva o bônus cheio; quem chega depois no mesmo lado leva menos.
+      const key = `${p.side}:${missionId}`;
+      const first = state.sideFirsts[key] == null;
+      if (first) state.sideFirsts[key] = p.id;
+      const bonus = first ? STEP_BONUS_FIRST : STEP_BONUS_LATER;
+      p.funds += bonus;
+      result.stepBonus = { bonus, first };
+    }
+  }
+  pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`, p.id);
+  p.lastResult = result;
+  p.flight = null;
+  retarget(state, p);
+  state.screen = 'report';
+  return null;
+}
+
+return { startGame, endTurn, rollDice, moveBy, rollAndMove, chooseDilemma, spyOn, buildOnLot, useFeeFor, useRivalBuilding, skipTile, upgradeBuilding, upgradeCostFor, requestBailout, chooseMission, buyItem, sellItem, chooseLauncher, chooseOrbit, describeEffect, launch, advanceFlight, chooseStageOption };
+})();
+
+// ---- src/data/glossary.js
+__mods["src/data/glossary.js"] = (() => {
+// Glossário dos recursos do jogo, em linguagem simples (valor educacional pedido pelo desafio).
+// Usado na tela inicial e no painel da oficina.
+
+const GLOSSARY = [
+  { term: 'Massa', text: 'Tudo que vai a bordo pesa. O foguete só consegue levar até um limite; passou disso, não sai do chão.' },
+  { term: 'Energia', text: 'Painéis solares e baterias geram energia; instrumentos e antenas consomem. Se consome mais do que gera, a espaçonave desliga.' },
+  { term: 'Dados', text: 'Instrumentos produzem dados (fotos, medidas). Se a antena não dá conta de transmitir tudo, parte da ciência se perde.' },
+  { term: 'Comunicação', text: 'Capacidade de enviar dados à Terra. Quanto mais longe a órbita, mais fraco o sinal e maior a antena necessária.' },
+  { term: 'Ciência', text: 'O valor do que a missão descobre. É o objetivo final, mas cada ponto custa massa, energia, dados e dinheiro.' },
+  { term: 'Verba', text: 'Dinheiro para comprar peças e pagar o lançamento. Missões reais também pagam operação todo ano.' },
+  { term: 'Vida útil', text: 'Quanto tempo a missão opera. Órbitas baixas decaem com o atrito da atmosfera; propulsores e baterias estendem a vida.' },
+  { term: 'Tecnologia', text: 'O que a agência já domina. Sobe a cada ano e com o Laboratório, e libera foguetes e instrumentos melhores. Esperar rende tecnologia, mas os rivais avançam.' },
+  { term: 'Risco', text: 'Chance de uma etapa do voo falhar. Margem de massa e energia, peças reservas (redundância) e o Controle de missão reduzem o risco. Nada no espaço tem risco zero.' },
+  { term: 'Dados de falha', text: 'Toda falha é estudada. A próxima tentativa tem menos risco no sistema que falhou: é o passo "Verify" do ciclo de projeto da NASA.' },
+];
+
+return { GLOSSARY };
+})();
+
+// ---- src/ui/components.js
+__mods["src/ui/components.js"] = (() => {
+// Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
+const { effectiveTotals } = __mods["src/sim/resources.js"];
+const { checkDesign } = __mods["src/sim/simulate.js"];
+const { flightPlan, pct } = __mods["src/sim/flight.js"];
+const { ladderProgress } = __mods["src/sim/progress.js"];
+const { upgradeCostFor } = __mods["src/sim/actions.js"];
+const { BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT } = __mods["src/sim/state.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { GLOSSARY } = __mods["src/data/glossary.js"];
+const { SIDES, ladderOf } = __mods["src/data/sides.js"];
+const { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } = __mods["src/data/history.js"];
+const { BUILDINGS, MAX_LEVEL, upgradeCost } = __mods["src/data/buildings.js"];
+const { STAGES } = __mods["src/data/stages.js"];
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'onclick') node.addEventListener('click', v);
+    else if (k === 'html') node.innerHTML = v;
+    else node.setAttribute(k, v);
+  }
+  for (const child of [].concat(children)) {
+    if (child == null || child === false) continue;
+    node.appendChild(typeof child === 'string' || typeof child === 'number' ? document.createTextNode(String(child)) : child);
+  }
+  return node;
+}
+
+function button(label, onclick, opts = {}) {
+  const b = el('button', { class: opts.class || '', onclick, title: opts.title }, label);
+  if (opts.disabled) b.disabled = true;
+  return b;
+}
+
+// Ícones por tipo visual de peça (ver campo `visual` em data/parts.js e data/instruments.js).
+const ITEM_ICONS = {
+  camera: '📷', camera_large: '🔭', spectro: '🌈', boom: '🧲', beacon: '📻',
+  panel: '☀️', panel_large: '🔆', battery: '🔋', antenna: '📶', dish: '📡', thruster: '🔥', capsule: '🧑‍🚀',
+};
+const MISSION_ICONS = { first_satellite: '🛰️', living_being: '🐕', weather_watch: '🌦️', lunar_probe: '🌙', space_station: '🏠', crewed_moon: '👩‍🚀' };
+const DIE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+function avatar(player, size) {
+  return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null }, player.bot ? '🤖' : player.name[0].toUpperCase());
+}
+
+const sideLabel = (p) => (SIDES[p.side] ? `${SIDES[p.side].icon} ${SIDES[p.side].name}` : '');
+
+// Barra superior: ano, quem joga, lado, degrau, verba, tecnologia e em que etapa do ciclo está.
+function hud(state, player, step) {
+  const mission = MISSIONS[player.flight?.missionId || player.missionId];
+  const prog = ladderProgress(player);
+  const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
+  const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
+  const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  return el('div', { class: 'hud' }, [
+    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox')
+      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, ['📅 ', el('span', { class: 'num' }, yearOf(state.round)), el('small', {}, ` · ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
+    el('div', { class: 'who' }, [avatar(player), player.name]),
+    player.side ? el('span', { class: 'chip' }, sideLabel(player)) : null,
+    el('span', { class: 'chip' }, mission
+      ? [MISSION_ICONS[mission.id] || '🚀', ' ', state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ' · em voo' : '']
+      : state.sandbox ? '🎯 escolhendo missão' : '🏁 escada completa'),
+    el('span', { class: 'chip', title: 'Verba' }, ['💰 ', el('span', { class: 'num' }, player.funds)]),
+    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, ['🔧 tec ', el('span', { class: 'num' }, player.tech)]),
+    player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, ['🛡️ ', el('span', { class: 'num' }, player.shields)]) : null,
+    el('span', { class: 'spacer' }),
+    el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
+  ]);
+}
+
+function progressBar(fraction, status = 'ok') {
+  return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
+}
+
+// Escada de missões do lado do jogador, com o ano em que o lado cumpriu cada degrau na história real.
+function ladderPanel(state, player) {
+  const ladder = ladderOf(player);
+  const prog = ladderProgress(player);
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, `🪜 Escada ${sideLabel(player)}`),
+    progressBar(prog.pct, prog.done ? 'done' : 'ok'),
+    el('ol', { class: 'ladder' }, ladder.map((m, i) => {
+      const done = player.completed.find((c) => c.missionId === m);
+      const real = REAL_HISTORY[m].sides[player.side];
+      const flying = player.flight?.missionId === m;
+      const cls = i < player.step ? 'done' : i === player.step ? 'now' : '';
+      return el('li', { class: cls }, [
+        el('span', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`),
+        el('small', { class: 'hint' }, [
+          done ? `✓ ${done.year}` : flying ? `🛰️ em voo, etapa ${player.flight.stageIndex + 1}/${player.flight.plan.length}` : i === player.step ? 'degrau atual' : '',
+          ` · história real: ${real ?? 'nunca'}`,
+        ]),
+      ]);
+    })),
+    el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
+  ]);
+}
+
+// Rival escondido (IDEIA.md v3 seção 8): só aparece o que o espião ou os boatos revelaram.
+function rivalsPanel(state, player) {
+  const rivals = state.players.filter((r) => r.id !== player.id);
+  if (!rivals.length) return null;
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, '🕵️ Rivais'),
+    ...rivals.map((r) => {
+      const info = player.intel[r.id];
+      let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
+      if (info?.rumor) text = `Boato de ${info.year}: ${info.steps}/${info.total} degraus. Pode estar errado.`;
+      else if (info) {
+        const ship = info.inFlight ? `nave em voo (etapa ${info.stage + 1}/${info.stages})`
+          : info.ready != null ? `nave ${pct(info.ready)} pronta` : info.note || '';
+        text = `Espião em ${info.year}: ${info.steps}/${info.total} degraus${info.mission ? `, mirando "${info.mission}"` : ''}; ${ship}.`;
+      }
+      return el('div', { class: 'race-row' }, [
+        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideLabel(r))]),
+        el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
+      ]);
+    }),
+  ]);
+}
+
+// Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
+function agencyPanel(state, player, actions) {
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, '🏢 Sua agência'),
+    el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
+      const level = player.buildings[b.id];
+      const cost = level ? upgradeCostFor(state, player, b.id) : null;
+      return el('li', {}, [
+        el('span', { class: 'b-icon' }, b.icon),
+        el('div', {}, [
+          el('strong', {}, `${b.name} ${level ? `nível ${level}/${MAX_LEVEL}` : ''}`),
+          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre (🏗️) por ${upgradeCost(0)}. ${b.effect}`),
+        ]),
+        level && level < MAX_LEVEL
+          ? button(`⬆ ${cost}`, () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: 'Subir de nível' })
+          : null,
+      ]);
+    })),
+    player.funds < BAILOUT_LIMIT
+      ? button(`🆘 Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`, () => actions.requestBailout(), { class: 'small ghost' })
+      : null,
+  ]);
+}
+
+// Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
+function missionPicker(state, player, actions) {
+  return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => button([
+    el('span', { class: 'icon' }, MISSION_ICONS[m.id] || '🚀'),
+    el('strong', {}, m.name),
+    el('span', { class: 'diff' }, `${m.difficulty} · ${flightPlan(m.id).length} etapas de voo`),
+    el('span', { class: 'goal' }, m.goal),
+  ], () => actions.chooseMission(m.id), { class: `mission-card ${player.missionId === m.id ? 'selected' : ''}`, disabled: Boolean(player.flight) })));
+}
+
+// Linha do tempo das etapas do voo.
+function stageTrack(plan, stages, currentIndex) {
+  return el('ol', { class: 'stage-track' }, plan.map((id, i) => {
+    const rec = stages[i];
+    const cls = rec ? (rec.success ? 'done' : 'fail') : i === currentIndex ? 'now' : '';
+    return el('li', { class: cls }, [el('span', { class: 's-icon' }, STAGES[id].icon), el('span', {}, STAGES[id].name)]);
+  }));
+}
+
+// Medidores: cada recurso contra o limite ou o mínimo, com barra e cor de alerta.
+function gauges(player) {
+  const t = effectiveTotals(player);
+  const m = MISSIONS[player.missionId];
+  const g = (label, value, limit, status, fill, hint) =>
+    el('div', { class: `gauge ${status}`, title: hint }, [
+      el('span', { class: 'g-label' }, label),
+      el('span', { class: 'g-value' }, limit == null ? `${value}` : `${value} / ${limit}`),
+      el('div', { class: 'bar' }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fill)) * 100)}%` })]),
+    ]);
+  const ratio = (a, b) => (b > 0 ? a / b : a > 0 ? 1 : 0);
+  const hasLauncher = t.maxMass != null;
+
+  return el('div', { class: 'gauges' }, [
+    g('💰 Verba p/ lançar', player.funds, hasLauncher ? t.launchCost : '—', hasLauncher && player.funds < t.launchCost ? 'bad' : 'ok',
+      hasLauncher ? ratio(player.funds, t.launchCost) : 1, 'Verba disponível contra o custo do lançador escolhido.'),
+    g('⚖️ Massa', t.mass, hasLauncher ? t.maxMass : '—', hasLauncher && t.mass > t.maxMass ? 'bad' : 'ok',
+      hasLauncher ? ratio(t.mass, t.maxMass) : 0, 'Massa total contra a capacidade do lançador. Barra cheia = no limite.'),
+    g('⚡ Energia usada', t.powerUse, t.powerGen, t.powerUse > t.powerGen ? 'bad' : 'ok',
+      ratio(t.powerUse, t.powerGen), 'Energia consumida contra a gerada. Precisa sobrar.'),
+    g('📡 Dados → comunicação', t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
+      ratio(t.data, t.commsEffective), 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.'),
+    g('🔬 Ciência', t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
+      ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
+    g('📶 Comunicação', t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
+      ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
+    g('⏳ Vida útil (anos)', t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
+      ratio(t.lifetime, m.needs.lifetime), 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.'),
+  ]);
+}
+
+function checklist(checks) {
+  return el('ul', { class: 'checklist' }, checks.map((c) =>
+    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [el('span', {}, c.ok ? '✓' : c.hard ? '✕' : '!'), el('span', {}, c.text)])));
+}
+const designChecklist = (player) => checklist(checkDesign(player).checks);
+
+function milestoneTrack(player, missionId = player.missionId) {
+  const mission = MISSIONS[missionId];
+  if (!mission) return null;
+  return el('ol', { class: 'milestones' }, mission.milestones.map((m) =>
+    el('li', { class: player.milestones.includes(`${missionId}:${m.id}`) ? 'done' : '' }, [
+      el('div', {}, [el('strong', {}, m.name), el('small', {}, m.requirement)]),
+    ])));
+}
+
+// Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
+function logPanel(state, viewer) {
+  const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
+  return el('div', { class: 'panel log' }, [el('h3', { style: 'margin-top:0' }, '📓 Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
+}
+
+function glossary(open = false) {
+  const d = el('details', { class: 'panel glossary' }, [
+    el('summary', {}, '📘 O que significam os recursos?'),
+    el('dl', {}, GLOSSARY.flatMap((g) => [el('dt', {}, g.term), el('dd', {}, g.text)])),
+  ]);
+  if (open) d.open = true;
+  return d;
+}
+
+return { el, button, ITEM_ICONS, MISSION_ICONS, DIE_FACES, avatar, sideLabel, hud, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+})();
+
+// ---- src/ui/spacecraft.js
+__mods["src/ui/spacecraft.js"] = (() => {
+// Desenho 2D da espaçonave em SVG, montado a partir das peças compradas.
+// Muda em tempo real na oficina: o jogador VÊ a consequência de cada compra.
+// Arte própria em formas simples (sem logos ou marcas da NASA).
+const { CATALOG } = __mods["src/sim/resources.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs = {}) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+}
+
+// Conta quantas peças de cada tipo visual o jogador tem.
+function visualCounts(player) {
+  const counts = {};
+  for (const id of [...player.spacecraft.parts, ...player.spacecraft.instruments]) {
+    const v = CATALOG[id]?.visual;
+    if (v) counts[v] = (counts[v] || 0) + 1;
+  }
+  return counts;
+}
+
+function spacecraftSvg(player) {
+  const c = visualCounts(player);
+  const svg = svgEl('svg', { viewBox: '0 0 320 220', class: 'spacecraft', role: 'img', 'aria-label': 'Desenho da espaçonave' });
+
+  // Fundo: estrelas discretas
+  for (let i = 0; i < 18; i++) {
+    svg.appendChild(svgEl('circle', { cx: (i * 53) % 320, cy: (i * 37) % 220, r: 0.8, fill: '#ffffff', opacity: 0.5 }));
+  }
+
+  const cx = 160, cy = 110;
+  const hasCapsule = c.capsule > 0;
+  const busW = hasCapsule ? 70 : 50, busH = hasCapsule ? 60 : 44;
+
+  // Painéis solares: pequenos (asas curtas) e grandes (asas longas), empilhados
+  const panels = (c.panel || 0) + (c.panel_large || 0);
+  let offset = 0;
+  const drawWing = (len, idx) => {
+    const y = cy - busH / 2 + 6 + (idx % 3) * 14;
+    const h = 11;
+    for (const dir of [-1, 1]) {
+      const x = dir === -1 ? cx - busW / 2 - len : cx + busW / 2;
+      svg.appendChild(svgEl('rect', { x, y, width: len, height: h, fill: '#1e5fb3', stroke: '#9fd0ff', 'stroke-width': 1, rx: 1 }));
+      for (let s = 1; s < len / 10; s++) svg.appendChild(svgEl('line', { x1: x + s * 10, y1: y, x2: x + s * 10, y2: y + h, stroke: '#0b1020', 'stroke-width': 0.6 }));
+    }
+  };
+  for (let i = 0; i < (c.panel_large || 0); i++) drawWing(70, offset++);
+  for (let i = 0; i < (c.panel || 0); i++) drawWing(40, offset++);
+
+  // Propulsor (atrás/embaixo)
+  if (c.thruster) {
+    svg.appendChild(svgEl('path', { d: `M${cx - 10},${cy + busH / 2} L${cx - 16},${cy + busH / 2 + 16} L${cx + 16},${cy + busH / 2 + 16} L${cx + 10},${cy + busH / 2} Z`, fill: '#6b7280', stroke: '#cbd5e1' }));
+    svg.appendChild(svgEl('ellipse', { cx, cy: cy + busH / 2 + 20, rx: 8, ry: 5, fill: '#fb923c', opacity: 0.8 }));
+  }
+
+  // Corpo (bus) ou cápsula
+  if (hasCapsule) {
+    svg.appendChild(svgEl('path', { d: `M${cx - busW / 2},${cy + busH / 2} L${cx - busW / 2 + 10},${cy - busH / 2} L${cx + busW / 2 - 10},${cy - busH / 2} L${cx + busW / 2},${cy + busH / 2} Z`, fill: '#d1d5db', stroke: '#f9fafb', 'stroke-width': 1.5 }));
+    svg.appendChild(svgEl('circle', { cx, cy: cy - 6, r: 8, fill: '#7dd3fc', stroke: '#f9fafb' })); // janela
+  } else {
+    svg.appendChild(svgEl('rect', { x: cx - busW / 2, y: cy - busH / 2, width: busW, height: busH, fill: '#c9a227', stroke: '#f5e6a3', 'stroke-width': 1.5, rx: 3 })); // manta térmica dourada
+    svg.appendChild(svgEl('rect', { x: cx - busW / 2 + 6, y: cy - busH / 2 + 6, width: busW - 12, height: busH - 12, fill: 'none', stroke: '#8a6d1a', 'stroke-dasharray': '3 2' }));
+  }
+
+  // Baterias: caixas laterais no corpo
+  for (let i = 0; i < Math.min(c.battery || 0, 3); i++) {
+    svg.appendChild(svgEl('rect', { x: cx + busW / 2 - 8, y: cy + busH / 2 - 10 - i * 9, width: 10, height: 7, fill: '#16a34a', stroke: '#bbf7d0' }));
+  }
+
+  // Antenas no topo
+  let top = cy - busH / 2;
+  if (c.dish) {
+    for (let i = 0; i < Math.min(c.dish, 2); i++) {
+      const ax = cx + (i === 0 ? 0 : 22);
+      svg.appendChild(svgEl('line', { x1: ax, y1: top, x2: ax, y2: top - 14, stroke: '#e5e7eb', 'stroke-width': 2 }));
+      svg.appendChild(svgEl('path', { d: `M${ax - 16},${top - 14} Q${ax},${top - 30} ${ax + 16},${top - 14} Z`, fill: '#f3f4f6', stroke: '#9ca3af' }));
+      svg.appendChild(svgEl('line', { x1: ax, y1: top - 14, x2: ax, y2: top - 24, stroke: '#9ca3af' }));
+    }
+  }
+  if (c.antenna) {
+    for (let i = 0; i < Math.min(c.antenna, 3); i++) {
+      const ax = cx - 18 - i * 7;
+      svg.appendChild(svgEl('line', { x1: ax, y1: top, x2: ax, y2: top - 22, stroke: '#e5e7eb', 'stroke-width': 1.5 }));
+      svg.appendChild(svgEl('circle', { cx: ax, cy: top - 23, r: 2, fill: '#f87171' }));
+    }
+  }
+
+  // Instrumentos na frente (embaixo do corpo): caixinhas coloridas
+  const instruments = [];
+  for (let i = 0; i < (c.camera_large || 0); i++) instruments.push({ w: 16, h: 12, fill: '#7c3aed' });
+  for (let i = 0; i < (c.camera || 0); i++) instruments.push({ w: 10, h: 10, fill: '#a78bfa' });
+  for (let i = 0; i < (c.spectro || 0); i++) instruments.push({ w: 14, h: 9, fill: '#f472b6' });
+  for (let i = 0; i < (c.beacon || 0); i++) instruments.push({ w: 6, h: 6, fill: '#f87171' });
+  let ix = cx - (instruments.reduce((a, b) => a + b.w + 3, 0) - 3) / 2;
+  for (const it of instruments.slice(0, 8)) {
+    svg.appendChild(svgEl('rect', { x: ix, y: cy + busH / 2 - 2, width: it.w, height: it.h, fill: it.fill, stroke: '#f9fafb', 'stroke-width': 0.8, rx: 1 }));
+    if (it.fill.startsWith('#a7') || it.fill === '#7c3aed') svg.appendChild(svgEl('circle', { cx: ix + it.w / 2, cy: cy + busH / 2 - 2 + it.h / 2, r: it.w / 4, fill: '#0b1020' })); // lente
+    ix += it.w + 3;
+  }
+
+  // Magnetômetro: haste (boom) lateral longa
+  if (c.boom) {
+    svg.appendChild(svgEl('line', { x1: cx + busW / 2, y1: cy - busH / 2 + 2, x2: cx + busW / 2 + 60, y2: cy - busH / 2 - 20, stroke: '#9ca3af', 'stroke-width': 1.5 }));
+    svg.appendChild(svgEl('circle', { cx: cx + busW / 2 + 60, cy: cy - busH / 2 - 20, r: 4, fill: '#fbbf24' }));
+  }
+
+  // Lançador escolhido: silhueta no canto, tamanho conforme a classe
+  const launcher = LAUNCHERS[player.spacecraft.launcherId];
+  if (launcher) {
+    const h = { small: 50, medium: 75, heavy: 100 }[launcher.id] || 50;
+    const rx = 292, base = 205;
+    svg.appendChild(svgEl('rect', { x: rx - 7, y: base - h, width: 14, height: h, fill: '#e5e7eb', rx: 3 }));
+    svg.appendChild(svgEl('path', { d: `M${rx - 7},${base - h} L${rx},${base - h - 12} L${rx + 7},${base - h} Z`, fill: '#ef4444' }));
+    svg.appendChild(svgEl('path', { d: `M${rx - 7},${base} L${rx - 14},${base + 6} L${rx - 7},${base - 12} Z`, fill: '#ef4444' }));
+    svg.appendChild(svgEl('path', { d: `M${rx + 7},${base} L${rx + 14},${base + 6} L${rx + 7},${base - 12} Z`, fill: '#ef4444' }));
+    const label = svgEl('text', { x: rx, y: 216, 'text-anchor': 'middle', 'font-size': 8, fill: '#9aa5c7' });
+    label.textContent = launcher.name.replace('Lançador ', '');
+    svg.appendChild(label);
+  }
+
+  // Vazio: dica
+  if (!panels && !instruments.length && !c.antenna && !c.dish && !hasCapsule) {
+    const t = svgEl('text', { x: cx, y: cy + busH / 2 + 30, 'text-anchor': 'middle', 'font-size': 10, fill: '#9aa5c7' });
+    t.textContent = 'Compre peças para montar a espaçonave';
+    svg.appendChild(t);
+  }
+
+  return svg;
+}
+
+return { spacecraftSvg };
+})();
+
+// ---- src/ui/setup.js
+__mods["src/ui/setup.js"] = (() => {
+// Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
+// Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
+const { el, button, glossary, MISSION_ICONS } = __mods["src/ui/components.js"];
+const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
+const { createPlayer } = __mods["src/sim/state.js"];
+const { SIDES } = __mods["src/data/sides.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { START_YEAR, END_YEAR, ROUNDS_PER_YEAR } = __mods["src/data/history.js"];
+
+function setupScreen(state, actions) {
+  const players = [{ name: '' }];
+  let sandbox = false;
+
+  // Espaçonave de exemplo na capa (só visual)
+  const demo = createPlayer(0, 'Demo', 'weather_watch');
+  demo.spacecraft.parts = ['solar_large', 'antenna_dish', 'thruster', 'battery'];
+  demo.spacecraft.instruments = ['camera', 'spectrometer', 'magnetometer'];
+  demo.spacecraft.launcherId = 'medium';
+
+  const playersBox = el('div', { class: 'players-box' });
+  const soloNote = el('p', { class: 'hint' });
+  const renderPlayers = () => {
+    playersBox.innerHTML = '';
+    players.forEach((p, i) => {
+      const input = el('input', { type: 'text', placeholder: `Nome da agência ${i + 1}`, maxlength: 20, value: p.name });
+      input.addEventListener('input', (e) => { p.name = e.target.value; });
+      playersBox.appendChild(el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]));
+    });
+    soloNote.textContent = players.length === 1
+      ? '🤖 Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
+      : players.length === 2
+        ? '2 agências: lados diferentes, sorteados. Cada uma joga escondida: use espionagem e boatos.'
+        : `${players.length} agências: lados sorteados de forma equilibrada. Quem é do mesmo lado disputa os mesmos degraus.`;
+  };
+  renderPlayers();
+
+  const setCount = (n) => {
+    while (players.length < n) players.push({ name: '' });
+    players.length = n;
+    renderPlayers();
+    countBox.querySelectorAll('button').forEach((b, i) => b.classList.toggle('selected', i + 1 === n));
+  };
+  const countBox = el('div', { class: 'row count-btns' }, ['Agências:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
+
+  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), '🧪 Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
+
+  return el('section', { class: 'screen setup' }, [
+    el('div', { class: 'hero' }, [
+      el('div', {}, [
+        el('p', { class: 'eyebrow' }, 'NASA Space Apps Challenge 2026 · Space Mission Design Game'),
+        el('h1', {}, [el('span', {}, 'Projete uma missão espacial.'), ' Descubra por que ela deu certo ou errado.']),
+        el('p', { class: 'lead' }, `Corrida espacial de ${START_YEAR} a ${END_YEAR}. Cada peça rende ciência, mas custa massa, energia, dinheiro e dados. Lançar agora é barato e arriscado; esperar deixa a nave melhor, mas você não sabe onde o rival está.`),
+      ]),
+      el('div', { class: 'spacecraft-box hero-art' }, [spacecraftSvg(demo), el('span', { class: 'caption' }, 'exemplo: satélite meteorológico')]),
+    ]),
+    el('h2', {}, 'Como funciona'),
+    el('div', { class: 'steps-grid' }, [
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', {}, '🎲 Tabuleiro'), el('p', {}, `Role 2 dados e escolha um. Cartas de dilema, prédios, espionagem. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', {}, '🔧 Oficina'), el('p', {}, 'Monte a nave do próximo degrau. Veja os limites e o risco do voo antes de lançar.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', {}, '🚀 Voo em etapas'), el('p', {}, 'Uma etapa por turno, com imprevistos. Se falhar no meio, ainda sobra uma missão de consolação.')]),
+    ]),
+    el('h2', {}, 'Lados e escadas de missões'),
+    el('p', { class: 'hint' }, 'Vence quem completar primeiro a escada do próprio lado. Cada degrau é uma nave nova. As agências são suas; o lado define a escada, uma vantagem e uma fraqueza.'),
+    el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
+      el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, s.icon), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
+      el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`))),
+      el('small', { class: 'gain-text' }, `+ ${s.advantage}`),
+      el('small', { class: 'lose-text' }, `− ${s.weakness}`),
+    ]))),
+    el('h2', {}, 'Partida'),
+    countBox,
+    playersBox,
+    soloNote,
+    toggle,
+    el('div', { class: 'row' }, [button('🚀 Começar', () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
+    glossary(),
+    el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
+  ]);
+}
+
+return { setupScreen };
+})();
+
+// ---- src/ui/handoff.js
+__mods["src/ui/handoff.js"] = (() => {
+// Tela de troca (IDEIA.md v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
+const { el, button, avatar, sideLabel } = __mods["src/ui/components.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { yearOf, isNewYear } = __mods["src/data/history.js"];
+
+function handoffScreen(state, actions) {
+  const p = currentPlayer(state);
+  return el('section', { class: 'screen handoff' }, [
+    el('div', { class: 'panel handoff-card' }, [
+      el('p', { class: 'eyebrow' }, `${yearOf(state.round)}${isNewYear(state.round) ? ' · Ano novo' : ''}`),
+      avatar(p, 64),
+      el('h1', {}, `Vez de ${p.name}`),
+      el('p', { class: 'hint' }, `${sideLabel(p)} · Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto.`),
+      button('Sou eu: começar meu turno', () => actions.go('board'), { class: 'primary' }),
+    ]),
+  ]);
+}
+
+return { handoffScreen };
+})();
+
+// ---- src/ui/board.js
+__mods["src/ui/board.js"] = (() => {
+// Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
+const { el, button, hud, milestoneTrack, logPanel, DIE_FACES, ladderPanel, rivalsPanel, agencyPanel, sideLabel } = __mods["src/ui/components.js"];
+const { TILES } = __mods["src/board/board.js"];
+const { currentPlayer, SPY_COST } = __mods["src/sim/state.js"];
+const { checkDesign } = __mods["src/sim/simulate.js"];
+const { useFeeFor } = __mods["src/sim/actions.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { BUILDINGS, upgradeCost } = __mods["src/data/buildings.js"];
+const { FLIGHT_EVENTS } = __mods["src/data/events.js"];
+const { STAGES } = __mods["src/data/stages.js"];
+const { DILEMMAS } = __mods["src/data/dilemmas.js"];
+
+const TILE_ICONS = { start: '🏁', funds: '💰', event: '🃏', tech: '🔬', shop: '🛒', lot: '🏗️', spy: '🕵️', repair: '🔧', catchup: '🚨' };
+// Anel 5×5 no sentido horário a partir do canto superior esquerdo (o miolo 3×3 fica para os dados).
+const RING_POS = ['1/1', '1/2', '1/3', '1/4', '1/5', '2/5', '3/5', '4/5', '5/5', '5/4', '5/3', '5/2', '5/1', '4/1', '3/1', '2/1'];
+let lastRollSeen = null;
+
+function tileSub(state, t) {
+  switch (t.type) {
+    case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
+    case 'start': return `+${t.funds} ao passar`;
+    case 'event': return 'carta de dilema · em voo: imprevisto';
+    case 'tech': return `+${t.tech} tecnologia`;
+    case 'shop': return `−${t.discount}% na próxima compra`;
+    case 'spy': return `ver um rival: ${SPY_COST} (1×/ano)`;
+    case 'repair': return '+1 proteção';
+    case 'catchup': return `+${t.funds} se estiver atrás`;
+    case 'lot': {
+      const lot = state.lots[t.id];
+      if (!lot) return `construir: ${upgradeCost(0)}`;
+      const owner = state.players[lot.ownerId];
+      return `${owner.name} · nível ${owner.buildings[lot.buildingId]}`;
+    }
+    default: return '';
+  }
+}
+
+function tileIcon(state, t) {
+  if (t.type === 'lot' && state.lots[t.id]) return BUILDINGS[state.lots[t.id].buildingId].icon;
+  if (t.type === 'funds' && t.funds < 0) return '📉';
+  return TILE_ICONS[t.type];
+}
+
+// Carta de dilema: sempre uma escolha, conforme a situação do jogador.
+function dilemmaDecision(state, actions) {
+  const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
+  if (!card) return null;
+  return el('div', { class: 'tile-decision dilemma' }, [
+    el('strong', {}, `🃏 ${card.title}`),
+    el('small', { class: 'hint' }, card.text),
+    el('div', { class: 'row wrap', style: 'justify-content:center' }, card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'small' }))),
+  ]);
+}
+
+// Decisão da casa onde o jogador parou: construir, usar o prédio do rival ou espionar.
+function tileDecision(state, p, actions) {
+  const pending = state.pendingTile;
+  if (!pending) return null;
+  if (pending.kind === 'build') {
+    const options = Object.values(BUILDINGS).filter((b) => !p.buildings[b.id]);
+    if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
+    return el('div', { class: 'tile-decision' }, [
+      el('strong', {}, `🏗️ Terreno livre: construir por ${upgradeCost(0)}?`),
+      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
+        ...options.map((b) => button(`${b.icon} ${b.name}`, () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
+        button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+      ]),
+    ]);
+  }
+  if (pending.kind === 'spy') {
+    const rivals = state.players.filter((r) => r.id !== p.id);
+    return el('div', { class: 'tile-decision' }, [
+      el('strong', {}, `🕵️ Espionagem: ver o estado real de um rival por ${SPY_COST}?`),
+      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
+        ...rivals.map((r) => button(`${r.name} (${sideLabel(r)})`, () => actions.spyOn(r.id), { class: 'small', disabled: p.funds < SPY_COST })),
+        button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+      ]),
+    ]);
+  }
+  const lot = state.lots[pending.tileId];
+  const owner = state.players[lot.ownerId];
+  const b = BUILDINGS[lot.buildingId];
+  const fee = useFeeFor(owner.buildings[lot.buildingId]);
+  return el('div', { class: 'tile-decision' }, [
+    el('strong', {}, `${b.icon} ${b.name} de ${owner.name}`),
+    el('small', { class: 'hint' }, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`),
+    el('div', { class: 'row', style: 'justify-content:center' }, [
+      button(`Usar (${fee})`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
+      button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+    ]),
+  ]);
+}
+
+// Centro do anel: dados (rolar 2, escolher 1) e as decisões da casa.
+function centerPanel(state, p, actions, rolling) {
+  let dice;
+  if (state.dice) {
+    dice = el('div', { class: 'dice-choice' }, [
+      el('span', { class: 'label' }, 'escolha um dado'),
+      el('div', { class: 'row', style: 'justify-content:center' }, state.dice.map((d, i) =>
+        button([el('span', { class: 'die small' }, DIE_FACES[d - 1]), ` andar ${d}`], () => actions.moveBy(i), { class: 'primary' }))),
+    ]);
+  } else if (!p.rolled) {
+    dice = el('div', { class: 'dice-choice' }, [
+      el('span', { class: 'label' }, `vez de ${p.name}`),
+      el('span', { class: 'die' }, '🎲🎲'),
+      button('Rolar 2 dados', () => actions.rollDice(), { class: 'primary' }),
+    ]);
+  } else {
+    dice = el('div', { class: 'dice-choice' }, [
+      el('span', { class: 'label' }, `${p.name} andou ${state.lastRoll}`),
+      el('span', { class: `die ${rolling ? 'rolling' : ''}` }, DIE_FACES[state.lastRoll - 1]),
+    ]);
+  }
+  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions)]);
+}
+
+// Bloco "o que fazer agora" (fase 2 do turno), conforme a situação da nave.
+function missionPanel(state, p, actions) {
+  if (p.flight) {
+    const f = p.flight;
+    const next = STAGES[f.plan[f.stageIndex]];
+    const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
+    return el('div', { class: 'panel' }, [
+      el('h3', { style: 'margin-top:0' }, `🛰️ Em voo: ${MISSIONS[f.missionId].name}`),
+      el('p', { class: 'hint' }, `Próxima etapa: ${next.icon} ${next.name} (${f.stageIndex + 1}/${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
+      p.flightAdvanced
+        ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
+        : button('🛰️ Avançar o voo', () => actions.advanceFlight(), { class: 'primary', disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
+      el('p', { class: 'hint' }, 'Enquanto a nave voa, você já pode montar a próxima na oficina.'),
+    ]);
+  }
+  if (!p.missionId) return el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '🏁 Escada completa!'), el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')]);
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, `🎯 ${MISSIONS[p.missionId].name}`),
+    el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
+    milestoneTrack(p),
+  ]);
+}
+
+function boardScreen(state, actions) {
+  const p = currentPlayer(state);
+  const design = p.missionId ? checkDesign(p) : { ok: false };
+  const rolling = state.lastRoll != null && state.lastRoll !== lastRollSeen && p.rolled;
+  if (p.rolled) lastRollSeen = state.lastRoll;
+
+  const tiles = TILES.map((t, i) => {
+    const [r, c] = RING_POS[i].split('/');
+    const lot = state.lots[t.id];
+    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: t.label }, [
+      el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
+      el('span', { class: 't-icon' }, tileIcon(state, t)),
+      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, tileSub(state, t))]),
+    ]);
+  });
+
+  const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn;
+  const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
+    : !p.rolled ? 'Ande no tabuleiro antes de lançar.'
+      : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
+  const mustAdvance = p.flight && !p.flightAdvanced;
+  const blocked = !p.rolled || mustAdvance || Boolean(state.pendingDilemma);
+
+  return el('section', { class: 'screen board-screen' }, [
+    hud(state, p, 'board'),
+    el('div', { class: 'board-layout' }, [
+      el('div', {}, [
+        el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
+        el('div', { class: 'row' }, [
+          button('🔧 Oficina', () => actions.go('workshop')),
+          button('🚀 Lançar', () => actions.launch(), { disabled: !canLaunch, title: launchTitle }),
+          button('Passar a vez →', () => actions.endTurn(), { disabled: blocked, class: 'ghost', title: mustAdvance ? 'Avance o voo antes de passar a vez.' : state.pendingDilemma ? 'Resolva a carta de dilema.' : '' }),
+        ]),
+        el('p', { class: 'hint' }, 'Turno: 1) role 2 dados e escolha um · 2) monte e lance, ou avance o voo · 3) passe a vez. Esperar rende tecnologia, mas você não sabe onde o rival está.'),
+      ]),
+      el('div', { class: 'side-stack' }, [
+        missionPanel(state, p, actions),
+        ladderPanel(state, p),
+        rivalsPanel(state, p),
+        agencyPanel(state, p, actions),
+        logPanel(state, p),
+      ]),
+    ]),
+  ]);
+}
+
+return { boardScreen };
+})();
+
+// ---- src/ui/workshop.js
+__mods["src/ui/workshop.js"] = (() => {
+// Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
+// e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
+// e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
+const { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS } = __mods["src/ui/components.js"];
+const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
+const { INSTRUMENTS } = __mods["src/data/instruments.js"];
+const { PARTS } = __mods["src/data/parts.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+const { ORBITS } = __mods["src/data/orbits.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { priceFor, isLocked, requiredTech, discountFor } = __mods["src/sim/resources.js"];
+const { checkDesign } = __mods["src/sim/simulate.js"];
+const { missionRisk, describeRisk, pct } = __mods["src/sim/flight.js"];
+
+function itemCard(player, item, actions) {
+  const owned = [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((id) => id === item.id).length;
+  const price = priceFor(player, item.id);
+  const locked = isLocked(player, item);
+  const gains = [
+    item.powerGen && `+${item.powerGen} energia`,
+    item.commsRate && `+${item.commsRate} comunicação`,
+    item.science && `+${item.science} ciência`,
+    item.lifetimeBonus && `+${item.lifetimeBonus} ano(s)`,
+    item.lifeSupport && 'suporte de vida',
+  ].filter(Boolean);
+  const costs = [
+    `${item.mass} massa`,
+    item.power && `${item.power} energia`,
+    item.dataRate && `${item.dataRate} dados`,
+  ].filter(Boolean);
+  return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''}` }, [
+    el('div', { class: 'card-head' }, [
+      el('span', { class: 'icon' }, ITEM_ICONS[item.visual] || '🔩'),
+      el('strong', {}, item.name),
+      owned ? el('span', { class: 'badge' }, `×${owned}`) : null,
+    ]),
+    el('div', { class: 'pills' }, [
+      ...gains.map((g) => el('span', { class: 'pill gain' }, g)),
+      ...costs.map((c) => el('span', { class: 'pill lose' }, c)),
+    ]),
+    el('div', { class: 'row' }, [
+      locked
+        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, `🔒 exige tecnologia ${requiredTech(player, item)}`)
+        : button([el('span', { class: 'price' }, `💰 ${price}`), ' Comprar'], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
+      button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
+    ]),
+  ]);
+}
+
+function choice(label, options, selectedId, onPick, describe, player) {
+  return el('div', { class: 'choice' }, [
+    el('h2', {}, label),
+    el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
+      const locked = player && isLocked(player, o);
+      return button(locked ? `🔒 ${o.name} · exige tecnologia ${requiredTech(player, o)}` : describe(o), () => onPick(o.id), {
+        class: o.id === selectedId ? 'selected' : '',
+        disabled: locked,
+      });
+    })),
+  ]);
+}
+
+// Risco do voo antes de lançar: etapa por etapa, com o porquê.
+function riskPanel(player) {
+  const risk = missionRisk(player);
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, `🎲 Risco do voo: ${pct(risk.total)}`),
+    el('ul', { class: 'risk-list' }, risk.stages.map((s) => el('li', {}, [el('strong', {}, s.name), el('small', {}, describeRisk(s.risk))]))),
+    el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Proteções 🛡️ salvam uma etapa.'),
+  ]);
+}
+
+function workshopScreen(state, actions) {
+  const p = currentPlayer(state);
+  const back = state.sandbox ? button('Nova partida', () => actions.newGame(), { class: 'ghost' }) : button('← Tabuleiro', () => actions.go('board'), { class: 'ghost' });
+
+  if (!p.missionId) {
+    return el('section', { class: 'screen workshop' }, [
+      hud(state, p, 'workshop'),
+      state.sandbox ? el('h2', {}, '🎯 Escolha a missão antes de projetar a nave') : el('h2', {}, '🏁 Sua escada está completa'),
+      el('p', { class: 'hint' }, state.sandbox
+        ? 'O desafio começa pelos requisitos: cada missão exige uma órbita, ciência, comunicação e vida útil diferentes.'
+        : 'Não há mais degraus para projetar. O vencedor é revelado no fim da rodada.'),
+      state.sandbox ? missionPicker(state, p, actions) : null,
+      el('div', { class: 'row' }, [back]),
+    ]);
+  }
+
+  const mission = MISSIONS[p.missionId];
+  const design = checkDesign(p);
+  const needs = [
+    `ciência ≥ ${mission.needs.science}`,
+    `comunicação ≥ ${mission.needs.comms}`,
+    `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
+    mission.needs.lifeSupport && 'suporte de vida',
+  ].filter(Boolean).join(' · ');
+  const blocked = p.flight ? 'Você já tem uma nave em voo: monte esta para depois.'
+    : !state.sandbox && !p.rolled ? 'Ande no tabuleiro antes de lançar.'
+      : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
+        : null;
+  const discount = discountFor(p);
+
+  return el('section', { class: 'screen workshop' }, [
+    hud(state, p, 'workshop'),
+    p.flight ? el('p', { class: 'banner' }, `🛰️ Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
+    state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
+    el('div', { class: 'workshop-grid' }, [
+      el('div', {}, [
+        el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
+        discount ? el('p', { class: 'hint' }, `🏷️ Desconto ativo: ${discount}% (Fábrica e eventos).`) : null,
+        el('h2', {}, '🔬 Instrumentos científicos'),
+        el('div', { class: 'cards' }, Object.values(INSTRUMENTS).map((i) => itemCard(p, i, actions))),
+        el('h2', {}, '⚙️ Energia, comunicação, propulsão e suporte de vida'),
+        el('div', { class: 'cards' }, Object.values(PARTS).map((i) => itemCard(p, i, actions))),
+        choice('🚀 Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
+          (l) => `${l.name} · carga ${l.maxMass} · 💰 ${l.cost} · ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p),
+        choice('🪐 Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
+          (o) => `${o.name} · ${o.baseLifetime} anos de vida · sinal −${o.commsPenalty * 100}%${o.scienceBonus ? ` · ciência +${o.scienceBonus}` : ''}`),
+      ]),
+      el('aside', { class: 'side' }, [
+        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '📊 Painel de recursos'), gauges(p)]),
+        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '✅ Checagem do projeto'), designChecklist(p)]),
+        design.ok ? riskPanel(p) : null,
+        blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
+        el('div', { class: 'row', style: 'margin:0' }, [
+          button('🚀 Lançar', () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: 'primary', title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          back,
+        ]),
+        glossary(),
+      ]),
+    ]),
+  ]);
+}
+
+return { workshopScreen };
+})();
+
+// ---- src/ui/flight.js
+__mods["src/ui/flight.js"] = (() => {
+// Tela de voo: uma etapa por turno. Mostra o imprevisto (vindo da casa do tabuleiro ou garantido
+// nos pontos-chave) e, em cada opção, o risco calculado e o porquê ANTES da escolha.
+// Depois da escolha, mostra o resultado da etapa.
+const { el, button, hud, stageTrack } = __mods["src/ui/components.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { stageOptions, describeRisk, pct } = __mods["src/sim/flight.js"];
+const { FLIGHT_EVENTS } = __mods["src/data/events.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { STAGES } = __mods["src/data/stages.js"];
+
+const EVENT_ICONS = { solar_storm: '🌞', debris: '☄️', budget_cut: '💸', antenna_stuck: '📡' };
+
+function describeEffect(effect = {}) {
+  const parts = [];
+  if (effect.sciencePenalty) parts.push(`−${effect.sciencePenalty * 100}% ciência`);
+  if (effect.sciencePenalty === 0) parts.push('sem perda: há reserva a bordo');
+  if (effect.funds) parts.push(`${effect.funds} verba`);
+  if (effect.lifetimeDelta) parts.push(`${effect.lifetimeDelta} ano(s) de vida útil`);
+  return parts.join(' · ');
+}
+
+function decisionView(state, p, actions) {
+  const { stageId, eventId } = p.flight.pending;
+  const stage = STAGES[stageId];
+  const event = eventId ? FLIGHT_EVENTS[eventId] : null;
+  const options = stageOptions(p, p.flight.pending);
+  return [
+    el('span', { class: 'alarm' }, event ? EVENT_ICONS[event.id] || '⚠️' : stage.icon),
+    el('p', { class: 'eyebrow' }, `Etapa ${p.flight.stageIndex + 1}/${p.flight.plan.length} · ${stage.name}`),
+    el('h1', {}, event ? event.title : `${stage.name}: tudo nominal`),
+    el('p', { class: 'event-text' }, event ? event.text : `${stage.text} Nenhum imprevisto à vista, mas o risco existe.`),
+    el('div', { class: 'options' }, options.map((opt, i) => {
+      const effectText = describeEffect(opt.effect);
+      return el('div', { class: `card option ${opt.disabled ? 'disabled' : ''}`, onclick: opt.disabled ? null : () => actions.chooseStageOption(i) }, [
+        el('strong', {}, opt.label),
+        el('span', { class: 'risk-big' }, `risco ${pct(opt.risk.total)}`),
+        el('small', { class: 'consequence' }, describeRisk(opt.risk)),
+        effectText ? el('small', { class: 'consequence' }, `→ ${effectText}`) : null,
+        button('Escolher', (e) => { e.stopPropagation(); actions.chooseStageOption(i); }, { class: 'primary small', disabled: opt.disabled }),
+      ]);
+    })),
+    el('p', { class: 'hint', style: 'margin-top:18px' }, 'O risco vem da sua nave: margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão. Uma proteção 🛡️ salva a etapa se ela falhar. Se falhar, a nave ainda tenta uma missão de consolação.'),
+  ];
+}
+
+function resultView(state, p, actions) {
+  const rec = p.flight.last;
+  const next = STAGES[p.flight.plan[p.flight.stageIndex]];
+  return [
+    el('span', { class: 'alarm calm' }, '✅'),
+    el('p', { class: 'eyebrow' }, `Etapa superada · risco era ${pct(rec.risk)}`),
+    el('h1', { class: 'ok' }, `${rec.name}: sucesso`),
+    rec.usedShield ? el('p', { class: 'event-text' }, 'Algo falhou, mas a proteção 🛡️ salvou a etapa.') : null,
+    rec.eventTitle ? el('p', { class: 'event-text' }, `Imprevisto: ${rec.eventTitle}. Você escolheu: "${rec.choice}".`) : null,
+    rec.lesson ? el('p', { class: 'hint' }, `💡 ${rec.lesson}`) : null,
+    rec.bonus ? el('p', { class: 'hint' }, `+${rec.bonus} de verba: cada etapa superada rende prestígio.`) : null,
+    el('p', { class: 'event-text' }, `Próxima etapa: ${next.icon} ${next.name}${state.sandbox ? '.' : ', no seu próximo turno.'}`),
+    el('div', { class: 'row', style: 'justify-content:center' }, state.sandbox
+      ? [button('Próxima etapa →', () => actions.advanceFlight(), { class: 'primary' })]
+      : [
+        button('Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
+        button('🔧 Montar a próxima nave', () => actions.go('workshop')),
+        button('← Tabuleiro', () => actions.go('board'), { class: 'ghost' }),
+      ]),
+  ];
+}
+
+function flightScreen(state, actions) {
+  const p = currentPlayer(state);
+  if (!p.flight) {
+    return el('section', { class: 'screen' }, [hud(state, p, 'flight'), el('p', { class: 'hint' }, 'Nenhuma nave em voo.'), button('← Voltar', () => actions.go(state.sandbox ? 'workshop' : 'board'))]);
+  }
+  const f = p.flight;
+  return el('section', { class: 'screen' }, [
+    hud(state, p, 'flight'),
+    el('div', { class: 'flight' }, [
+      el('p', { class: 'eyebrow' }, `Missão ${MISSIONS[f.missionId].name}`),
+      stageTrack(f.plan, f.stages, f.stageIndex),
+      ...(f.pending ? decisionView(state, p, actions) : resultView(state, p, actions)),
+    ]),
+  ]);
+}
+
+return { flightScreen };
+})();
+
+// ---- src/ui/report.js
+__mods["src/ui/report.js"] = (() => {
+// Relatório da missão: sucesso ou falha (com missão de consolação), pontuação e, principalmente, o PORQUÊ.
+// Mostra cada etapa do voo com o risco e a decisão, os dados de falha (passo Verify) e,
+// no sucesso, o cartão "Na história real".
+const { el, button, hud, checklist, stageTrack } = __mods["src/ui/components.js"];
+const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { pct } = __mods["src/sim/flight.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { REAL_HISTORY } = __mods["src/data/history.js"];
+
+function stageLog(stages) {
+  return el('ol', { class: 'stage-log' }, stages.map((s) => el('li', { class: s.success ? 'ok' : 'bad' }, [
+    el('strong', {}, `${s.success ? '✓' : '✕'} ${s.name} · risco ${pct(s.risk)}${s.usedShield ? ' · salva pela proteção 🛡️' : ''}`),
+    s.eventTitle ? el('small', {}, `Imprevisto: ${s.eventTitle}. Decisão: "${s.choice}".`) : null,
+    el('small', { class: 'hint' }, s.riskText),
+    s.lesson ? el('small', { class: 'hint' }, `💡 ${s.lesson}`) : null,
+  ])));
+}
+
+function reportScreen(state, actions) {
+  const p = currentPlayer(state);
+  const r = p.lastResult;
+  const mission = MISSIONS[r.missionId];
+  const failed = (r.checks || []).filter((c) => !c.ok);
+  const history = REAL_HISTORY[r.missionId];
+  const craftView = r.craft ? { ...p, missionId: r.missionId, spacecraft: r.craft } : p;
+  const title = r.success ? 'Missão cumprida' : 'Missão falhou';
+
+  return el('section', { class: `screen report ${r.success ? 'success' : 'failure'}` }, [
+    hud(state, p, 'report'),
+    el('div', { class: 'panel report-head' }, [
+      el('span', { class: 'stamp' }, r.success ? '✓' : '✕'),
+      el('div', {}, [
+        el('p', { class: 'eyebrow' }, `Relatório de missão · ${mission.name}`),
+        el('h1', {}, title),
+        el('p', { class: 'hint' }, r.success
+          ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' 🏆 Primeira agência do mundo a cumprir esta missão!' : ''}`
+          : 'Cada falha ensina algo: veja os dados de falha abaixo.'),
+      ]),
+      el('div', { class: 'score' }, [el('div', { class: 'big' }, r.score), el('div', { class: 'label' }, 'pontos')]),
+    ]),
+    el('div', { class: 'report-grid' }, [
+      el('div', {}, [
+        el('h2', {}, 'Por quê'),
+        el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
+        r.consolation ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🎖️ Missão de consolação'), el('p', {}, r.consolation)]) : null,
+        r.failureLesson ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🧪 Dados de falha'), el('p', {}, r.failureLesson)]) : null,
+        r.stepBonus ? el('div', { class: 'panel lesson' }, [
+          el('strong', {}, `🪜 Degrau cumprido: +${r.stepBonus.bonus} de verba`),
+          el('p', {}, r.stepBonus.first ? 'Você foi a primeira agência do seu lado a cumprir este degrau.' : 'Outra agência do seu lado chegou antes, por isso o bônus é menor.'),
+        ]) : null,
+        r.stages?.length ? el('div', {}, [el('h2', {}, 'O voo, etapa por etapa'), stageLog(r.stages)]) : null,
+        failed.length ? el('div', {}, [
+          el('h2', {}, 'O que mudaria o resultado'),
+          el('ul', { class: 'reasons' }, failed.map((c) => el('li', {}, c.text))),
+        ]) : null,
+        r.success && history ? el('div', { class: 'panel lesson history' }, [
+          el('strong', {}, `📜 Na história real (${history.year})`),
+          el('p', {}, history.text),
+          state.sandbox || !p.side ? null : el('p', { class: 'hint' }, `Você cumpriu em ${r.year}. ${history.sides[p.side] ? `Seu lado, na história real: ${history.sides[p.side]}. ${compareYear(r.year, history.sides[p.side])}` : 'Na história real, seu lado nunca cumpriu esta missão.'}`),
+          el('a', { href: history.source, target: '_blank', rel: 'noopener' }, 'Fonte: NASA History'),
+        ]) : null,
+      ]),
+      el('div', {}, [
+        el('div', { class: 'spacecraft-box' }, [spacecraftSvg(craftView), el('span', { class: 'caption' }, r.success ? 'sua espaçonave, agora em operação' : 'a espaçonave deste voo')]),
+        r.stages?.length ? el('div', { class: 'panel', style: 'margin-top:12px' }, [stageTrack(r.stages.map((s) => s.stageId), r.stages, -1)]) : null,
+        r.checks?.length ? el('div', { class: 'panel', style: 'margin-top:12px' }, [el('h3', { style: 'margin-top:0' }, 'Checagem completa'), checklist(r.checks)]) : null,
+      ]),
+    ]),
+    el('p', { class: 'hint' }, r.success
+      ? 'Pontuação = ciência entregue ×10 + verba poupada + margem de massa não usada. Projetos enxutos pontuam mais.'
+      : 'A nave foi perdida. Monte outra na oficina: tecnologia, prédios e dados de falha continuam com você.'),
+    el('div', { class: 'row' }, [
+      button(state.sandbox ? '🔧 Voltar à oficina' : 'Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
+      state.sandbox ? null : button('🔧 Oficina', () => actions.go('workshop')),
+      button('Nova partida', () => actions.newGame(), { class: 'ghost' }),
+    ]),
+  ]);
+}
+
+function compareYear(mine, real) {
+  if (!mine) return '';
+  if (mine < real) return `${real - mine} ano(s) antes da história real.`;
+  if (mine > real) return `${mine - real} ano(s) depois da história real.`;
+  return 'No mesmo ano da história real.';
+}
+
+return { reportScreen };
+})();
+
+// ---- src/ui/gameover.js
+__mods["src/ui/gameover.js"] = (() => {
+// Fim da partida: o estado de todos é revelado. Vencedor pela escada (ou pelo maior progresso em 1969),
+// classificação e comparação com a história real de cada lado.
+const { el, button, avatar, progressBar, sideLabel } = __mods["src/ui/components.js"];
+const { ladderProgress } = __mods["src/sim/progress.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { REAL_HISTORY, EPILOGUE, yearOf } = __mods["src/data/history.js"];
+
+function gameoverScreen(state, actions) {
+  const ranked = [...state.players].sort((a, b) => {
+    const wa = state.winners.includes(a.id) ? 1 : 0;
+    const wb = state.winners.includes(b.id) ? 1 : 0;
+    return wb - wa || ladderProgress(b).pct - ladderProgress(a).pct;
+  });
+  const names = state.winners.map((id) => state.players[id].name).join(' e ');
+  const humanWon = state.winners.some((id) => !state.players[id].bot);
+
+  return el('section', { class: 'screen gameover' }, [
+    el('div', { class: 'panel report-head' }, [
+      el('span', { class: 'stamp' }, '🏆'),
+      el('div', {}, [
+        el('p', { class: 'eyebrow' }, `Fim da corrida · ${yearOf(state.round)}`),
+        el('h1', {}, `${names} ${state.winners.length > 1 ? 'venceram' : 'venceu'}`),
+        el('p', { class: 'hint' }, state.endReason === 'ladder'
+          ? 'Uma escada foi completada. A rodada terminou para todos jogarem o mesmo número de turnos, e agora o estado de todos é revelado.'
+          : `Ninguém completou a escada até ${yearOf(state.round)}. Vence quem subiu mais degraus.`),
+        !humanWon && state.players.some((p) => p.bot) ? el('p', { class: 'hint' }, 'A história real chegou antes. Tente lançar mais cedo, ou investir em tecnologia para errar menos.') : null,
+      ]),
+    ]),
+    el('h2', {}, 'Classificação'),
+    el('div', { class: 'panel race' }, ranked.map((p) => {
+      const prog = ladderProgress(p);
+      return el('div', { class: 'race-row' }, [
+        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
+          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? '🏆' : null,
+          el('span', { class: 'chip small' }, sideLabel(p)),
+          el('span', { class: 'spacer' }),
+          el('span', { class: 'num' }, `${prog.steps}/${prog.total} degraus`),
+        ]),
+        progressBar(prog.pct, prog.done ? 'done' : 'ok'),
+        el('small', { class: 'hint' }, p.bot
+          ? 'Bot histórico: seguiu o calendário real com variação.'
+          : `${p.launches} lançamento(s) · tecnologia ${p.tech} · ${p.completed.reduce((s, c) => s + c.science, 0)} de ciência entregue`),
+      ]);
+    })),
+    el('h2', {}, 'Você × a história real'),
+    el('ul', { class: 'reasons' }, state.players.filter((p) => !p.bot).flatMap((p) => p.completed.map((c) => {
+      const real = REAL_HISTORY[c.missionId].sides[p.side];
+      if (real == null) return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year}. Na história real, ${sideLabel(p)} nunca cumpriu esta missão.`);
+      const diff = c.year - real;
+      return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year} (${sideLabel(p)} na história real: ${real}, ${diff === 0 ? 'mesmo ano' : diff < 0 ? `${-diff} ano(s) antes` : `${diff} ano(s) depois`}).`);
+    }))),
+    state.players.some((p) => !p.bot && p.completed.length) ? null : el('p', { class: 'hint' }, 'Nenhum degrau cumprido nesta partida.'),
+    el('div', { class: 'panel lesson' }, [el('strong', {}, '🤝 Epílogo'), el('p', {}, EPILOGUE)]),
+    el('div', { class: 'row' }, [button('Nova partida', () => actions.newGame(), { class: 'primary' })]),
+  ]);
+}
+
+return { gameoverScreen };
+})();
+
+// ---- src/ui/screens.js
+__mods["src/ui/screens.js"] = (() => {
+// Mapa de telas. Cada tela é uma função (state, actions) => elemento DOM.
+// Ciclo (IDEIA.md v3): setup -> troca -> tabuleiro <-> oficina -> voo (uma etapa por turno) -> relatório -> ... -> fim
+const { setupScreen } = __mods["src/ui/setup.js"];
+const { handoffScreen } = __mods["src/ui/handoff.js"];
+const { boardScreen } = __mods["src/ui/board.js"];
+const { workshopScreen } = __mods["src/ui/workshop.js"];
+const { flightScreen } = __mods["src/ui/flight.js"];
+const { reportScreen } = __mods["src/ui/report.js"];
+const { gameoverScreen } = __mods["src/ui/gameover.js"];
+
+const SCREENS = {
+  setup: setupScreen,
+  handoff: handoffScreen,
+  board: boardScreen,
+  workshop: workshopScreen,
+  flight: flightScreen,
+  report: reportScreen,
+  gameover: gameoverScreen,
+};
+
+return { SCREENS };
+})();
+
+// ---- src/main.js
+__mods["src/main.js"] = (() => {
+// Ponto de entrada: cria o estado, liga as ações à UI e re-renderiza a cada mudança.
+const { createInitialState } = __mods["src/sim/state.js"];
+const game = __mods["src/sim/actions.js"];
+const { SCREENS } = __mods["src/ui/screens.js"];
+
+const app = document.getElementById('app');
+let state = createInitialState();
+
+let lastScreen = null;
+let lastTurn = null;
+
+// Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
+// num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
+function render() {
+  const changed = state.screen !== lastScreen || state.turn !== lastTurn;
+  const scrollY = window.scrollY;
+  const node = SCREENS[state.screen](state, actions);
+  if (changed) node.classList.add('enter');
+  app.replaceChildren(node);
+  window.scrollTo(0, changed ? 0 : scrollY);
+  lastScreen = state.screen;
+  lastTurn = state.turn;
+}
+
+// Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
+function wrap(fn, after) {
+  return (...args) => {
+    const error = fn(state, ...args);
+    if (typeof error === 'string') showToast(error);
+    render();
+    if (!error && after) after();
+  };
+}
+
+const actions = {
+  go: wrap((s, screen) => { s.screen = screen; }),
+  startGame: wrap(game.startGame),
+  rollDice: wrap(game.rollDice),
+  moveBy: wrap(game.moveBy),
+  chooseDilemma: wrap(game.chooseDilemma),
+  spyOn: wrap(game.spyOn),
+  buyItem: wrap(game.buyItem),
+  sellItem: wrap(game.sellItem),
+  chooseLauncher: wrap(game.chooseLauncher),
+  chooseOrbit: wrap(game.chooseOrbit),
+  chooseMission: wrap(game.chooseMission),
+  buildOnLot: wrap(game.buildOnLot),
+  useRivalBuilding: wrap(game.useRivalBuilding),
+  skipTile: wrap(game.skipTile),
+  upgradeBuilding: wrap(game.upgradeBuilding),
+  requestBailout: wrap(game.requestBailout),
+  launch: wrap(game.launch, showLaunchOverlay),
+  advanceFlight: wrap(game.advanceFlight),
+  // Atalho de depuração no console: rola e anda com o primeiro dado.
+  rollAndMove: wrap(game.rollAndMove),
+  chooseStageOption: wrap(game.chooseStageOption),
+  endTurn: wrap(game.endTurn),
+  newGame: wrap(() => { state = createInitialState(); }),
+};
+
+function showToast(text) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// Animação curta de lançamento (contagem + foguete) antes da tela de voo. Um clique pula.
+function showLaunchOverlay() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const o = document.createElement('div');
+  o.className = 'launch-overlay';
+  o.title = 'Clique para pular';
+  o.innerHTML = '<div class="count">3</div><div class="rocket">🚀</div><div class="flame"></div>';
+  document.body.appendChild(o);
+  const count = o.querySelector('.count');
+  const timers = [
+    setTimeout(() => { count.textContent = '2'; }, 300),
+    setTimeout(() => { count.textContent = '1'; }, 600),
+    setTimeout(() => { count.textContent = 'Lançar!'; }, 900),
+    setTimeout(() => o.remove(), 1400),
+  ];
+  o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
+}
+
+// Exposto para depuração no console do navegador.
+window.__game = { get state() { return state; }, actions };
+
+render();
+
+return {  };
+})();
+})();
+</script>
+</body>
+</html>
