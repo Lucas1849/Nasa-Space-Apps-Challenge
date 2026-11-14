@@ -1,4 +1,4 @@
-// Progresso de cada agência na escada do próprio lado (IDEIA-v3 seções 2 e 11).
+// Progresso de cada agência na escada do próprio lado (IDEIA.md v3 seções 2 e 11).
 // Função pura. Usada para o fim da partida, o desempate e o apoio a quem está atrás.
 import { ladderOf } from '../data/sides.js';
 import { flightPlan } from './flight.js';

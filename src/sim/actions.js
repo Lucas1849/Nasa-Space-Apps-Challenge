@@ -1,7 +1,7 @@
 // Ações do jogo: cada função altera o estado e devolve uma mensagem de erro (string) ou null.
 // A UI só chama estas funções; a regra de negócio fica aqui (testável sem DOM).
 //
-// Regras da IDEIA-v3:
+// Regras da IDEIA.md v3:
 //   - Cada agência é de um lado (EUA ou URSS) e vence completando a ESCADA de missões do lado.
 //   - 3 rodadas = 1 ano. No "Ano novo" cada agência recebe verba e tecnologia.
 //   - Rival escondido: só o espião e os boatos revelam o estado dos outros. Tela de troca entre turnos.
@@ -193,7 +193,7 @@ function isLastPlayer(state, player) {
   return state.players.every((p) => compareRank(player, p) >= 0);
 }
 
-// Rola 2 dados; o jogador escolhe qual usar (IDEIA-v3: ainda tem sorte, mas ele sente que decidiu).
+// Rola 2 dados; o jogador escolhe qual usar (IDEIA.md v3: ainda tem sorte, mas ele sente que decidiu).
 export function rollDice(state, rng = Math.random) {
   const p = currentPlayer(state);
   if (state.sandbox) return 'No modo sandbox não há tabuleiro.';

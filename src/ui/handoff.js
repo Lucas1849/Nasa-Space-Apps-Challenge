@@ -1,4 +1,4 @@
-// Tela de troca (IDEIA-v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
+// Tela de troca (IDEIA.md v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
 import { el, button, avatar, sideLabel } from './components.js';
 import { currentPlayer } from '../sim/state.js';
 import { yearOf, isNewYear } from '../data/history.js';

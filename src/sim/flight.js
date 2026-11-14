@@ -77,7 +77,7 @@ export function flyer(player) {
   return { ...player, missionId: player.flight.missionId, spacecraft: player.flight.craft };
 }
 
-// Opções do jogador numa etapa do voo. Não existe "abortar" (IDEIA-v3 seção 7): se a etapa falhar,
+// Opções do jogador numa etapa do voo. Não existe "abortar" (IDEIA.md v3 seção 7): se a etapa falhar,
 // a nave tenta uma missão de consolação. Com imprevisto: as 2 opções do evento.
 // Sem imprevisto: seguir ou gastar a reserva de verba para reduzir o risco.
 // Cada opção já traz o risco calculado e explicado, para o jogador decidir vendo o porquê.

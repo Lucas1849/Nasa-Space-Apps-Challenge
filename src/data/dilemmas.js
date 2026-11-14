@@ -1,4 +1,4 @@
-// Cartas de dilema (IDEIA-v3 seção 7): a casa de evento sorteia uma carta com ESCOLHA, de acordo
+// Cartas de dilema (IDEIA.md v3 seção 7): a casa de evento sorteia uma carta com ESCOLHA, de acordo
 // com a situação do jogador. Com a nave em voo, a casa vira um imprevisto na próxima etapa do voo
 // (data/events.js). Em solo, valem as cartas abaixo.
 // ATENÇÃO: efeitos FICTÍCIOS para balanceamento. Situações históricas só como inspiração.

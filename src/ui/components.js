@@ -99,7 +99,7 @@ export function ladderPanel(state, player) {
   ]);
 }
 
-// Rival escondido (IDEIA-v3 seção 8): só aparece o que o espião ou os boatos revelaram.
+// Rival escondido (IDEIA.md v3 seção 8): só aparece o que o espião ou os boatos revelaram.
 export function rivalsPanel(state, player) {
   const rivals = state.players.filter((r) => r.id !== player.id);
   if (!rivals.length) return null;

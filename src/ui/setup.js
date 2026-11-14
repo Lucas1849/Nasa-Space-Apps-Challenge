@@ -1,5 +1,5 @@
 // Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
-// Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA-v3 seção 9).
+// Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
 import { el, button, glossary, MISSION_ICONS } from './components.js';
 import { spacecraftSvg } from './spacecraft.js';
 import { createPlayer } from '../sim/state.js';

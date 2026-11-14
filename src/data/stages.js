@@ -6,7 +6,7 @@
 // system = subsistema testado na etapa. Uma falha gera "dados de falha" desse sistema,
 //          que reduzem o risco dele na próxima tentativa (passo Verify do ciclo da NASA).
 // guaranteedEvent = sempre tem imprevisto nessa etapa (pontos-chave do voo nunca ficam vazios).
-// consolation = missão de consolação (IDEIA-v3 seção 7): se a etapa falha, a nave ainda cumpre um
+// consolation = missão de consolação (IDEIA.md v3 seção 7): se a etapa falha, a nave ainda cumpre um
 //               objetivo menor e dá crédito parcial. Não existe "abortar".
 
 export const STAGES = {

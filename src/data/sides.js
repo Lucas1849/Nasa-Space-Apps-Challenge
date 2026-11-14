@@ -1,4 +1,4 @@
-// Lados da Guerra Fria e escadas de missões (IDEIA-v3 seção 2). A win con é completar a escada do
+// Lados da Guerra Fria e escadas de missões (IDEIA.md v3 seção 2). A win con é completar a escada do
 // próprio lado: cada degrau é uma nave nova; tecnologia, prédios, verba e bônus persistem.
 // Agências são do jogador; o lado só define a escada, uma vantagem pequena e uma fraqueza pequena.
 // ATENÇÃO: vantagens e fraquezas FICTÍCIAS, para balanceamento. Sem bandeiras nem marcas.

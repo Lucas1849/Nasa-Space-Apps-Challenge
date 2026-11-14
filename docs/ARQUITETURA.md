@@ -48,7 +48,7 @@ UI (src/ui)  --chama-->  actions (src/sim/actions.js)  --altera-->  state (src/s
 - Não há framework: cada tela é `(state, actions) => HTMLElement` e é reconstruída inteira.
   É simples e suficiente para o tamanho do jogo.
 
-## Ciclo do jogo (conforme `IDEIA-v3.md`)
+## Ciclo do jogo (conforme a parte v3 do `IDEIA.md`)
 
 Tensão central: **lançar agora (barato e arriscado) ou esperar melhorar (seguro, mas o rival pode
 estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida.

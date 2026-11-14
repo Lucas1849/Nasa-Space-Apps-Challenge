@@ -1,4 +1,4 @@
-// Calendário da corrida espacial (IDEIA-v3 seção 3): 3 rodadas = 1 ano, começando em 1957.
+// Calendário da corrida espacial (IDEIA.md v3 seção 3): 3 rodadas = 1 ano, começando em 1957.
 // Os marcos reais foram conferidos nas páginas de história da NASA (links em `source`).
 // Usamos só o ano: algumas páginas divergem no dia exato.
 // `sides` = ano em que cada lado cumpriu a missão de verdade (null = nunca). O bot do modo solo

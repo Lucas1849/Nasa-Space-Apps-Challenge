@@ -1,4 +1,4 @@
-// Camada do TABULEIRO (IDEIA-v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
+// Camada do TABULEIRO (IDEIA.md v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
 // O tabuleiro alimenta a engenharia: verba, tecnologia, desconto, proteção, prédios e informação.
 // Funções puras, sem DOM. Recebem `rng` para os testes serem determinísticos.
 // ATENÇÃO: valores FICTÍCIOS para balanceamento. Casas de dinheiro são fracas de propósito.
