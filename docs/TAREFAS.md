@@ -3,7 +3,7 @@
 Prazo: **domingo 15/11, 23:59 (Uberlândia)**. Tudo que está aqui cabe nesse prazo se cada um
 ficar na própria área. Marque `[x]` ao concluir e abra PR pequeno (ver `CLAUDE.md`).
 
-Estado da base (branch `daniel/estrutura-inicial`): o ciclo completo já roda —
+Estado da base (`main`): o ciclo completo já roda —
 setup → tabuleiro → oficina → lançamento → relatório com explicação — para 1 a 4 jogadores
 em hot-seat, com 3 missões, 17 testes passando. **O que falta é polir, balancear e entregar.**
 
@@ -23,8 +23,8 @@ Regra de ouro: quem precisar mudar `src/sim/state.js` ou `src/sim/actions.js` av
 
 - [ ] **Deploy público** no GitHub Pages (Settings → Pages → branch `main`, pasta `/`). Testar o link
       em aba anônima. Sem link público o projeto não é julgado.
-- [ ] **Merge da estrutura** (`daniel/estrutura-inicial` → `main`) para todos partirem da mesma base.
-- [ ] **Convidar o Henrique** como colaborador do repositório (só o Lucas, admin, consegue).
+- [x] **Merge da estrutura** na `main` (PRs #1 e #2). Todos partem da mesma base.
+- [x] **Henrique** já é colaborador do repositório.
 - [ ] **Texto da página do projeto em inglês** (campos em `SUBMISSION.md`). Rascunhar já; refinar domingo.
 - [ ] **Citar ao menos 1 recurso da NASA** (obrigatório p/ prêmio global). Sugestões que já usamos
       como referência de design: webinar *Design and Develop Science Missions* (fluxo Need → Concept →
