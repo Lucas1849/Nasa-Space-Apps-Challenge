@@ -70,9 +70,10 @@ git push -u origin <nome>/<assunto>   # depois abrir Pull Request
 - Conceito do jogo em `IDEIA.md` (tabuleiro estilo Banco Imobiliário + oficina de engenharia,
   tema corrida espacial). Regras do evento em `docs/regras-do-evento.md`.
 - Stack e estrutura em `docs/ARQUITETURA.md` (JS puro, ES modules, sem build; testes com
-  `node --test`). O ciclo completo já roda: setup → tabuleiro → oficina → lançamento → evento de
-  voo (decisão) → relatório, 1–4 jogadores em hot-seat ou sandbox, 5 missões, vida útil, desenho
-  SVG da espaçonave, glossário. `npm start` para jogar, `npm test` para testar.
+  `node --test`). O jogo segue a `IDEIA.md` v2: rodada = ano (1957–1969), cartas de vitória
+  sorteadas, recordes mundiais, tabuleiro de 16 casas com prédios e tecnologia, voo em etapas
+  (uma por turno) com risco explicado, dados de falha, cartão "Na história real" e tela de fim.
+  1–4 agências em hot-seat ou sandbox. `npm start` para jogar, `npm test` para testar.
 - Plano de tarefas e divisão por área em `docs/TAREFAS.md`. Donos de cada área: **a definir**.
 - Regras de simulação ficam em `src/sim/simulate.js`; toda regra nova precisa de teste e de um
   texto explicando a falha (o "porquê" é o que a banca avalia).

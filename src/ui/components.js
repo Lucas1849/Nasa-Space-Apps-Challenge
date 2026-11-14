@@ -1,8 +1,15 @@
 // Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
 import { effectiveTotals } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
+import { flightPlan } from '../sim/flight.js';
+import { upgradeCostFor } from '../sim/actions.js';
+import { BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
 import { GLOSSARY } from '../data/glossary.js';
+import { OBJECTIVES, objectiveProgress } from '../data/objectives.js';
+import { REAL_HISTORY, MAX_ROUNDS, yearOf } from '../data/history.js';
+import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
+import { STAGES } from '../data/stages.js';
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -38,20 +45,132 @@ export function avatar(player, size) {
   return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null }, player.name[0].toUpperCase());
 }
 
-// Barra superior: quem joga, missão, verba, rodada e em que etapa do ciclo está.
+// Barra superior: ano, quem joga, carta, missão, verba, tecnologia e em que etapa do ciclo está.
 export function hud(state, player, step) {
-  const mission = MISSIONS[player.missionId];
+  const mission = MISSIONS[player.flight?.missionId || player.missionId];
+  const card = OBJECTIVES[player.objectiveId];
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
   const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
   return el('div', { class: 'hud' }, [
+    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox') : el('span', { class: 'chip year', title: `Rodada ${state.round} de ${MAX_ROUNDS}` }, ['📅 ', el('span', { class: 'num' }, yearOf(state.round))]),
     el('div', { class: 'who' }, [avatar(player), player.name]),
-    el('span', { class: 'chip' }, [MISSION_ICONS[mission.id] || '🚀', ' ', mission.name]),
-    el('span', { class: 'chip' }, ['💰 ', el('span', { class: 'num' }, player.funds)]),
-    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox') : el('span', { class: 'chip' }, ['Rodada ', el('span', { class: 'num' }, state.round)]),
+    card ? el('span', { class: 'chip', title: card.goal }, [card.icon, ' ', card.name]) : null,
+    el('span', { class: 'chip' }, mission ? [MISSION_ICONS[mission.id] || '🚀', ' ', mission.name, player.flight ? ' · em voo' : ''] : '🎯 escolhendo missão'),
+    el('span', { class: 'chip', title: 'Verba' }, ['💰 ', el('span', { class: 'num' }, player.funds)]),
+    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, ['🔧 tec ', el('span', { class: 'num' }, player.tech)]),
     player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, ['🛡️ ', el('span', { class: 'num' }, player.shields)]) : null,
     el('span', { class: 'spacer' }),
     el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
   ]);
+}
+
+export function progressBar(fraction, status = 'ok') {
+  return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
+}
+
+function statusText(player) {
+  if (player.flight) {
+    const f = player.flight;
+    return `🛰️ em voo: ${MISSIONS[f.missionId].name}, etapa ${f.stageIndex + 1}/${f.plan.length}`;
+  }
+  if (player.missionId) return `🔧 no chão: ${MISSIONS[player.missionId].name}`;
+  return '🎯 escolhendo missão';
+}
+
+// Corrida visível (IDEIA.md seção 2): todos veem a carta, o progresso e a nave de todos.
+// É o custo de esperar: enquanto você melhora a nave, os rivais avançam.
+export function raceTable(state) {
+  return el('div', { class: 'panel race' }, [
+    el('h3', { style: 'margin-top:0' }, state.players.length > 1 ? '🏁 Corrida espacial' : '🏁 Sua agência na corrida'),
+    ...state.players.map((pl) => {
+      const card = OBJECTIVES[pl.objectiveId];
+      const prog = objectiveProgress(pl, state);
+      return el('div', { class: `race-row ${pl.id === state.turn ? 'current' : ''}` }, [
+        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
+          avatar(pl, 26), el('strong', {}, pl.name),
+          card ? el('span', { class: 'chip small', title: card.goal }, `${card.icon} ${card.name}`) : null,
+          el('span', { class: 'spacer' }),
+          el('span', { class: 'num' }, `${Math.round(prog.pct * 100)}%`),
+        ]),
+        progressBar(prog.pct, prog.done ? 'done' : 'ok'),
+        el('div', { class: 'race-meta' }, [
+          el('span', {}, statusText(pl)),
+          el('span', {}, `💰 ${pl.funds} · 🔧 ${pl.tech}${pl.shields ? ` · 🛡️ ${pl.shields}` : ''} · ✓ ${pl.completed.length}`),
+        ]),
+        card ? el('small', { class: 'hint' }, `${card.goal} (${prog.value}/${prog.target})`) : null,
+      ]);
+    }),
+  ]);
+}
+
+// Recordes mundiais: quem cumpriu cada missão primeiro (vale bônus e conta para a carta Pioneira).
+export function recordsPanel(state) {
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, '🏆 Recordes mundiais'),
+    el('ul', { class: 'records' }, Object.values(MISSIONS).map((m) => {
+      const r = state.records[m.id];
+      return el('li', { class: r ? 'taken' : '' }, [
+        el('span', {}, `${MISSION_ICONS[m.id] || '🚀'} ${m.name}`),
+        el('span', { class: 'hint' }, r ? `${state.players[r.playerId].name}, ${r.year}` : `em aberto (história real: ${REAL_HISTORY[m.id].year})`),
+      ]);
+    })),
+  ]);
+}
+
+// Escolha da missão atual. Mostra se ela ajuda a carta de vitória e se o recorde ainda está em aberto.
+export function missionPicker(state, player, actions) {
+  const card = OBJECTIVES[player.objectiveId];
+  return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => {
+    const done = player.completed.some((c) => c.missionId === m.id);
+    const record = state.records[m.id];
+    const helps = card && !done && card.counts(m.id, state);
+    const stages = flightPlan(m.id).length;
+    return button([
+      el('span', { class: 'icon' }, MISSION_ICONS[m.id] || '🚀'),
+      el('strong', {}, m.name),
+      el('span', { class: 'diff' }, `${m.difficulty} · ${stages} etapas de voo`),
+      el('span', { class: 'goal' }, m.goal),
+      done ? el('span', { class: 'tag ok' }, '✓ cumprida') : null,
+      helps ? el('span', { class: 'tag accent' }, `${card.icon} conta para sua carta`) : null,
+      !state.sandbox ? el('span', { class: 'tag' }, record ? `recorde: ${state.players[record.playerId].name}` : '🏆 recorde em aberto') : null,
+    ], () => actions.chooseMission(m.id), {
+      class: `mission-card ${player.missionId === m.id ? 'selected' : ''}`,
+      disabled: done || Boolean(player.flight),
+    });
+  }));
+}
+
+// Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
+export function agencyPanel(state, player, actions) {
+  return el('div', { class: 'panel' }, [
+    el('h3', { style: 'margin-top:0' }, '🏢 Sua agência'),
+    el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
+      const level = player.buildings[b.id];
+      const cost = level ? upgradeCostFor(state, player, b.id) : null;
+      return el('li', {}, [
+        el('span', { class: 'b-icon' }, b.icon),
+        el('div', {}, [
+          el('strong', {}, `${b.name} ${level ? `nível ${level}/${MAX_LEVEL}` : ''}`),
+          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre (🏗️) por ${upgradeCost(0)}. ${b.effect}`),
+        ]),
+        level && level < MAX_LEVEL
+          ? button(`⬆ ${cost}`, () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: 'Subir de nível' })
+          : null,
+      ]);
+    })),
+    player.funds < BAILOUT_LIMIT
+      ? button(`🆘 Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`, () => actions.requestBailout(), { class: 'small ghost' })
+      : null,
+  ]);
+}
+
+// Linha do tempo das etapas do voo.
+export function stageTrack(plan, stages, currentIndex) {
+  return el('ol', { class: 'stage-track' }, plan.map((id, i) => {
+    const rec = stages[i];
+    const cls = rec ? (rec.success ? 'done' : 'fail') : i === currentIndex ? 'now' : '';
+    return el('li', { class: cls }, [el('span', { class: 's-icon' }, STAGES[id].icon), el('span', {}, STAGES[id].name)]);
+  }));
 }
 
 // Medidores: cada recurso contra o limite ou o mínimo, com barra e cor de alerta.
@@ -91,10 +210,11 @@ export function checklist(checks) {
 }
 export const designChecklist = (player) => checklist(checkDesign(player).checks);
 
-export function milestoneTrack(player) {
-  const mission = MISSIONS[player.missionId];
+export function milestoneTrack(player, missionId = player.missionId) {
+  const mission = MISSIONS[missionId];
+  if (!mission) return null;
   return el('ol', { class: 'milestones' }, mission.milestones.map((m) =>
-    el('li', { class: player.milestones.includes(m.id) ? 'done' : '' }, [
+    el('li', { class: player.milestones.includes(`${missionId}:${m.id}`) ? 'done' : '' }, [
       el('div', {}, [el('strong', {}, m.name), el('small', {}, m.requirement)]),
     ])));
 }

@@ -64,9 +64,12 @@ export function checkDesign(player, modifiers = {}) {
       `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} propulsor de manutenção ou bateria estendem a vida.`);
   }
 
-  add('funds', player.funds >= t.launchCost,
-    `Verba ${player.funds} cobre o lançamento (${t.launchCost}).`,
-    `Verba ${player.funds} não cobre o custo de lançamento ${t.launchCost}. Jogue mais rodadas no tabuleiro ou use um lançador mais barato.`);
+  // `modifiers.launched`: avaliação depois do voo, o lançamento já foi pago.
+  if (!modifiers.launched) {
+    add('funds', player.funds >= t.launchCost,
+      `Verba ${player.funds} cobre o lançamento (${t.launchCost}).`,
+      `Verba ${player.funds} não cobre o custo de lançamento ${t.launchCost}. Jogue mais rodadas no tabuleiro ou use um lançador mais barato.`);
+  }
 
   const hardOk = checks.filter((c) => c.hard).every((c) => c.ok);
   // "Projeto pronto" ignora verba: o projeto está certo, só falta dinheiro para lançar.
@@ -76,15 +79,17 @@ export function checkDesign(player, modifiers = {}) {
 
 // Simula o lançamento e a operação.
 // `modifiers` = consequências da decisão em voo: { sciencePenalty, failChance, lifetimeDelta }.
+// `randomFailure: false` desliga a falha aleatória única: no jogo com voo em etapas, o risco
+// já foi sorteado etapa por etapa (sim/flight.js) e aqui só sobra a avaliação final da operação.
 // Devolve { success, score, reasons, checks, totals, usedShield, scienceDelivered }.
-export function simulate(player, { rng = Math.random, modifiers = {} } = {}) {
+export function simulate(player, { rng = Math.random, modifiers = {}, randomFailure: allowRandom = true } = {}) {
   const { ok, checks, totals } = checkDesign(player, modifiers);
   const reasons = checks.filter((c) => !c.ok && c.hard).map((c) => c.text);
   let usedShield = false;
 
   // Falha aleatória só acontece se o projeto estava certo; escudo protege uma vez.
   let randomFailure = false;
-  if (ok) {
+  if (ok && allowRandom) {
     const chance = FAILURE_CHANCE + (modifiers.failChance || 0);
     if (rng() < chance) {
       if ((player.shields || 0) > 0) {
@@ -105,8 +110,9 @@ export function simulate(player, { rng = Math.random, modifiers = {} } = {}) {
   if (modifiers.sciencePenalty) scienceDelivered = Math.floor(scienceDelivered * (1 - modifiers.sciencePenalty));
 
   // Pontuação: premia ciência entregue, verba poupada e massa enxuta (uso eficiente de recursos).
+  const fundsLeft = modifiers.launched ? player.funds : player.funds - totals.launchCost;
   const score = success
-    ? scienceDelivered * 10 + Math.max(0, player.funds - totals.launchCost) + Math.max(0, (totals.maxMass || 0) - totals.mass)
+    ? scienceDelivered * 10 + Math.max(0, fundsLeft) + Math.max(0, (totals.maxMass || 0) - totals.mass)
     : 0;
 
   if (success) {

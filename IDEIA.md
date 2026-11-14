@@ -299,3 +299,48 @@ todos, mas pesa diferente em cada carta.
 - Aprovar as 4 cartas e os números (15 de ciência, 3 missões, 2 recordes).
 - Falha = nave perdida inteira (proposta) ou só parte?
 - 13 rodadas (1957–1969) está bom?
+
+## 14. O que já está no jogo (Daniel, 14/11)
+
+> Status: **implementado** na branch `daniel/ideia-v2`. Junta as seções 2 a 9 (Marcus) com a seção
+> 13 (Henrique). Todos os números continuam sendo chutes para testar; ficam em `src/data/`.
+
+### 14.1 O que faltava no tabuleiro para a ideia funcionar
+O tabuleiro antigo (8 casas, quase todas de dinheiro) tinha quatro problemas:
+
+1. **Não tinha decisão.** O jogador só rolava e recebia. Agora há terrenos (construir ou não, qual
+   prédio) e prédios de rivais (pagar para usar ou não).
+2. **Não falava com a engenharia.** Agora as casas dão o que a oficina usa: tecnologia, desconto,
+   proteção. E as **casas de risco** viram o imprevisto da etapa do voo quando a nave está voando.
+   Isso junta a seção 7 (casa dispara evento) com a 13.3 (uma etapa por turno).
+3. **Dinheiro dependia de sorte.** Como cada rodada é um ano, toda agência recebe um **orçamento
+   anual** fixo. As casas de dinheiro ficaram fracas, como a seção 4 pede.
+4. **Não tinha interação.** Usar o prédio do rival paga o dono e dá um efeito para quem usa: é um
+   contrato simples, de um botão, em que os dois ganham.
+
+### 14.2 Mapa do que entrou
+| Ideia | Onde está |
+|---|---|
+| Rodada = ano, 1957–1969, limite de 13 rodadas | `src/data/history.js` |
+| Cartas de vitória sorteadas e recordes mundiais (+20 de prestígio) | `src/data/objectives.js` |
+| Tecnologia +1 por turno, peças e foguetes bloqueados por nível | `minTech` em `src/data/` |
+| Prédios: Laboratório, Fábrica, Controle de missão, Patrocinador (nível 1 a 3) | `src/data/buildings.js` |
+| Tabuleiro de 16 casas com tema de época | `src/board/board.js` |
+| Voo em etapas (LEO 2, GEO 3, Lua 3, tripulada 4), uma por turno | `src/data/stages.js` |
+| Risco por etapa com o motivo, antes da decisão | `src/sim/flight.js` |
+| Consertar (revisão paga), abortar ou insistir | tela de voo |
+| Etapas contam (+4 por etapa) e dados de falha por sistema | `src/sim/actions.js` |
+| Montar a próxima nave enquanto a outra voa | oficina |
+| Socorro de emergência, sem eliminação | painel da agência |
+| Cartão "Na história real" com fonte da NASA e tela final com epílogo Apollo-Soyuz | relatório e fim |
+
+### 14.3 Decisões que tomei (dá para mudar)
+- **Falha = nave perdida inteira**, como a proposta 13.7. Em troca, a falha dá dados de falha e +1 de tecnologia.
+- **No solo não sai a carta Pioneira**: sem rivais, ser o primeiro do mundo seria automático.
+- **Exploradora começa com +40 de verba**, pela suspeita da seção 13.2 de que é a carta mais difícil.
+- A subida acontece no turno do lançamento. Por isso a Lua leva 2 a 3 turnos em voo, não 3 a 4.
+
+### 14.4 Ainda não entrou
+- Contratos completos entre jogadores (só o "usar prédio do rival").
+- Espionagem, facções e árvore de tecnologia (roadmap, seção 10).
+- Balanceamento por partidas de teste: verba anual, metas das cartas e riscos.
