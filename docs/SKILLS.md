@@ -20,7 +20,9 @@ frontend-design para redesenhar a oficina"). As skills ficam em três lugares:
 - O jogo é **JS puro + DOM/CSS**, sem canvas e sem engine (Phaser, Pixi etc.). Skills de
   Godot/Unity/Unreal ou de física **não servem**.
 - A arte precisa rodar sem build e sem arquivos pesados: **SVG inline e CSS** são o caminho
-  mais barato. Pixel art em PNG também funciona, mas exige mais cuidado com escala.
+  mais barato. O jogo já desenha a espaçonave em SVG gerado por código
+  (`src/ui/spacecraft.js`), então novas artes em SVG encaixam direto nesse padrão. Pixel art
+  em PNG também funciona, mas exige mais cuidado com escala.
 - A banca avalia clareza do "porquê" da falha da missão, então a UI do relatório e da oficina
   pesa tanto quanto a arte.
 
