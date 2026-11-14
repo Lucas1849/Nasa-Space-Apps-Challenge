@@ -40,6 +40,7 @@ export function rollAndMove(state, rng = Math.random) {
   pushLog(state, `${p.name} tirou ${steps} e parou em "${tile.label}".`);
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`));
   state.players[state.turn].rolled = true;
+  state.lastRoll = steps; // usado pela UI para mostrar a face do dado
   return steps;
 }
 

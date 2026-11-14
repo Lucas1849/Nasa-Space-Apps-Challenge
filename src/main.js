@@ -13,11 +13,12 @@ function render() {
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
-function wrap(fn) {
+function wrap(fn, after) {
   return (...args) => {
     const error = fn(state, ...args);
     if (typeof error === 'string') showToast(error);
     render();
+    if (!error && after) after();
   };
 }
 
@@ -29,7 +30,7 @@ const actions = {
   sellItem: wrap(game.sellItem),
   chooseLauncher: wrap(game.chooseLauncher),
   chooseOrbit: wrap(game.chooseOrbit),
-  launch: wrap(game.launch),
+  launch: wrap(game.launch, showLaunchOverlay),
   resolveFlight: wrap(game.resolveFlight),
   endTurn: wrap(game.endTurn),
   newGame: wrap(() => { state = createInitialState(); }),
@@ -41,6 +42,20 @@ function showToast(text) {
   t.textContent = text;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
+}
+
+// Animação curta de lançamento (contagem + foguete) antes da tela de voo.
+function showLaunchOverlay() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const o = document.createElement('div');
+  o.className = 'launch-overlay';
+  o.innerHTML = '<div class="count">3</div><div class="rocket">🚀</div><div class="flame"></div>';
+  document.body.appendChild(o);
+  const count = o.querySelector('.count');
+  setTimeout(() => { count.textContent = '2'; }, 500);
+  setTimeout(() => { count.textContent = '1'; }, 1000);
+  setTimeout(() => { count.textContent = 'Lançar!'; }, 1500);
+  setTimeout(() => o.remove(), 2400);
 }
 
 // Exposto para depuração no console do navegador.

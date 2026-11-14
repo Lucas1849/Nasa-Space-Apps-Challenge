@@ -1,66 +1,76 @@
-// Tela inicial: número de jogadores, nomes e missão de cada um (hot-seat: todos no mesmo computador).
-import { el, button, glossary } from './components.js';
+// Tela inicial: apresentação, missões em cards, jogadores (hot-seat) e modo sandbox.
+import { el, button, glossary, MISSION_ICONS } from './components.js';
+import { spacecraftSvg } from './spacecraft.js';
 import { MISSIONS } from '../data/missions.js';
+import { createPlayer } from '../sim/state.js';
 
 export function setupScreen(state, actions) {
-  let count = 1;
+  const missionIds = Object.keys(MISSIONS);
+  const players = [{ name: '', missionId: missionIds[0] }];
   let sandbox = false;
-  const form = el('div', { class: 'setup-players' });
 
+  // Espaçonave de exemplo na capa (só visual)
+  const demo = createPlayer(0, 'Demo', 'weather_watch');
+  demo.spacecraft.parts = ['solar_large', 'antenna_dish', 'thruster', 'battery'];
+  demo.spacecraft.instruments = ['camera', 'spectrometer', 'magnetometer'];
+  demo.spacecraft.launcherId = 'medium';
+
+  const playersBox = el('div');
   const renderPlayers = () => {
-    form.innerHTML = '';
-    for (let i = 0; i < count; i++) {
-      form.appendChild(el('div', { class: 'player-row' }, [
-        el('input', { type: 'text', placeholder: `Jogador ${i + 1}`, 'data-name': i, maxlength: 20 }),
-        el('select', { 'data-mission': i }, Object.values(MISSIONS).map((m) =>
-          el('option', { value: m.id, title: m.goal }, `${m.name} (${m.difficulty})`))),
+    playersBox.innerHTML = '';
+    players.forEach((p, i) => {
+      const input = el('input', { type: 'text', placeholder: `Jogador ${i + 1}`, maxlength: 20, value: p.name });
+      input.addEventListener('input', (e) => { p.name = e.target.value; });
+      const grid = el('div', { class: 'mission-grid' }, missionIds.map((id) => {
+        const m = MISSIONS[id];
+        return button([
+          el('span', { class: 'icon' }, MISSION_ICONS[id] || '🚀'),
+          el('strong', {}, m.name),
+          el('span', { class: 'diff' }, m.difficulty),
+          el('span', { class: 'goal' }, m.goal),
+        ], () => { p.missionId = id; renderPlayers(); }, { class: `mission-card ${p.missionId === id ? 'selected' : ''}` });
+      }));
+      playersBox.appendChild(el('div', { class: 'panel', style: 'margin-bottom:12px' }, [
+        el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]),
+        el('div', { class: 'hint', style: 'margin:8px 0 10px' }, 'Escolha a missão deste jogador:'),
+        grid,
       ]));
-    }
+    });
   };
   renderPlayers();
 
-  const counter = el('div', { class: 'row' }, [
-    'Jogadores: ',
-    ...[1, 2, 3, 4].map((n) => button(String(n), () => { count = n; renderPlayers(); })),
-  ]);
+  const setCount = (n) => {
+    while (players.length < n) players.push({ name: '', missionId: missionIds[players.length % missionIds.length] });
+    players.length = n;
+    renderPlayers();
+    countBox.querySelectorAll('button').forEach((b, i) => b.classList.toggle('selected', i + 1 === n));
+  };
+  const countBox = el('div', { class: 'row count-btns' }, ['Jogadores:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
 
-  const sandboxToggle = el('label', { class: 'toggle' }, [
-    el('input', { type: 'checkbox' }),
-    ' Modo sandbox (sem tabuleiro, verba livre: só para explorar os trade-offs)',
-  ]);
-  sandboxToggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
-
-  const start = button('Começar', () => {
-    const setup = [];
-    for (let i = 0; i < count; i++) {
-      setup.push({
-        name: form.querySelector(`[data-name="${i}"]`).value.trim(),
-        missionId: form.querySelector(`[data-mission="${i}"]`).value,
-      });
-    }
-    actions.startGame(setup, { sandbox });
-  }, { class: 'primary' });
-
-  const missionList = el('ul', { class: 'mission-list' }, Object.values(MISSIONS).map((m) =>
-    el('li', {}, [el('strong', {}, m.name), ` (${m.difficulty}): ${m.goal}`])));
+  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), '🧪 Modo sandbox: sem tabuleiro, verba livre. Só para explorar os trade-offs.']);
+  toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
   return el('section', { class: 'screen setup' }, [
-    el('h1', {}, 'Space Mission Design Game'),
-    el('p', {}, 'Monte uma missão espacial com recursos limitados. Cada peça tem um custo: massa, energia, dinheiro e dados. Ganha quem cumprir a própria missão primeiro.'),
-    el('h2', {}, 'Como funciona'),
-    el('ol', {}, [
-      el('li', {}, 'No tabuleiro, jogue o dado para conseguir verba.'),
-      el('li', {}, 'Na oficina, compre peças e instrumentos e escolha lançador e órbita. Veja a espaçonave tomar forma.'),
-      el('li', {}, 'Lance. Em voo, um imprevisto vai exigir uma decisão. Depois, o relatório explica por que deu certo ou errado.'),
+    el('div', { class: 'hero' }, [
+      el('div', {}, [
+        el('p', { class: 'eyebrow' }, 'NASA Space Apps Challenge 2026 · Space Mission Design Game'),
+        el('h1', {}, [el('span', {}, 'Projete uma missão espacial.'), ' Descubra por que ela deu certo ou errado.']),
+        el('p', { class: 'lead' }, 'Cada peça rende ciência, mas custa massa, energia, dinheiro e dados. Não existe projeto perfeito, só o melhor equilíbrio para a sua missão.'),
+      ]),
+      el('div', { class: 'spacecraft-box hero-art' }, [spacecraftSvg(demo), el('span', { class: 'caption' }, 'exemplo: satélite meteorológico')]),
     ]),
-    el('h2', {}, 'Missões'),
-    missionList,
-    glossary(),
+    el('h2', {}, 'Como funciona'),
+    el('div', { class: 'steps-grid' }, [
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', {}, '🎲 Tabuleiro'), el('p', {}, 'Jogue o dado para conseguir verba e enfrentar eventos.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', {}, '🔧 Oficina'), el('p', {}, 'Compre instrumentos e peças, escolha foguete e órbita. Veja a nave tomar forma.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', {}, '🚀 Lançamento'), el('p', {}, 'Em voo, um imprevisto exige decisão. O relatório explica o resultado.')]),
+    ]),
     el('h2', {}, 'Partida'),
-    counter,
-    form,
-    sandboxToggle,
-    start,
-    el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement). Os números do jogo são fictícios, criados para o aprendizado.'),
+    countBox,
+    playersBox,
+    toggle,
+    el('div', { class: 'row' }, [button('🚀 Começar', () => actions.startGame(players.map((p) => ({ name: p.name.trim(), missionId: p.missionId })), { sandbox }), { class: 'primary' })]),
+    glossary(),
+    el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Os números do jogo são fictícios, criados para o aprendizado.'),
   ]);
 }
