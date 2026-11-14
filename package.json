@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "python -m http.server 8000",
+    "build": "node scripts/build-single.mjs",
     "test": "node --test \"test/*.test.mjs\""
   }
 }
