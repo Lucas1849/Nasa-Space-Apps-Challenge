@@ -1,4 +1,4 @@
-// Cálculo dos recursos da espaçonave: massa, energia, custo, dados, comunicação, ciência.
+// Cálculo dos recursos da espaçonave: massa, energia, custo, dados, comunicação, ciência, vida útil.
 // Funções puras (sem DOM) para facilitar teste e ensaiar o balanceamento.
 import { INSTRUMENTS } from '../data/instruments.js';
 import { PARTS } from '../data/parts.js';
@@ -24,6 +24,7 @@ export function totalsFor(player) {
     data: sum('dataRate'),
     comms: sum('commsRate'),
     science: sum('science'),
+    lifetimeBonus: sum('lifetimeBonus'),
     lifeSupport: items.some((i) => i.lifeSupport),
   };
 }
@@ -38,6 +39,7 @@ export function effectiveTotals(player) {
     ...t,
     commsEffective,
     scienceEffective: t.science + (orbit ? orbit.scienceBonus : 0),
+    lifetime: (orbit ? orbit.baseLifetime : 0) + t.lifetimeBonus,
     maxMass: launcher ? launcher.maxMass : null,
     launchCost: launcher ? launcher.cost : 0,
     powerBalance: t.powerGen - t.powerUse,

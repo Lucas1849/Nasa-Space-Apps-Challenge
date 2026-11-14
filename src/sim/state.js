@@ -3,6 +3,7 @@
 // ATENÇÃO: valores iniciais FICTÍCIOS.
 
 export const STARTING_FUNDS = 60;
+export const SANDBOX_FUNDS = 999;
 
 export function createPlayer(id, name, missionId = null) {
   return {
@@ -21,19 +22,21 @@ export function createPlayer(id, name, missionId = null) {
       orbitId: null,       // ver data/orbits.js
     },
     launches: 0,           // quantas vezes já lançou
-    lastResult: null,      // último resultado de sim/simulate.js
+    lastResult: null,      // último resultado de sim/simulate.js (+ evento de voo)
     won: false,
   };
 }
 
 export function createInitialState() {
   return {
-    screen: 'setup',       // setup -> board <-> workshop -> report -> board ...
+    screen: 'setup',       // setup -> board <-> workshop -> flight -> report -> board ...
+    sandbox: false,        // modo sandbox: sem tabuleiro, verba livre, só a oficina
     players: [],
     turn: 0,               // índice do jogador da vez
     round: 1,
     log: [],               // mensagens recentes (tabuleiro, compras, lançamentos)
     winner: null,          // id do jogador que cumpriu a missão primeiro
+    pendingFlight: null,   // { eventId } enquanto o jogador decide o evento de voo
   };
 }
 

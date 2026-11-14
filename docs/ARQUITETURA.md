@@ -54,10 +54,20 @@ UI (src/ui)  --chama-->  actions (src/sim/actions.js)  --altera-->  state (src/s
 2. **Tabuleiro**: joga o dado, cai numa casa (verba, imposto, evento, apoio ao atrasado).
 3. **Oficina** (centro do jogo): compra/vende instrumentos e peças, escolhe lançador e órbita.
    O painel de recursos e a checagem do projeto atualizam em tempo real.
-4. **Lançamento**: paga o lançador, `simulate()` roda as checagens + chance de falha aleatória
+4. **Lançamento**: paga o lançador e sorteia um **evento de voo** (`src/data/events.js`).
+5. **Voo**: o jogador escolhe entre 2 opções; cada uma mostra a consequência antes. A opção vira
+   `modifiers` (penalidade de ciência, chance extra de falha, verba, anos de vida útil).
+6. **Simulação**: `simulate(player, { modifiers })` roda as checagens + chance de falha aleatória
    (escudos absorvem). Milestones concedem verba, desconto ou escudo.
-5. **Relatório**: sucesso/falha, pontuação e a lista de motivos (o porquê é o que a banca avalia).
-6. Passa a vez. Ganha quem cumprir a própria missão primeiro; os outros podem continuar.
+7. **Relatório**: sucesso/falha, pontuação, motivos, a lição do evento e "o que mudaria o resultado".
+8. Passa a vez. Ganha quem cumprir a própria missão primeiro; os outros podem continuar.
+
+**Sandbox**: `startGame(state, setup, { sandbox: true })` pula o tabuleiro, dá verba alta e
+alterna só entre oficina → voo → relatório. Serve para explorar trade-offs e para a demo.
+
+Checagens têm `hard: true|false`. As duras impedem o sucesso; as leves (hoje só "dados >
+comunicação") deixam voar e reduzem a ciência pela metade. Isso segue a ideia de que a maior
+parte dos problemas de projeto não explode o foguete, só piora a missão.
 
 ## Regras da simulação (`src/sim/simulate.js`)
 
@@ -72,8 +82,17 @@ Todas devolvem um texto explicativo que aparece na oficina (preview) e no relat�
 | Comunicação × dados | comunicação efetiva (com penalidade da órbita) ≥ dados gerados; se não, metade da ciência se perde |
 | Ciência e comunicação mínimas | ≥ `mission.needs` |
 | Suporte de vida | se `mission.needs.lifeSupport` |
+| Vida útil | `orbit.baseLifetime` + Σ `lifetimeBonus` (+ `lifetimeDelta` do voo) ≥ `mission.needs.lifetime` |
 | Verba | ≥ custo do lançador |
-| Falha aleatória | 15 % após projeto correto; escudo absorve |
+| Falha aleatória | 15 % (+ `failChance` da decisão em voo) após projeto correto; escudo absorve |
+
+## Inspirações (ideias, sem código copiado)
+
+- **Marsbound! (NASA/JPL Education)**: jogo de cartas em que cada carta mostra massa, energia e
+  custo e a equipe ajusta até fechar todos os limites. É a lógica dos nossos cards "Ganha / Custa".
+- Entradas públicas de outras equipes deste desafio (ex.: *Margin*, *SATIT Orbital*): falhas duras
+  × leves, imprevistos em voo com decisão, debrief com "o que mudaria o resultado", modo sandbox.
+- `IDEIA.md` (Marcus): tabuleiro como fonte de recursos, oficina como centro, 3 milestones.
 
 Pontuação = ciência entregue × 10 + verba poupada + margem de massa não usada. Premia
 sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
