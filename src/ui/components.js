@@ -255,6 +255,10 @@ export function outcomeCard(state, p) {
   ]);
 }
 
+// Largura de cada barra no desenho anterior: a barra nova cresce a partir dela (CSS .fill.grow),
+// para o jogador ver o que a peça comprada mudou. Só visual.
+const lastFill = {};
+
 // Medidores: cada recurso contra o limite ou o mínimo, com barra e cor de alerta.
 export function gauges(player) {
   const t = effectiveTotals(player);
@@ -264,7 +268,14 @@ export function gauges(player) {
     el('div', { class: `gauge ${status}`, title: hint }, [
       el('span', { class: 'g-label' }, [icon(iconName, { size: 15 }), label]),
       el('span', { class: 'g-value' }, limit == null ? `${value}` : `${value} / ${limit}`),
-      el('div', { class: 'bar' }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fill)) * 100)}%` })]),
+      (() => {
+        const width = Math.round(Math.max(0, Math.min(1, fill)) * 100);
+        const key = `${player.id}:${label}`;
+        const prev = lastFill[key];
+        lastFill[key] = width;
+        const grow = prev != null && prev !== width;
+        return el('div', { class: 'bar' }, [el('div', { class: `fill ${grow ? 'grow' : ''}`, style: `width:${width}%${grow ? `;--from:${prev}%` : ''}` })]);
+      })(),
     ]);
   const ratio = (a, b) => (b > 0 ? a / b : a > 0 ? 1 : 0);
   const hasLauncher = t.maxMass != null;

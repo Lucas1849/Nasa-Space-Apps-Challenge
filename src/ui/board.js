@@ -1,12 +1,19 @@
-// Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
+// Tela do tabuleiro: um tabuleiro "impresso" de 16 casas (papel, tinta, arte própria em ui/boardArt.js),
+// com os dados e as decisões no miolo, e ao lado a missão, a escada, os rivais e o diário.
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
+//
+// UX (15/11): todas as ações do turno ficam numa BARRA FIXA no rodapé (turnDock), sempre à vista, na
+// ordem do turno. Antes, "Rolar 2 dados" e "Lançar" ficavam abaixo da dobra e a página pulava.
+// Animações que explicam o que mudou: dados rolando, peão andando casa a casa (afterMount).
 import {
   el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyStrip, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
 } from './components.js';
-import { icon, dieFace } from './icons.js';
+import { icon } from './icons.js';
+import { TILE_ART, BUILDING_ART, ORBIT_ART, PRINT_COLORS, pawnSvg, dieSvg } from './boardArt.js';
 import { guideCard, hl } from './guide.js';
 import { sinceCard } from './summary.js';
+import { walkPawn, scrollIntoViewIfNeeded } from './motion.js';
 import { TILES } from '../board/board.js';
 import { currentPlayer, SPY_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
@@ -17,11 +24,24 @@ import { BUILDINGS, upgradeCost } from '../data/buildings.js';
 import { FLIGHT_EVENTS } from '../data/events.js';
 import { STAGES } from '../data/stages.js';
 import { DILEMMAS } from '../data/dilemmas.js';
+import { yearOf, START_YEAR, END_YEAR } from '../data/history.js';
 
-const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask', shop: 'cart', lot: 'crane', spy: 'eye', repair: 'wrench', catchup: 'lifebuoy' };
 // Anel 5×5 no sentido horário a partir do canto superior esquerdo (o miolo 3×3 fica para os dados).
+// As casas 0, 4, 8 e 12 caem nos cantos, que são maiores, como num tabuleiro de verdade.
 const RING_POS = ['1/1', '1/2', '1/3', '1/4', '1/5', '2/5', '3/5', '4/5', '5/5', '5/4', '5/3', '5/2', '5/1', '4/1', '3/1', '2/1'];
+const CORNERS = new Set([0, 4, 8, 12]);
+const KIND = {
+  start: 'Largada', lot: 'Terreno', funds: 'Verba', event: 'Evento', spy: 'Espionagem',
+  tech: 'Ciência', shop: 'Fornecedor', repair: 'Oficina', catchup: 'Recuperação',
+};
+
+// Memória da animação entre um desenho e outro (a tela é redesenhada inteira a cada clique).
 let lastRollSeen = null;
+let lastDiceKey = null;
+const lastPositions = {};
+
+const isCrisis = (t) => t.type === 'funds' && t.funds < 0;
+const shortName = (t) => t.label.split(':')[0];
 
 // Legenda curta da casa para a interface enxuta do começo. O que decide a escolha do dado (quanto dá)
 // continua; o texto longo vai só para o balão (title), que sempre tem a legenda completa.
@@ -60,113 +80,137 @@ function tileSub(state, t) {
   }
 }
 
-function tileIcon(state, t) {
-  if (t.type === 'lot' && state.lots[t.id]) return BUILDINGS[state.lots[t.id].buildingId].icon;
-  if (t.type === 'funds' && t.funds < 0) return 'trendDown';
-  return TILE_ICONS[t.type];
+function tileArt(state, t) {
+  if (t.type === 'lot' && state.lots[t.id]) return BUILDING_ART[state.lots[t.id].buildingId];
+  if (isCrisis(t)) return TILE_ART.crisis;
+  return TILE_ART[t.type];
 }
 
-// Casas do anel (16), com peões, ícone e legenda. `p` é o jogador em foco (destaca a casa dele).
 // Exportado para a tela de espectador (ui/spectate.js) reaproveitar o mesmo tabuleiro.
-export function ringTiles(state, p, simple) {
-  return TILES.map((t, i) => {
-    const [r, c] = RING_POS[i].split('/');
-    const lot = state.lots[t.id];
-    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: `${t.label}: ${tileSub(state, t)}` }, [
-      el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
-      el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 20 })),
-      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t))]),
-    ]);
-  });
+export function boardTile(state, t, i, current, simple) {
+  const [r, c] = RING_POS[i].split('/');
+  const lot = state.lots[t.id];
+  const here = state.players.filter((pl) => !pl.bot && pl.position === t.id);
+  const cls = [
+    'gb-tile', `gb-${isCrisis(t) ? 'crisis' : t.type}`,
+    CORNERS.has(i) ? 'corner' : '',
+    current.position === t.id ? 'here' : '',
+    lot ? 'owned' : '',
+  ].filter(Boolean).join(' ');
+  const style = `grid-row:${r};grid-column:${c};${lot ? `--owner:${PRINT_COLORS[lot.ownerId % 4]};` : ''}`;
+  const name = lot ? BUILDINGS[lot.buildingId].name : shortName(t);
+  return el('div', { class: cls, style, 'data-tile': String(t.id), title: `${t.label}: ${tileSub(state, t)}` }, [
+    CORNERS.has(i) ? null : el('div', { class: 'gb-band' }),
+    el('div', { class: 'gb-kind' }, isCrisis(t) ? 'Crise' : KIND[t.type]),
+    el('span', { class: 'gb-art', html: tileArt(state, t) }),
+    el('div', { class: 'gb-name' }, name),
+    el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t)),
+    here.length ? el('div', { class: 'gb-pawns' }, here.map((pl) =>
+      el('span', { class: 'gb-pawn', 'data-pid': String(pl.id), title: pl.name, html: pawnSvg(PRINT_COLORS[pl.id % 4], pl.name[0].toUpperCase()) }))) : null,
+  ]);
+}
+
+// Cartão de decisão impresso (dilema, terreno, prédio do rival, espião).
+function deckCard(kind, title, text, buttons, extraClass = '') {
+  return el('div', { class: `gb-card gb-card-${kind} ${extraClass}` }, [
+    el('div', { class: 'gb-card-head' }, [el('span', {}, title)]),
+    text ? el('p', {}, text) : null,
+    el('div', { class: 'gb-card-actions' }, buttons),
+  ]);
 }
 
 // Carta de dilema: sempre uma escolha, conforme a situação do jogador.
 function dilemmaDecision(state, actions) {
   const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
   if (!card) return null;
-  return el('div', { class: `tile-decision dilemma ${hl(state, 'board', 'dilemma')}` }, [
-    el('strong', { class: 'decision-title' }, [icon('card', { size: 18 }), card.title]),
-    el('small', { class: 'hint' }, card.text),
-    el('div', { class: 'row wrap', style: 'justify-content:center' }, card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'small' }))),
-  ]);
+  return deckCard('event', card.title, card.text,
+    card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'gb-btn' })),
+    `deal ${hl(state, 'board', 'dilemma')}`);
 }
 
 // Decisão da casa onde o jogador parou: construir, usar o prédio do rival ou espionar.
 function tileDecision(state, p, actions) {
   const pending = state.pendingTile;
   if (!pending) return null;
-  const cls = `tile-decision ${hl(state, 'board', 'tile')}`;
+  const cls = `deal ${hl(state, 'board', 'tile')}`;
   if (pending.kind === 'build') {
     const options = Object.values(BUILDINGS).filter((b) => !p.buildings[b.id]);
-    if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
-    return el('div', { class: cls }, [
-      el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
-      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
-        ...options.map((b) => button([icon(b.icon, { size: 16 }), b.name], () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
-        button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
-      ]),
-    ]);
+    const skip = button('Seguir sem construir', () => actions.skipTile(), { class: 'gb-btn ghost' });
+    if (!options.length) return deckCard('lot', 'Terreno livre', 'Você já tem todos os prédios. Suba o nível no painel da agência.', [skip], cls);
+    return deckCard('lot', `Terreno livre: construir por ${upgradeCost(0)}?`, 'Um prédio dá vantagem até o fim da partida. Passe o mouse para ver o efeito.', [
+      ...options.map((b) => button([el('span', { class: 'gb-btn-art', html: BUILDING_ART[b.id] }), b.name], () => actions.buildOnLot(b.id), { class: 'gb-btn', disabled: p.funds < upgradeCost(0), title: b.effect })),
+      skip,
+    ], cls);
   }
   if (pending.kind === 'spy') {
     const rivals = state.players.filter((r) => r.id !== p.id);
-    return el('div', { class: cls }, [
-      el('strong', { class: 'decision-title' }, [icon('eye', { size: 18 }), `Espionagem: ver o estado real de um rival por ${SPY_COST}?`]),
-      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
-        ...rivals.map((r) => button([`${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'small', disabled: p.funds < SPY_COST })),
-        button('Seguir sem espionar', () => actions.skipTile(), { class: 'small ghost' }),
-      ]),
-    ]);
+    return deckCard('spy', `Espionagem: ver o estado real de um rival por ${SPY_COST}?`, 'O espião mostra degraus, missão e quanto a nave dele está pronta.', [
+      ...rivals.map((r) => button([`${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'gb-btn', disabled: p.funds < SPY_COST })),
+      button('Seguir sem espionar', () => actions.skipTile(), { class: 'gb-btn ghost' }),
+    ], cls);
   }
   const lot = state.lots[pending.tileId];
   const owner = state.players[lot.ownerId];
   const b = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
-  return el('div', { class: cls }, [
-    el('strong', { class: 'decision-title' }, [icon(b.icon, { size: 18 }), `${b.name} de ${owner.name}`]),
-    el('small', { class: 'hint' }, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`),
-    el('div', { class: 'row', style: 'justify-content:center' }, [
-      button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
-      button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
-    ]),
+  return deckCard('lot', `${b.name} de ${owner.name}`, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`, [
+    button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'gb-btn primary', disabled: p.funds < fee }),
+    button('Seguir', () => actions.skipTile(), { class: 'gb-btn ghost' }),
+  ], cls);
+}
+
+// Dados do miolo. Recém-rolados, entram girando (CSS .tumble) e só depois mostram o número.
+function diceView(state, p, actions, rolling) {
+  if (state.dice) {
+    const key = `${state.round}:${state.turn}:${state.dice.join(',')}`;
+    const fresh = key !== lastDiceKey;
+    lastDiceKey = key;
+    return el('div', { class: 'gb-dice' }, [
+      el('div', { class: 'gb-dice-row' }, state.dice.map((d, i) =>
+        button([el('span', { class: `gb-die ${fresh ? 'tumble' : ''}`, style: `--i:${i}`, html: dieSvg(d) }), el('span', {}, `andar ${d}`)],
+          () => actions.moveBy(i), { class: 'gb-die-btn', title: `Andar ${d} casa${d > 1 ? 's' : ''}` }))),
+      el('span', { class: 'gb-caption' }, 'Escolha um dado: veja onde cada um para'),
+    ]);
+  }
+  if (!p.rolled) {
+    return el('div', { class: 'gb-dice' }, [
+      button([el('span', { class: 'gb-die idle', html: dieSvg(0) }), el('span', { class: 'gb-die idle', html: dieSvg(0) })],
+        () => actions.rollDice(), { class: 'gb-die-btn pair', title: 'Rolar 2 dados' }),
+      el('span', { class: 'gb-caption' }, `Vez de ${p.name}`),
+    ]);
+  }
+  return el('div', { class: 'gb-dice' }, [
+    el('span', { class: `gb-die ${rolling ? 'landed' : ''}`, html: dieSvg(state.lastRoll) }),
+    el('span', { class: 'gb-caption' }, `${p.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
   ]);
 }
 
-// Centro do anel: dados (rolar 2, escolher 1) e as decisões da casa.
+// Miolo do tabuleiro: título como arte de caixa, órbitas ao fundo, dados, decisões e o resultado da casa.
 function centerPanel(state, p, actions, rolling) {
-  let dice;
-  if (state.dice) {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, 'Escolha um dado'),
-      el('div', { class: 'row', style: 'justify-content:center' }, state.dice.map((d, i) =>
-        button([dieFace(d, { size: 26 }), `Andar ${d}`], () => actions.moveBy(i), { class: `primary ${hl(state, 'board', 'die')}` }))),
-    ]);
-  } else if (!p.rolled) {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `Vez de ${p.name}`),
-      el('span', { class: 'dice-pair' }, [dieFace(5, { size: 46 }), dieFace(2, { size: 46 })]),
-      button([icon('die', { size: 18 }), 'Rolar 2 dados'], () => actions.rollDice(), { class: `primary ${hl(state, 'board', 'roll')}` }),
-    ]);
-  } else {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `${p.name} andou ${state.lastRoll}`),
-      dieFace(state.lastRoll, { size: 54, className: rolling ? 'rolling' : '' }),
-    ]);
-  }
-  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions), outcomeCard(state, p)]);
+  return el('div', { class: 'gb-center' }, [
+    el('span', { class: 'gb-orbit', html: ORBIT_ART }),
+    el('div', { class: 'gb-title' }, [
+      el('small', {}, 'Space Mission Design Game'),
+      el('strong', {}, 'Corrida Espacial'),
+      el('span', {}, [`${START_YEAR}`, el('b', {}, ` ${yearOf(state.round)} `), `${END_YEAR}`]),
+    ]),
+    diceView(state, p, actions, rolling),
+    dilemmaDecision(state, actions),
+    tileDecision(state, p, actions),
+    outcomeCard(state, p),
+  ]);
 }
 
-// Bloco "o que fazer agora" (fase 2 do turno), conforme a situação da nave.
-function missionPanel(state, p, actions, simple = false) {
+// Bloco da missão atual (lateral), conforme a situação da nave.
+function missionPanel(state, p, simple = false) {
   if (p.flight) {
     const f = p.flight;
     const next = STAGES[f.plan[f.stageIndex]];
     const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
     return sidePanel('mission', 'satellite', `Em voo: ${MISSIONS[f.missionId].name}`, [
       el('p', { class: 'hint' }, `Próxima etapa: ${next.name} (${f.stageIndex + 1} de ${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
-      p.flightAdvanced
-        ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
-        : button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}`, disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
-      !p.rolled ? el('p', { class: 'hint' }, 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.') : null,
+      p.flightAdvanced ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
+        : el('p', { class: 'hint' }, !p.rolled ? 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.' : 'Avance o voo pela barra de baixo.'),
       el('p', { class: 'hint' }, 'A próxima nave só pode ser montada quando esta cumprir a missão.'),
     ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
   }
@@ -181,7 +225,7 @@ function missionPanel(state, p, actions, simple = false) {
   ], { hint: 'Missão atual' });
 }
 
-// Passo a passo do turno, sempre visível: o que já foi feito e o que falta.
+// Passo a passo do turno, sempre visível na barra fixa: o que já foi feito e o que falta.
 function turnSteps(state, p, design) {
   const moved = p.rolled && !state.dice;
   const tileDone = moved && !state.pendingTile && !state.pendingDilemma;
@@ -196,8 +240,64 @@ function turnSteps(state, p, design) {
   return el('ol', { class: 'turn-steps', 'aria-label': 'Etapas do turno' }, steps.map((s, i) =>
     el('li', { class: s.done ? 'done' : i === current ? 'now' : '' }, [
       el('span', { class: 'n' }, s.done ? icon('check', { size: 14 }) : String(i + 1)),
-      s.label,
+      el('span', { class: 'lbl' }, s.label),
     ])));
+}
+
+// Barra fixa do turno: os passos à esquerda e, à direita, só as ações que fazem sentido agora.
+// A ação recomendada é a primária (cheia); as outras ficam discretas.
+function turnDock(state, p, design, actions, simple) {
+  const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn;
+  const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
+    : !p.rolled ? 'Ande no tabuleiro antes de lançar.'
+      : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
+  const mustAdvance = p.flight && !p.flightAdvanced;
+  const deciding = Boolean(state.pendingDilemma || state.pendingTile);
+  const blocked = !p.rolled || mustAdvance || Boolean(state.pendingDilemma);
+  const blockedReason = !p.rolled ? 'Role os dados para poder passar a vez.'
+    : state.pendingDilemma ? 'Resolva a carta de dilema para poder passar a vez.'
+      : mustAdvance ? 'Avance o voo para poder passar a vez.' : '';
+
+  let main = [];
+  let note = null;
+  if (state.dice) {
+    main = state.dice.map((d, i) => button([el('span', { class: 'dock-die', html: dieSvg(d) }), `Andar ${d}`], () => actions.moveBy(i), { class: `primary reveal ${hl(state, 'board', 'die')}` }));
+    note = 'Escolha um dos dados';
+  } else if (!p.rolled) {
+    main = [button([icon('die', { size: 18 }), 'Rolar 2 dados'], () => actions.rollDice(), { class: `primary ${hl(state, 'board', 'roll')}` })];
+  } else if (deciding) {
+    note = 'Decida a carta no meio do tabuleiro';
+  }
+
+  // A Oficina fica SEMPRE na barra: dá para planejar a nave antes de rolar (só o lançamento exige andar).
+  // Antes ela só aparecia depois de rolar, e o jogador não a encontrava. Com a nave em voo ela fecha.
+  const showWorkshop = !p.flight;
+  const early = showWorkshop && !(p.rolled && !state.dice)
+    ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: 'Montar a nave: peças, foguete e o que falta para lançar.' })
+    : null;
+
+  // Depois de andar: oficina, voo, lançar e passar a vez (interface enxuta: um passo de cada vez).
+  const after = [];
+  if (p.rolled && !state.dice) {
+    const showLaunch = !simple || design.ok || p.launchedThisTurn;
+    // Só UMA ação cheia por vez: a oficina se a nave não fecha, o Lançar se fecha, e o Passar a vez quando
+    // não sobrou nada recomendado (voo avançado, lançou ou a escada acabou).
+    const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId);
+    if (mustAdvance) after.push(button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}` }));
+    if (showWorkshop) after.push(button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `${!design.ok && !p.launchedThisTurn ? 'primary' : ''} ${hl(state, 'board', 'workshop')}` }));
+    if (showLaunch && !p.flight) after.push(button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: `${canLaunch ? 'primary launch-ready' : ''} ${hl(state, 'board', 'launch')}` }));
+    after.push(button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `${turnDone ? 'primary' : 'ghost'} ${hl(state, 'board', 'end')}`, title: blockedReason }));
+  }
+
+  return el('div', { class: 'turn-dock', role: 'region', 'aria-label': 'Ações do turno' }, [
+    turnSteps(state, p, design),
+    el('div', { class: 'dock-actions' }, [
+      note ? el('span', { class: 'dock-note' }, note) : null,
+      early,
+      ...main,
+      after.length ? el('div', { class: 'row action-bar' }, after) : null,
+    ]),
+  ]);
 }
 
 export function boardScreen(state, actions) {
@@ -207,54 +307,50 @@ export function boardScreen(state, actions) {
   if (p.rolled) lastRollSeen = state.lastRoll;
   const simple = simpleUi(state, p);
 
-  const tiles = ringTiles(state, p, simple);
+  // Peão: de onde saiu no desenho anterior (só anima quando o mesmo jogador andou agora).
+  const from = lastPositions[p.id];
+  const walked = from != null && from !== p.position && p.rolled && !state.dice;
+  state.players.forEach((pl) => { lastPositions[pl.id] = pl.position; });
 
-  const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn;
-  const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
-    : !p.rolled ? 'Ande no tabuleiro antes de lançar.'
-      : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
-  const mustAdvance = p.flight && !p.flightAdvanced;
-  const blocked = !p.rolled || mustAdvance || Boolean(state.pendingDilemma);
-  const blockedReason = !p.rolled ? 'Role os dados para poder passar a vez.'
-    : state.pendingDilemma ? 'Resolva a carta de dilema para poder passar a vez.'
-      : mustAdvance ? 'Avance o voo para poder passar a vez.' : '';
-
-  // Interface enxuta: um passo de cada vez. Rolar primeiro; Oficina e Passar a vez só depois de andar;
-  // Lançar só quando o projeto fecha. Com a nave em voo aparece tudo (o jogador já conhece o turno).
-  const showWorkshop = !p.flight && (!simple || p.rolled); // com a nave em voo a oficina fica fechada
-  const showLaunch = !simple || design.ok || Boolean(p.flight) || p.launchedThisTurn;
-  const showEnd = !simple || p.rolled;
-  const actionBar = [
-    showWorkshop && button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: hl(state, 'board', 'workshop') }),
-    showLaunch && button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: hl(state, 'board', 'launch') }),
-    showEnd && button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `ghost ${hl(state, 'board', 'end')}`, title: blockedReason }),
-  ].filter(Boolean);
+  const tiles = TILES.map((t, i) => boardTile(state, t, i, p, simple));
 
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
   const showLadder = !simple;
   const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3;
   // Faixa de prédios sob o tabuleiro: sempre à vista; na interface enxuta só depois do 1º prédio.
   const showStrip = !simple || Object.values(p.buildings).some(Boolean);
+  const deciding = Boolean(state.pendingDilemma || state.pendingTile);
 
-  return el('section', { class: 'screen board-screen' }, [
+  const screen = el('section', { class: 'screen board-screen' }, [
     hud(state, p, 'board', actions),
     guideCard(state, 'board'),
     el('div', { class: 'board-layout' }, [
       el('div', {}, [
         sinceCard(state),
-        turnSteps(state, p, design),
-        el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
-        actionBar.length ? el('div', { class: 'row action-bar' }, actionBar) : null,
-        blocked && blockedReason && showEnd ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
+        el('div', { class: 'gameboard' }, [...tiles, centerPanel(state, p, actions, rolling)]),
         showStrip ? agencyStrip(state, p, actions) : null,
       ]),
       el('div', { class: 'side-stack' }, [
-        missionPanel(state, p, actions, simple),
+        missionPanel(state, p, simple),
         showLadder ? ladderPanel(state, p) : null,
         showRivals ? rivalsPanel(state, p) : null,
         logPanel(state, p),
       ]),
     ]),
+    turnDock(state, p, design, actions, simple),
   ]);
-}
 
+  // Depois de montar a tela no navegador (main.js): peão andando e o miolo à vista quando há decisão.
+  screen.afterMount = () => {
+    const center = document.querySelector('.gb-center');
+    if (walked) {
+      const steps = (p.position - from + TILES.length) % TILES.length;
+      walkPawn({ playerId: p.id, from, steps, total: TILES.length }).then(() => {
+        if (deciding || state.outcome) scrollIntoViewIfNeeded(center);
+      });
+    } else if (deciding || state.dice) {
+      scrollIntoViewIfNeeded(center);
+    }
+  };
+  return screen;
+}

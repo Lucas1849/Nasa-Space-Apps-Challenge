@@ -3,7 +3,11 @@
 // ATENÇÃO: valores iniciais FICTÍCIOS.
 import { yearOf } from '../data/history.js';
 
-export const STARTING_FUNDS = 20;
+// Balanceamento (15/11): o 1º satélite custa 43 (peças 18 + lançador pequeno 25). A rodada 1 já paga o orçamento
+// do 1º ano, então a URSS começa com 5 + 15 = 20 e os EUA com 5 + 25 = 30 (e sem tecnologia para o lançador).
+// Nem a nave "vazia" (lançador + painel = 33, que falharia pelos mínimos escondidos) cabe no turno 1.
+// Simulação com jogadas aleatórias: o 1º satélite completo sai na rodada 4 (EUA) e 4–5 (URSS).
+export const STARTING_FUNDS = 5;
 export const SANDBOX_FUNDS = 999;
 export const SANDBOX_TECH = 99;
 export const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)

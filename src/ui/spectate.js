@@ -9,8 +9,10 @@
 import {
   el, button, hud, avatar, sideBadge, outcomeCard, logPanel, milestoneTrack, ladderPanel, sidePanel, MISSION_ICONS,
 } from './components.js';
-import { icon, dieFace } from './icons.js';
-import { ringTiles } from './board.js';
+import { icon } from './icons.js';
+import { boardTile } from './board.js';
+import { ORBIT_ART, dieSvg } from './boardArt.js';
+import { TILES } from '../board/board.js';
 import { currentPlayer } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
 
@@ -38,29 +40,32 @@ function banner(state, current) {
   ]);
 }
 
-// Centro do anel em modo leitura: só o resultado dos dados (sem botões) e o cartão de
-// resultado do jogador da vez (a ação que ele tomou e a variação de recursos).
+// Miolo do tabuleiro em modo leitura: só o resultado dos dados (sem botões) e o cartão de
+// resultado do jogador da vez (a ação que ele tomou e a variação de recursos). Usa a mesma
+// arte do tabuleiro de verdade (ui/boardArt.js) para o espectador ver a mesma coisa.
 function spectateCenter(state, current) {
   let dice;
   if (state.dice) {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `${current.name} rolou`),
-      el('div', { class: 'row', style: 'justify-content:center' }, state.dice.map((d) => el('span', { class: 'dice-pair' }, dieFace(d, { size: 40 })))),
-      el('small', { class: 'hint' }, 'Escolhendo qual dado usar...'),
+    dice = el('div', { class: 'gb-dice' }, [
+      el('div', { class: 'gb-dice-row' }, state.dice.map((d) => el('span', { class: 'gb-die', html: dieSvg(d) }))),
+      el('span', { class: 'gb-caption' }, `${current.name} rolou — escolhendo o dado`),
     ]);
   } else if (!current.rolled) {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `Vez de ${current.name}`),
-      el('span', { class: 'dice-pair' }, [dieFace(5, { size: 40 }), dieFace(2, { size: 40 })]),
-      el('small', { class: 'hint' }, 'Aguardando a rolagem...'),
+    dice = el('div', { class: 'gb-dice' }, [
+      el('span', { class: 'gb-die idle', html: dieSvg(0) }),
+      el('span', { class: 'gb-caption' }, `Vez de ${current.name} — aguardando a rolagem`),
     ]);
   } else {
-    dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `${current.name} andou ${state.lastRoll}`),
-      dieFace(state.lastRoll, { size: 48 }),
+    dice = el('div', { class: 'gb-dice' }, [
+      el('span', { class: 'gb-die', html: dieSvg(state.lastRoll) }),
+      el('span', { class: 'gb-caption' }, `${current.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
     ]);
   }
-  return el('div', { class: 'panel ring-center' }, [dice, outcomeCard(state, current)]);
+  return el('div', { class: 'gb-center' }, [
+    el('span', { class: 'gb-orbit', html: ORBIT_ART }),
+    dice,
+    outcomeCard(state, current),
+  ]);
 }
 
 // Painel "Seus objetivos": a missão do degrau atual e os marcos, só leitura.
@@ -90,7 +95,7 @@ export function spectateScreen(state, me, actions) {
     banner(state, current),
     el('div', { class: 'board-layout' }, [
       el('div', {}, [
-        el('div', { class: 'ring ring-16' }, [...ringTiles(state, current, false), spectateCenter(state, current)]),
+        el('div', { class: 'gameboard' }, [...TILES.map((t, i) => boardTile(state, t, i, current, false)), spectateCenter(state, current)]),
         el('div', { class: 'row action-bar' }, [
           button([icon('wrench', { size: 18 }), 'Minha oficina'], () => actions.openWorkshop(), {}),
         ]),

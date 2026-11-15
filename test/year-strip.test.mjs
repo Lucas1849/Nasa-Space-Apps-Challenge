@@ -204,15 +204,21 @@ test('tabuleiro: a faixa fica depois da barra de ações e a aba "Sua agência" 
   const state = newGame();
   state.players[0].rolled = true;
   const root = boardScreen(state, actions);
-  // a faixa é irmã da barra de ações, logo depois dela, na coluna do tabuleiro
+  // UX de 15/11: a faixa é irmã do tabuleiro, logo depois dele; as ações ficam numa barra fixa,
+  // o último bloco da tela (sempre à vista no rodapé)
   let ordered = false;
   walk(root, (n) => {
     const names = n.children.map((c) => c.className || '');
-    const bar = names.findIndex((c) => /\baction-bar\b/.test(c));
+    const board = names.findIndex((c) => /\bgameboard\b/.test(c));
     const strip = names.findIndex((c) => /\bagency-strip\b/.test(c));
-    if (bar !== -1 && strip !== -1) ordered = strip > bar;
+    if (board !== -1 && strip !== -1) ordered = strip === board + 1;
   });
   assert.equal(ordered, true);
+  const dock = root.children[root.children.length - 1];
+  assert.match(dock.className, /\bturn-dock\b/);
+  let bar = false;
+  walk(dock, (n) => { if (/\baction-bar\b/.test(n.className)) bar = true; });
+  assert.equal(bar, true, 'Oficina, Lançar e Passar a vez ficam na barra fixa');
   const summaries = [];
   walk(root, (n) => { if (n.tag === 'summary') summaries.push(n.textContent); });
   assert.ok(!summaries.some((t) => /Sua agência/.test(t)));

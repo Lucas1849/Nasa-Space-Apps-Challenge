@@ -4,6 +4,7 @@
 // e compara. Respeita o rival escondido: só mostra entradas públicas do diário ou do próprio jogador.
 import { el } from './components.js';
 import { icon } from './icons.js';
+import { guideOn } from './prefs.js';
 import { currentPlayer } from '../sim/state.js';
 import { ladderProgress } from '../sim/progress.js';
 import { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } from '../data/history.js';
@@ -93,6 +94,8 @@ export function sinceCard(state) {
   if (!since || p.rolled) return null;
   const newYear = isNewYear(state.round);
   if (since.first) {
+    // Com as dicas ligadas o cartão de orientação já diz o que fazer: este só empurraria o tabuleiro para baixo.
+    if (guideOn()) return null;
     return el('div', { class: 'panel since-card' }, [
       el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
       el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),

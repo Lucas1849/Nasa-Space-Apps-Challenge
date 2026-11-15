@@ -21,6 +21,35 @@ function describeEffect(effect = {}) {
   return parts.join(' · ');
 }
 
+// Trajetória do voo: Terra à esquerda, destino à direita, uma marca por etapa e a nave no ponto atual.
+// A nave desliza de onde estava no desenho anterior até onde está agora (CSS .traj-ship, --from/--to),
+// para o jogador VER o voo avançando a cada turno. Só visual.
+let lastTrajectory = { key: null, at: 0 };
+
+function trajectory(f, launches) {
+  const n = f.plan.length;
+  const done = f.stages.length; // etapas já resolvidas
+  const failed = f.stages.some((s) => !s.success);
+  const at = n > 0 ? Math.min(done, n) / n : 0;
+  const key = `${f.missionId}:${launches}`;
+  const from = lastTrajectory.key === key ? lastTrajectory.at : 0;
+  lastTrajectory = { key, at };
+  const destIcon = { leo: 'satellite', geo: 'dish', moon: 'moon' }[MISSIONS[f.missionId].orbit] || 'target';
+  return el('div', { class: `trajectory ${failed ? 'failed' : ''}`, style: `--from:${from};--to:${at}`, 'aria-hidden': 'true' }, [
+    el('span', { class: 'traj-end earth' }, icon('planet', { size: 26 })),
+    el('div', { class: 'traj-line' }, [
+      el('div', { class: 'traj-done' }),
+      ...f.plan.map((id, i) => el('span', {
+        class: `traj-mark ${i < done ? (f.stages[i].success ? 'ok' : 'bad') : i === done ? 'now' : ''}`,
+        style: `left:${((i + 1) / n) * 100}%`,
+        title: STAGES[id].name,
+      })),
+      el('span', { class: 'traj-ship' }, icon('rocket', { size: 22 })),
+    ]),
+    el('span', { class: 'traj-end dest' }, icon(destIcon, { size: 26 })),
+  ]);
+}
+
 function decisionView(state, p, actions) {
   const { stageId, eventId } = p.flight.pending;
   const stage = STAGES[stageId];
@@ -49,7 +78,7 @@ function resultView(state, p, actions) {
   const rec = p.flight.last;
   const next = STAGES[p.flight.plan[p.flight.stageIndex]];
   return [
-    el('span', { class: 'alarm calm' }, icon('check', { size: 64 })),
+    el('span', { class: 'alarm calm burst' }, icon('check', { size: 64 })),
     el('p', { class: 'eyebrow' }, `Etapa superada. O risco era de ${pct(rec.risk)}.`),
     el('h1', { class: 'ok' }, `${rec.name}: sucesso`),
     rec.usedShield ? el('p', { class: 'event-text' }, 'Algo falhou, mas a proteção salvou a etapa.') : null,
@@ -77,6 +106,7 @@ export function flightScreen(state, actions) {
     guideCard(state, 'flight'),
     el('div', { class: 'flight' }, [
       el('p', { class: 'eyebrow' }, `Missão ${MISSIONS[f.missionId].name}`),
+      trajectory(f, p.launches),
       stageTrack(f.plan, f.stages, f.stageIndex),
       ...(f.pending ? decisionView(state, p, actions) : resultView(state, p, actions)),
     ]),

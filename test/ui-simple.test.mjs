@@ -21,14 +21,14 @@ function snapshot(state) {
     if (/\bsteps\b/.test(n.className) && n.tag === 'div') out.steps = true;
     if (/\baction-bar\b/.test(n.className)) out.actionBar = true;
     if (/\bagency-strip\b/.test(n.className)) out.strip = true;
-    if (n.className === 't-sub') out.subs.push(n.textContent.trim());
+    if (/\bt-sub\b/.test(n.className)) out.subs.push(n.textContent.trim());
   });
   return out;
 }
 const has = (list, word) => list.some((t) => t.includes(word));
 const newGame = () => { const s = createInitialState(); startGame(s, [{ name: 'A' }], { rng: () => 0 }); return s; };
 
-test('começo: só missão e diário na lateral, sem trilha e sem botões antes de rolar', () => {
+test('começo: só missão e diário na lateral, sem trilha; antes de rolar só Rolar e Oficina', () => {
   setGuide(true);
   const state = newGame();
   assert.equal(simpleUi(state, state.players[0]), true);
@@ -38,8 +38,11 @@ test('começo: só missão e diário na lateral, sem trilha e sem botões antes 
   for (const hidden of ['Escada', 'Rivais']) assert.ok(!has(s.tabs, hidden), hidden);
   assert.equal(s.strip, false, 'a faixa de prédios só aparece depois do 1º prédio');
   assert.equal(s.steps, false);
-  assert.equal(s.actionBar, false);
+  assert.equal(s.actionBar, false, 'antes de rolar a barra fixa só tem o Rolar');
   assert.ok(has(s.buttons, 'Rolar 2 dados'));
+  // a Oficina fica sempre à vista (dá para planejar antes de rolar); Passar a vez só depois de andar
+  assert.ok(has(s.buttons, 'Oficina'));
+  assert.ok(!has(s.buttons, 'Passar a vez'));
 });
 
 test('começo: as legendas das casas ficam curtas mas mantêm o valor que decide o dado', () => {
@@ -64,6 +67,7 @@ test('dicas desligadas mostram tudo', () => {
   setGuide(false);
   const state = newGame();
   assert.equal(simpleUi(state, state.players[0]), false);
+  rollAndMove(state, () => 0.01); // a barra fixa só mostra as ações do turno depois de andar (UX de 15/11)
   const s = snapshot(state);
   for (const tab of ['Escada', 'Rivais', 'Diário']) assert.ok(has(s.tabs, tab), tab);
   assert.equal(s.strip, true, 'faixa de prédios sempre à vista');

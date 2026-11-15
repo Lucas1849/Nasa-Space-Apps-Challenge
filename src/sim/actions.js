@@ -637,6 +637,7 @@ export function rehearse(state) {
   const short = results.filter((r) => !r.ok);
   pushLog(state, `${p.name} fez um ensaio em solo da missão "${MISSIONS[p.missionId].name}".`, p.id);
   setOutcome(state, p, {
+    where: 'workshop', // a oficina mostra este resultado (os da casa do tabuleiro ficam no tabuleiro)
     title: 'Ensaio em solo',
     changes: [{ label: 'Verba', value: -REHEARSAL_COST }],
     notes: [
