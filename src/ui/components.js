@@ -74,8 +74,8 @@ export function hud(state, player, step, actions = null) {
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   // Recursos sempre à vista, em números grandes, com a previsão do próximo Ano novo (de onde vem o recurso).
   // Na interface enxuta a previsão fica só no balão, para não somar texto no começo.
-  const income = state.sandbox || !player.side ? null : yearlyIncome(player);
   const roundsLeft = ROUNDS_PER_YEAR - ((state.round - 1) % ROUNDS_PER_YEAR);
+  const income = state.sandbox || !player.side ? null : yearlyIncome(player, yearOf(state.round + roundsLeft)); // o próximo Ano novo
   const when = `em ${roundsLeft} ${roundsLeft === 1 ? 'rodada' : 'rodadas'}`;
   const stat = (cls, iconName, label, value, title, next = null) => el('div', { class: `stat ${cls}`, title }, [
     icon(iconName, { size: 22, label }),
@@ -97,7 +97,7 @@ export function hud(state, player, step, actions = null) {
       income ? `Verba. No próximo Ano novo entram +${income.funds} (${Object.entries({ orçamento: income.parts.base, lado: income.parts.side, Patrocinador: income.parts.sponsor }).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ')}).` : 'Verba',
       income ? `+${income.funds} ${when}` : null),
     state.sandbox ? null : stat('tech', 'chip', 'Tecnologia', player.tech,
-      income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
+      income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}${income.techParts.base ? '' : ' (a pesquisa básica vem de 2 em 2 anos: só o Laboratório rende)'}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
       income ? `+${income.tech} ${when}` : null),
     player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
     el('span', { class: 'spacer' }),
@@ -179,9 +179,11 @@ export function rivalsPanel(state, player) {
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideBadge(r))]),
         el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
+        // Público: o lançamento foi anunciado a todos. O resultado do voo e a nave por dentro continuam secretos.
+        r.flight ? el('small', { class: 'hint flight-public' }, [icon('rocket', { size: 12 }), 'Nave em voo (anúncio público).']) : null,
       ]);
     }),
-  ], { defaultOpen: false, hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida` });
+  ], { defaultOpen: rivals.some((r) => r.flight), hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida${rivals.some((r) => r.flight) ? ', com nave em voo' : ''}` });
 }
 
 // Faixa da agência, sempre visível sob o tabuleiro e os botões de ação: os 4 prédios em cartões (nível,

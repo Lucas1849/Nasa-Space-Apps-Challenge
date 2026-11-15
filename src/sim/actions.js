@@ -17,15 +17,16 @@
 import {
   createPlayer, currentPlayer, pushLog, emptySpacecraft, humans,
   SANDBOX_FUNDS, SANDBOX_TECH,
-  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST,
+  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, TECH_FLOOR, SPY_COST, SABOTAGE_COST, REHEARSAL_COST,
 } from './state.js';
 import { isHidden, learnNeeds, assessNeeds, HIDDEN_CHECK_IDS } from './needs.js';
 import { yearlyIncome } from './income.js';
-import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
+import { TILES, rollDie, movePlayer, applyTile, atWorkshopTile } from '../board/board.js';
 import {
   CATALOG, priceFor, isLocked, requiredTech,
-  isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf,
+  isDiscovered, discover, allDiscoverableIds, nameOf, refundFor,
 } from './resources.js';
+import { makeOffers, blueprintCostFor } from './suppliers.js';
 import { checkDesign, simulate } from './simulate.js';
 import { flightPlan, stageRisk, stageOptions, flyer, describeRisk, pct } from './flight.js';
 import { ladderProgress } from './progress.js';
@@ -57,6 +58,7 @@ export function startGame(state, setup, options = {}) {
   state.pendingTile = null;
   state.pendingDilemma = null;
   state.outcome = null;
+  state.tip = null;
   state.yearChange = null;
   state.winners = [];
   state.gameOver = false;
@@ -94,32 +96,23 @@ function assignSide(p, sideId) {
 
 // Muda a missão atual (o degrau da escada). No jogo normal revela o kit do degrau (as peças mínimas
 // para fechar o projeto) e já deixa a órbita da missão escolhida, que não é decisão do jogador.
-// Devolve as peças recém-descobertas (o relatório mostra como prêmio por cumprir o degrau anterior).
+// Muda a missão atual (o degrau da escada). No jogo normal a órbita da missão já vem escolhida (não é decisão do
+// jogador). As PEÇAS não vêm de graça: a blueprint de cada uma é conquistada nos fornecedores (sim/suppliers.js).
 function setMission(state, p, missionId) {
   p.missionId = missionId;
-  if (!missionId || state.sandbox) return [];
-  const mission = MISSIONS[missionId];
-  const fresh = discover(p, mission.kit || []);
-  p.spacecraft.orbitId = mission.orbit;
-  if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
-  return fresh;
+  if (!missionId || state.sandbox) return;
+  p.spacecraft.orbitId = MISSIONS[missionId].orbit;
 }
 
 // Com a nave em voo a oficina fica fechada no jogo normal: o kit do próximo degrau só é liberado quando
 // o degrau atual é cumprido (completeMission). O sandbox continua livre.
+// Agir (comprar, vender, escolher foguete/órbita, ensaiar, lançar) exige o peão numa casa de oficina. Ver é livre.
+const workshopLock = (state, p) =>
+  (state.sandbox || atWorkshopTile(p) ? null : 'Vá a uma casa de Oficina do tabuleiro para montar e lançar. Aqui você só planeja.');
+
 const inFlightLock = (state, p) =>
   (!state.sandbox && p.flight ? 'Sua nave está em voo: aguarde o resultado para montar a próxima.' : null);
 
-// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas). Devolve as descobertas.
-function revealRandom(state, p, count, rng, accept = () => true) {
-  const pool = undiscoveredItems(p).filter(accept);
-  const picked = [];
-  while (picked.length < count && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  if (!picked.length) return [];
-  discover(p, picked.map((item) => item.id));
-  pushLog(state, `${p.name} descobriu: ${picked.map((item) => item.name).join(', ')}.`, p.id);
-  return picked;
-}
 
 // ---------------------------------------------------------------- retorno imediato ao jogador
 // Depois de uma escolha ou de parar numa casa, o jogador vê na hora o que aconteceu (a UI mostra no
@@ -141,6 +134,14 @@ function extrasBetween(before, after) {
   if (after.discount > before.discount) extras.push(`${after.discount}% de desconto na próxima compra.`);
   if (after.launchRisk > before.launchRisk) extras.push(`A próxima subida terá ${Math.round((after.launchRisk - before.launchRisk) * 100)}% a mais de risco.`);
   return extras;
+}
+
+// Dica contextual (Etapa 5): a 1ª vez que algo acontece o jogo explica na hora, uma única vez por jogador.
+// A UI só lê `state.tip` (texto em ui/guide.js); sandbox e bots não recebem.
+function raiseTip(state, p, id, item = null) {
+  if (state.sandbox || p.bot || p.tipsSeen.includes(id)) return;
+  p.tipsSeen.push(id);
+  state.tip = { playerId: p.id, id, item };
 }
 
 function setOutcome(state, p, outcome) {
@@ -171,9 +172,12 @@ function startTurn(state) {
   state.pendingTile = null;
   state.pendingDilemma = null;
   state.outcome = null;
+  state.tip = null;
   if (p.bot) return;
+  // A sabotagem só vale no ano em que foi armada.
+  if (p.interference && p.interference.year !== yearOf(state.round)) p.interference = null;
   if (isNewYear(state.round)) {
-    const income = yearlyIncome(p);
+    const income = yearlyIncome(p, yearOf(state.round));
     const { funds, tech } = income;
     p.funds += funds;
     p.tech += tech;
@@ -181,20 +185,8 @@ function startTurn(state) {
     // Registro estruturado da virada: a UI anima o calendário e mostra o que entrou (só para este jogador).
     state.yearChange = {
       playerId: p.id, round: state.round, year: yearOf(state.round),
-      funds, tech, techLevel: p.tech, parts: income.parts, techParts: income.techParts, part: null,
+      funds, tech, techLevel: p.tech, parts: income.parts, techParts: income.techParts,
     };
-    // A pesquisa libera a peça mais simples que o nível de tecnologia já alcança (ninguém fica travado).
-    // No 1º ano não: o jogador começa só com o kit do 1º degrau, para o turno 1 não ter excesso de opções.
-    const next = state.round > 1
-      ? undiscoveredItems(p)
-        .filter((item) => requiredTech(p, item) <= p.tech)
-        .sort((a, b) => a.minTech - b.minTech || a.cost - b.cost)[0]
-      : null;
-    if (next) {
-      discover(p, [next.id]);
-      pushLog(state, `${p.name}: a pesquisa do ano liberou ${next.name}.`, p.id);
-      state.yearChange.part = next.name;
-    }
   }
 }
 
@@ -302,15 +294,18 @@ export function moveBy(state, index, rng = Math.random) {
   pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
 
-  // Descoberta de peças: a Feira mostra novidades dos fornecedores; a cooperação científica libera o que o nível alcança.
-  let found = [];
-  if (tile.type === 'shop') found = revealRandom(state, p, 3, rng);
-  if (tile.type === 'tech') found = revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
-
   // Retorno imediato: o que a casa deu (casas de decisão e de evento mostram a própria carta).
-  const notes = [...messages, ...(found.length ? [`Descobriu: ${found.map((item) => item.name).join(', ')}.`] : [])];
-  if (notes.length) setOutcome(state, p, { title: `Parou em "${tile.label}"`, notes });
+  if (messages.length) setOutcome(state, p, { title: `Parou em "${tile.label}"`, notes: messages });
   else state.outcome = null;
+
+  if (tile.type === 'workshop') raiseTip(state, p, 'workshop');
+
+  // Fornecedor: até 4 ofertas de blueprint (as do kit do degrau atual vêm primeiro); o jogador escolhe e paga (a 1ª é de graça).
+  if (tile.type === 'shop') {
+    const offers = makeOffers(p, rng);
+    if (offers.length) state.pendingTile = { tileId: tile.id, kind: 'supplier', offers };
+    else pushLog(state, `${p.name}: o fornecedor não tem nenhuma blueprint nova para você.`, p.id);
+  }
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
@@ -397,6 +392,38 @@ function spreadRumor(state, p, rng, notes = []) {
 }
 
 // Espionagem: paga e vê o estado real de um rival (degrau atual e quanto a nave está pronta).
+// Sabotar em vez de observar (mesma casa, mesma ação anual). Contra um jogador arma uma "interferência na telemetria"
+// que chega na etapa final do voo dele; contra o bot do solo atrasa o próximo degrau dele em 1 ano.
+export function sabotage(state, rivalId) {
+  const p = currentPlayer(state);
+  if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
+  const rival = state.players.find((r) => r.id === rivalId && r.id !== p.id);
+  if (!rival) return 'Rival inválido.';
+  if (p.funds < SABOTAGE_COST) return `Verba insuficiente: a sabotagem custa ${SABOTAGE_COST}.`;
+  if (rival.interference) return `${rival.name} já tem uma sabotagem armada: espere ela chegar.`;
+  if (rival.bot && (rival.step >= ladderOf(rival).length || rival.schedule[rival.step] == null)) return `${rival.name} não tem mais um degrau para atrasar.`;
+  if (rival.bot && rival.delayedStep === rival.step) return `${rival.name} já foi atrasada neste degrau: sabotar de novo o adiaria sem fim.`;
+  p.funds -= SABOTAGE_COST;
+  p.lastSpyYear = yearOf(state.round);
+  state.pendingTile = null;
+  let note;
+  if (rival.bot) {
+    rival.schedule[rival.step] += 1;
+    rival.delayedStep = rival.step; // só um atraso por degrau (senão, 1 sabotagem por ano o seguraria para sempre)
+    note = `O próximo degrau de ${rival.name} atrasou 1 ano.`;
+  } else {
+    rival.interference = { fromId: p.id, year: yearOf(state.round) };
+    note = `A interferência vai atingir a telemetria de ${rival.name} na etapa final do voo dele, se ele voar neste ano.`;
+  }
+  pushLog(state, `${p.name} pagou ${SABOTAGE_COST} ao espião para sabotar ${rival.name}.`, p.id);
+  setOutcome(state, p, {
+    title: `Sabotagem: ${rival.name}`,
+    changes: [{ label: 'Verba', value: -SABOTAGE_COST }],
+    notes: [note, 'Sabotar custa verba e uma ação de espião; o rival pode se proteger pagando a rede de reserva.'],
+  });
+  return null;
+}
+
 export function spyOn(state, rivalId) {
   const p = currentPlayer(state);
   if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
@@ -460,7 +487,7 @@ export function buildOnLot(state, buildingId) {
 export const useFeeFor = (level) => USE_FEE + 2 * (level - 1);
 
 // Prédio de outro jogador: paga a taxa ao dono e recebe o efeito uma vez. Os dois ganham.
-export function useRivalBuilding(state) {
+export function useRivalBuilding(state, rng = Math.random) {
   const p = currentPlayer(state);
   const pending = state.pendingTile;
   if (!pending || pending.kind !== 'use') return 'Não há prédio de rival para usar aqui.';
@@ -472,7 +499,7 @@ export function useRivalBuilding(state) {
   const before = statsOf(p);
   p.funds -= fee;
   owner.funds += fee;
-  applyEffect(state, p, building.useEffect, Math.random);
+  applyEffect(state, p, building.useEffect, rng); // `rng` injetável: o simulador (scripts/simulate.mjs) repete partidas
   state.pendingTile = null;
   pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
   const after = statsOf(p);
@@ -486,6 +513,32 @@ export function useRivalBuilding(state) {
 
 export function skipTile(state) {
   state.pendingTile = null;
+  return null;
+}
+
+// Fornecedor: compra uma das ofertas da visita. A blueprint é pesquisa (paga uma vez, vale para sempre); a peça física
+// ainda é paga na oficina. A PRIMEIRA blueprint da partida é de graça. A visita continua aberta até acabarem as ofertas
+// ou o jogador seguir (skipTile).
+export function buyBlueprint(state, itemId) {
+  const p = currentPlayer(state);
+  const pending = state.pendingTile;
+  if (!pending || pending.kind !== 'supplier') return 'Você não está num fornecedor.';
+  if (!pending.offers.includes(itemId)) return 'Esse item não está nas ofertas desta visita.';
+  const free = !p.freeBlueprintUsed;
+  const price = blueprintCostFor(p, itemId);
+  if (p.funds < price) return `Verba insuficiente: a blueprint custa ${price}.`;
+  p.funds -= price;
+  p.freeBlueprintUsed = true;
+  discover(p, [itemId]);
+  pending.offers = pending.offers.filter((id) => id !== itemId);
+  if (!pending.offers.length) state.pendingTile = null;
+  pushLog(state, `${p.name} conseguiu a blueprint de ${nameOf(itemId)}${free ? ' (a primeira é de graça)' : ` por ${price}`}.`, p.id);
+  setOutcome(state, p, {
+    title: `Blueprint: ${nameOf(itemId)}`,
+    changes: price ? [{ label: 'Verba', value: -price }] : [],
+    notes: [free ? 'A primeira blueprint é de graça.' : 'A blueprint vale para sempre.', 'Agora você pode comprar essa peça (ou escolher esse foguete) na oficina.'],
+  });
+  raiseTip(state, p, 'blueprint', itemId);
   return null;
 }
 
@@ -521,9 +574,12 @@ export function requestBailout(state) {
   const p = currentPlayer(state);
   if (p.funds >= BAILOUT_LIMIT) return `Socorro só com menos de ${BAILOUT_LIMIT} de verba.`;
   p.funds += BAILOUT_FUNDS;
-  p.tech = Math.max(0, p.tech - BAILOUT_TECH_COST);
+  // Piso de tecnologia 1: toda peça exige pelo menos 1. Com a pesquisa básica de 2 em 2 anos, descer a 0 trancaria a
+  // agência fora da oficina por até 2 anos, e o socorro de emergência não pode ser uma armadilha.
+  const lost = Math.min(BAILOUT_TECH_COST, Math.max(0, p.tech - TECH_FLOOR));
+  p.tech -= lost;
   p.bailouts += 1;
-  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba, −${BAILOUT_TECH_COST} de tecnologia.`, p.id);
+  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba${lost ? `, −${lost} de tecnologia` : ' (sem perder tecnologia: já está no mínimo)'}.`, p.id);
   return null;
 }
 
@@ -543,10 +599,10 @@ export function chooseMission(state, missionId) {
 
 export function buyItem(state, itemId) {
   const p = currentPlayer(state);
-  const locked = inFlightLock(state, p);
+  const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   const item = CATALOG[itemId];
-  if (!isDiscovered(p, item)) return `${item.name} ainda não foi descoberta: ela aparece nas casas do tabuleiro e a cada Ano novo.`;
+  if (!isDiscovered(p, item)) return `${item.name}: você ainda não tem a blueprint. Pare numa casa de Fornecedor do tabuleiro para consegui-la.`;
   if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
   const price = priceFor(p, itemId);
   if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
@@ -554,6 +610,7 @@ export function buyItem(state, itemId) {
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   bucket.push(itemId);
   pushLog(state, `${p.name} comprou ${item.name} por ${price}.`, p.id);
+  raiseTip(state, p, 'part');
   p.discount = 0; // desconto de evento vale para uma compra (a Fábrica é permanente)
   checkMilestones(state, p);
   return null;
@@ -562,23 +619,24 @@ export function buyItem(state, itemId) {
 // Antes de voar, revende pelo valor cheio (regra do IDEIA.md).
 export function sellItem(state, itemId) {
   const p = currentPlayer(state);
-  const locked = inFlightLock(state, p);
+  const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   const idx = bucket.indexOf(itemId);
   if (idx === -1) return 'Item não está na espaçonave.';
   bucket.splice(idx, 1);
-  p.funds += CATALOG[itemId].cost;
-  pushLog(state, `${p.name} vendeu ${CATALOG[itemId].name} por ${CATALOG[itemId].cost}.`, p.id);
+  const refund = refundFor(itemId); // sucata: metade do custo base (sim/resources.js)
+  p.funds += refund;
+  pushLog(state, `${p.name} revendeu ${CATALOG[itemId].name} como sucata por ${refund}.`, p.id);
   return null;
 }
 
 export function chooseLauncher(state, launcherId) {
   const p = currentPlayer(state);
-  const locked = inFlightLock(state, p);
+  const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   const launcher = LAUNCHERS[launcherId];
-  if (!isDiscovered(p, launcher)) return `${launcher.name} ainda não foi descoberto: ele é liberado pelo degrau da missão.`;
+  if (!isDiscovered(p, launcher)) return `${launcher.name}: você ainda não tem a blueprint. Pare numa casa de Fornecedor do tabuleiro para consegui-la.`;
   if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
   p.spacecraft.launcherId = launcherId;
   checkMilestones(state, p);
@@ -587,7 +645,7 @@ export function chooseLauncher(state, launcherId) {
 
 export function chooseOrbit(state, orbitId) {
   const p = currentPlayer(state);
-  const locked = inFlightLock(state, p);
+  const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   p.spacecraft.orbitId = orbitId;
   checkMilestones(state, p);
@@ -625,7 +683,7 @@ function checkMilestones(state, player) {
 export function rehearse(state) {
   const p = currentPlayer(state);
   if (state.sandbox) return 'No sandbox os requisitos da missão já aparecem na checagem.';
-  const inFlight = inFlightLock(state, p);
+  const inFlight = inFlightLock(state, p) || workshopLock(state, p);
   if (inFlight) return inFlight;
   if (!p.missionId) return 'Sua escada já está completa.';
   if (!isHidden(p)) return 'Os requisitos desta missão já são conhecidos: veja a checagem do projeto.';
@@ -655,12 +713,15 @@ export function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
   if (!p.missionId) return state.sandbox ? 'Escolha uma missão antes de lançar.' : 'Sua escada já está completa.';
   if (p.flight) return 'Você já tem uma nave em voo.';
+  const away = workshopLock(state, p);
+  if (away) return away;
   if (!state.sandbox && !p.rolled) return 'Ande no tabuleiro antes de lançar.';
   if (!state.sandbox && p.launchedThisTurn) return 'Só um lançamento por turno.';
   const design = checkDesign(p);
   if (!design.ok) return 'O projeto ainda tem pendências: veja a checagem na oficina.';
   p.funds -= design.totals.launchCost;
   p.launches += 1;
+  raiseTip(state, p, 'launch');
   grant(state, p, 'launched');
   const missionId = p.missionId;
   p.flight = {
@@ -679,7 +740,9 @@ export function launch(state, rng = Math.random) {
   p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
   p.launchedThisTurn = true;
   p.flightAdvanced = true;
-  pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
+  // Lançar é público (o mundo vê um foguete subir): todos ficam sabendo e o peão ganha o marcador "em voo".
+  // O que continua secreto: a nave por dentro e se o voo deu certo (só o espião ou o fim da partida revelam).
+  pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`);
   const stageId = p.flight.plan[0];
   const risk = stageRisk(flyer(p), stageId);
   p.launchRisk = 0; // o defeito ignorado só pesa nesta subida
@@ -698,6 +761,14 @@ export function advanceFlight(state, rng = Math.random) {
   }
   const stageId = p.flight.plan[p.flight.stageIndex];
   let eventId = p.flight.tileEvent;
+  // Sabotagem armada por um rival: chega na etapa final, no lugar de qualquer outro imprevisto.
+  if (p.interference && p.flight.stageIndex === p.flight.plan.length - 1) {
+    const from = state.players.find((r) => r.id === p.interference.fromId);
+    eventId = 'interference';
+    pushLog(state, `${p.name}: a telemetria da nave sofreu interferência na etapa final (suspeita de sabotagem rival).`, p.id);
+    if (from) pushLog(state, `${from.name}: sua sabotagem chegou à telemetria de ${p.name}.`, from.id);
+    p.interference = null;
+  }
   if (!eventId && STAGES[stageId].guaranteedEvent) eventId = pickEvent(rng).id;
   p.flight.tileEvent = null;
   p.flight.pending = { stageId, eventId: eventId || null };
@@ -768,7 +839,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
 
 // Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
 function retarget(state, p) {
-  return state.sandbox ? [] : setMission(state, p, ladderOf(p)[p.step] || null);
+  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step] || null);
 }
 
 function failMission(state, p, stageId) {
@@ -843,9 +914,8 @@ function completeMission(state, p) {
   pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`, p.id);
   p.lastResult = result;
   p.flight = null;
-  // Cumprir o degrau libera o kit do próximo (prêmio mostrado no relatório); falhar mantém o degrau atual.
-  const unlocked = retarget(state, p);
-  if (result.success && unlocked.length) result.unlocked = unlocked.map(nameOf);
+  // Cumprir o degrau passa a mirar o próximo; falhar mantém o degrau atual. As blueprints vêm dos fornecedores.
+  retarget(state, p);
   state.screen = 'report';
   return null;
 }

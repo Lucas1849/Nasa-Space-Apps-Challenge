@@ -11,11 +11,14 @@ export const STARTING_FUNDS = 5;
 export const SANDBOX_FUNDS = 999;
 export const SANDBOX_TECH = 99;
 export const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
-export const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
+export const TECH_PER_YEAR = 1;      // tecnologia da pesquisa básica, em cada ano em que ela rende (+ Laboratório, todo ano)
+export const TECH_EVERY_YEARS = 2;   // a pesquisa básica rende de 2 em 2 anos (média 0,5/ano): o Laboratório é o que acelera
 export const SPONSOR_FUNDS_PER_LEVEL = 10; // verba por ano de cada nível do Patrocinador
 export const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 export const BAILOUT_TECH_COST = 2;
+export const TECH_FLOOR = 1;         // tecnologia mínima: toda peça exige pelo menos 1, então o socorro não desce abaixo disso
 export const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
+export const SABOTAGE_COST = 15;   // sabotagem: gasta a ação anual do espião, como observar
 export const SPY_COST = 12;          // espionagem: uma vez por ano
 export const REHEARSAL_COST = 5;     // ensaio em solo: diz em palavras se a nave atende aos mínimos escondidos
 
@@ -37,7 +40,9 @@ export function createPlayer(id, name, missionId = null) {
     position: 0,           // casa atual do tabuleiro
     funds: STARTING_FUNDS, // verba disponível
     tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
-    unlocked: [],          // ids de peças e lançadores já descobertos (sim/resources.js); o kit do degrau entra ao começar o degrau
+    unlocked: [],          // blueprints conquistadas (ids de peças e lançadores, sim/resources.js): vêm dos fornecedores, ninguém começa com nenhuma
+    tipsSeen: [],          // dicas contextuais já mostradas (sim/actions.js, raiseTip): cada uma aparece uma única vez
+    freeBlueprintUsed: false, // a 1ª blueprint da partida é de graça (sim/suppliers.js)
     hideNeeds: false,      // jogo normal: mínimos de ciência e comunicação da missão escondidos (sim/needs.js)
     knownNeeds: {},        // { missionId: true } missões cujos mínimos já foram descobertos
     rehearsedThisTurn: false, // 1 ensaio em solo por turno
@@ -51,6 +56,7 @@ export function createPlayer(id, name, missionId = null) {
     failureData: {},       // { sistema: n } falhas anteriores; reduzem o risco desse sistema
     buildings: { lab: 0, factory: 0, control: 0, sponsor: 0 }, // nível de cada prédio
     intel: {},             // { rivalId: { year, ... } } o que o espião descobriu
+    interference: null,    // sabotagem armada por um rival: { fromId, year }; chega na etapa final do voo e expira no fim do ano
     lastSpyYear: null,
     spacecraft: emptySpacecraft(),
     flight: null,          // voo em andamento (sim/actions.js)
@@ -77,6 +83,7 @@ export function createInitialState() {
     dice: null,            // [a, b] dados rolados aguardando escolha
     pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
     pendingDilemma: null,  // { id } carta de dilema aguardando escolha
+    tip: null,             // dica contextual do momento: { playerId, id, item } (a UI mostra no turno em que nasce)
     outcome: null,         // retorno imediato ao jogador: { playerId, title, choice, changes, notes, lesson }
     yearChange: null,      // virada de ano do jogador da vez: { playerId, round, year, funds, tech, techLevel, parts, techParts, part } (a UI anima uma vez por round:playerId)
     winners: [],

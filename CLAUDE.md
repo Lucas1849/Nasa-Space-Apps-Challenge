@@ -71,7 +71,7 @@ git push -u origin <nome>/<assunto>   # depois abrir Pull Request
   tema corrida espacial). Regras do evento em `docs/regras-do-evento.md`.
 - Stack e estrutura em `docs/ARQUITETURA.md` (JS puro, ES modules, sem build; testes com
   `node --test`). O jogo segue a `IDEIA.md` na parte v3, no fim do arquivo (a seção 16 diz o que entrou): lados EUA/URSS com
-  escadas de missões, 3 rodadas = 1 ano (1957–1969), rival escondido com espião e boatos, bot
+  escadas de missões, 3 rodadas = 1 ano (1955–1969), rival escondido com espião e boatos, bot
   histórico no solo, cartas de dilema, 2 dados, prédios e tecnologia, voo em etapas com risco
   explicado, missão de consolação, dados de falha e cartão "Na história real".
   1–4 agências em hot-seat ou sandbox. `npm start` para jogar, `npm test` para testar.

@@ -584,8 +584,8 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
   --orange: #c9652a; --green: #4c7a3a; --plum: #5b3f63;
   --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .12 0 0 0 0 .1 0 0 0 0 .06 0 0 0 .1 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   display: grid; gap: 2px; padding: 0; margin: 14px 14px 22px;
-  grid-template-columns: 1.3fr repeat(3, minmax(0, 1fr)) 1.3fr;
-  grid-template-rows: minmax(118px, auto) repeat(3, minmax(104px, auto)) minmax(118px, auto);
+  grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)) 1.3fr;
+  grid-template-rows: minmax(118px, auto) repeat(4, minmax(96px, auto)) minmax(118px, auto);
   background: var(--ink); color: var(--ink); border: 2px solid var(--ink);
   /* margem de papel + filete de tinta + sombra na mesa */
   box-shadow: 0 0 0 12px var(--paper), 0 0 0 14px var(--ink), 0 30px 60px rgba(0, 0, 0, .55);
@@ -607,6 +607,8 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 .gb-crisis  { --band: var(--red); }
 .gb-tech    { --band: var(--navy); }
 .gb-shop    { --band: var(--teal); }
+.gb-workshop { --band: var(--plum); }
+.gb-workshop .gb-name, .gb-workshop .gb-art { color: var(--plum); }
 .gb-lot     { --band: repeating-linear-gradient(135deg, var(--ink) 0 2px, var(--paper) 2px 7px); }
 .gb-lot .gb-art { opacity: .8; }
 .gb-tile.owned { background: color-mix(in srgb, var(--owner) 13%, var(--paper)) var(--grain); --band: var(--owner); }
@@ -634,7 +636,7 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 
 /* miolo: arte de caixa de jogo */
 .gb-center {
-  grid-row: 2 / 5; grid-column: 2 / 5; position: relative; overflow: hidden;
+  grid-row: 2 / 6; grid-column: 2 / 6; position: relative; overflow: hidden;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   padding: 18px 16px; text-align: center; background: var(--paper-2) var(--grain);
 }
@@ -691,7 +693,7 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 .gb-card-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; }
 
 @media (max-width: 760px) {
-  .gameboard { margin: 10px 10px 18px; grid-template-rows: minmax(84px, auto) repeat(3, minmax(64px, auto)) minmax(84px, auto); box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink), 0 18px 40px rgba(0, 0, 0, .5); }
+  .gameboard { margin: 10px 10px 18px; grid-template-rows: minmax(84px, auto) repeat(4, minmax(56px, auto)) minmax(84px, auto); box-shadow: 0 0 0 6px var(--paper), 0 0 0 8px var(--ink), 0 18px 40px rgba(0, 0, 0, .5); }
   .gb-tile:not(.corner) .gb-name, .gb-tile:not(.corner) .t-sub, .gb-tile:not(.corner) .gb-kind { display: none; }
   .gb-tile:not(.corner) .gb-art { width: 26px; height: 26px; margin-top: 4px; }
   .gb-band { height: 8px; margin-bottom: 4px; }
@@ -710,7 +712,7 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
    ========================================================= */
 
 /* Tabuleiro um pouco mais baixo, para caber com o HUD em telas de notebook */
-.gameboard { grid-template-rows: minmax(100px, auto) repeat(3, minmax(84px, auto)) minmax(100px, auto); }
+.gameboard { grid-template-rows: minmax(100px, auto) repeat(4, minmax(80px, auto)) minmax(100px, auto); }
 .gb-tile .gb-art { width: 28px; height: 28px; margin: 3px 0 2px; }
 .gb-tile.corner .gb-art { width: 40px; height: 40px; }
 
@@ -843,3 +845,17 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Lançamento público: o peão de quem está com a nave no ar ganha um marcador de foguete. */
+.gb-pawn.in-flight { position: relative; }
+.gb-pawn .gb-flight { position: absolute; top: -5px; right: -9px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: var(--amber, #fbbf24); color: #1f2a3a; box-shadow: 0 1px 0 rgba(31, 42, 58, .4); animation: pulse 1.6s ease-in-out infinite; }
+.gb-pawn .gb-flight .ic { line-height: 0; }
+.hint.flight-public { display: inline-flex; align-items: center; gap: 5px; color: var(--amber, #fbbf24); }
+
+/* Fornecedor: preço da blueprint ao lado do nome */
+.gb-price { margin-left: .5rem; font: 700 .72rem/1 'Courier Prime', ui-monospace, monospace; opacity: .85; }
+
+/* Dicas de "primeira vez" (Etapa 5): destacadas sobre o cartão do próximo passo */
+.guide-stack { display: grid; gap: 0; }
+.guide-tip { border-left: 4px solid var(--warn, #d9a21b); }
+.guide-tip .tip-tag { display: inline-block; margin-bottom: 2px; font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .75; }

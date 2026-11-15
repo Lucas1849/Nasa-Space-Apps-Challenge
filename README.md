@@ -3,7 +3,7 @@
 Jogo 2D gratuito, no navegador, para o desafio **Space Mission Design Game** do NASA Space Apps
 Challenge 2026. O jogador monta uma missão espacial com recursos limitados: cada peça rende ciência,
 mas custa massa, energia, dinheiro e dados. Vence a agência que completar primeiro a escada de
-missões do seu lado na corrida espacial (1957–1969).
+missões do seu lado na corrida espacial (1955–1969).
 
 > Designing a Free 2D Space Mission Game that will work on browsers. Our idea is making space
 > mission design accessible for any person that wants to have that experience.

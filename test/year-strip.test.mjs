@@ -47,27 +47,38 @@ test('yearlyIncome soma orçamento, bônus do lado, Patrocinador e Laboratório'
   assert.deepEqual(full.techParts, { base: TECH_PER_YEAR, lab: 3 });
 });
 
-test('a abertura registra a virada de 1957 com o que entrou, sem peça liberada', () => {
+test('a abertura registra a virada de 1955 com o que entrou, sem peça liberada', () => {
   const state = newGame();
   const p = state.players[0];
   const yc = state.yearChange;
   assert.equal(yc.playerId, p.id);
   assert.equal(yc.round, 1);
-  assert.equal(yc.year, 1957);
+  assert.equal(yc.year, 1955);
   assert.equal(yc.funds, yearlyIncome(p).funds);
   assert.equal(yc.tech, TECH_PER_YEAR);
   assert.equal(yc.techLevel, p.tech);
-  assert.equal(yc.part, null, 'no 1º ano a pesquisa não libera peça');
+  assert.equal(yc.part, undefined, 'a pesquisa do ano não libera peça (só os fornecedores dão blueprint)');
 });
 
-test('a virada seguinte (rodada 4) registra o novo ano e a peça liberada pela pesquisa', () => {
+test('a virada seguinte (rodada 4, 1956) vem sem pesquisa básica', () => {
   const state = newGame();
   for (let i = 0; i < 3; i++) pass(state); // rodadas 1, 2 e 3
   assert.equal(state.round, 4);
   const yc = state.yearChange;
-  assert.equal(yc.year, 1958);
+  assert.equal(yc.year, 1956);
   assert.equal(yc.round, 4);
-  assert.equal(typeof yc.part, 'string', 'a pesquisa do ano liberou uma peça');
+  assert.equal(yc.tech, 0, 'a pesquisa básica só rende de 2 em 2 anos');
+  assert.equal(yc.techParts.base, 0);
+  assert.equal(yc.part, undefined);
+});
+
+test('a virada de 1957 (rodada 7) volta a render tecnologia', () => {
+  const state = newGame();
+  for (let i = 0; i < 6; i++) pass(state);
+  assert.equal(state.round, 7);
+  assert.equal(state.yearChange.year, 1957);
+  assert.equal(state.yearChange.tech, 1);
+  assert.equal(state.yearChange.techParts.base, 1);
 });
 
 test('o bot não recebe virada; em 2 humanos cada um recebe a sua', () => {
@@ -95,15 +106,15 @@ test('subir um prédio devolve o resultado na hora', () => {
 
 test('overlay: mostra o ano novo, o ano que sai e os ganhos', () => {
   const state = newGame();
-  for (let i = 0; i < 3; i++) pass(state);
+  for (let i = 0; i < 6; i++) pass(state); // rodada 7 = 1957, ano com pesquisa básica
   const root = yearOverlayNode(state.yearChange);
   assert.match(text(root), /Ano novo/);
-  assert.deepEqual(textsOf(root, 'year-old'), ['1957']);
-  assert.deepEqual(textsOf(root, 'year-new'), ['1958']);
+  assert.deepEqual(textsOf(root, 'year-old'), ['1956']);
+  assert.deepEqual(textsOf(root, 'year-new'), ['1957']);
   const gains = textsOf(root, 'gain');
   assert.ok(gains.some((g) => /Verba \+/.test(g)));
   assert.ok(gains.some((g) => /Tecnologia \+1/.test(g)));
-  assert.ok(gains.some((g) => /Peça liberada/.test(g)));
+  assert.ok(!gains.some((g) => /Peça liberada/.test(g)));
 });
 
 test('overlay: na abertura não há ano antigo; com movimento reduzido também não', () => {
@@ -111,7 +122,7 @@ test('overlay: na abertura não há ano antigo; com movimento reduzido também n
   const open = yearOverlayNode(state.yearChange);
   assert.match(text(open), /Começa a corrida espacial/);
   assert.deepEqual(textsOf(open, 'year-old'), []);
-  assert.deepEqual(textsOf(open, 'year-new'), ['1957']);
+  assert.deepEqual(textsOf(open, 'year-new'), ['1955']);
   for (let i = 0; i < 3; i++) pass(state);
   assert.deepEqual(textsOf(yearOverlayNode(state.yearChange, { reduced: true }), 'year-old'), []);
 });

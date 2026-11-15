@@ -176,7 +176,7 @@ test('chegada à Lua sempre tem imprevisto (ponto-chave)', () => {
 });
 
 test('pickEvent é determinístico com rng fixo', () => {
-  const ids = Object.keys(FLIGHT_EVENTS);
+  const ids = Object.values(FLIGHT_EVENTS).filter((e) => !e.armed).map((e) => e.id); // a interferência (armed) não entra no sorteio
   assert.equal(pickEvent(() => 0).id, ids[0]);
   assert.equal(pickEvent(() => 0.999).id, ids[ids.length - 1]);
 });

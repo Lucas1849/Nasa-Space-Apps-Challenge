@@ -28,13 +28,13 @@ test('depois de escolher no dilema, a tela mostra o que mudou e a lição', () =
 
 test('parar numa casa mostra o que ela deu', () => {
   const state = twoPlayers();
-  rollAndMove(state, die(2));
+  rollAndMove(state, die(3));
   assert.match(outcomeText(state), /Discurso: o espaço vira prioridade/);
 });
 
 test('o resultado é de quem jogou: o outro jogador não o vê', () => {
   const state = twoPlayers();
-  rollAndMove(state, die(2));
+  rollAndMove(state, die(3));
   assert.ok(outcomeText(state));
   state.turn = 1; // a tela é desenhada para o jogador da vez
   assert.equal(outcomeText(state), null);

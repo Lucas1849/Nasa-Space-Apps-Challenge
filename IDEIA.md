@@ -657,3 +657,79 @@ Decisão:
 Fora desta entrega: mostrar o progresso da escada no topo (o usuário preferiu só prédios e recursos) e deixar a
 escada, os rivais e o diário fora de abas. Para avaliar jogando: se a faixa e o HUD maior apertam o tabuleiro em
 telas pequenas, e se 2 s de animação cansam quando a virada vem a cada 3 rodadas.
+
+## 23. Revenda como sucata e lançamento público (Marcus, 15/11)
+Problemas vistos jogando e na linha de base do simulador (`docs/BASELINE-SIMULACAO.md`):
+- **Revender pelo preço cheio não punia falta de planejamento** e ainda dava lucro: o desconto valia na compra, mas a
+  venda devolvia o custo base. Comprando e revendendo todos os itens com 50% de desconto sobravam **+97 de verba**.
+- **Ninguém precisava olhar os outros jogadores**: o que o rival faz era invisível.
+
+Decisão:
+- **Revenda como sucata: devolve 50% do custo base.** O desconto máximo é 50%, então o reembolso nunca passa do preço
+  pago e o ralo some. Errar uma compra agora custa metade, e o botão "Vender" mostra quanto devolve. A blueprint (Etapa 3)
+  não será perdida ao vender: só a peça física perde valor.
+- **Lançar é público**: o jogo anuncia a todos e o peão de quem está com a nave no ar ganha o marcador "em voo" (também
+  no painel de Rivais). Lançar foguete é público no mundo real.
+- **O que continua secreto**: a nave por dentro, o dinheiro e se o voo deu certo. Só o espião, os boatos ou o fim da partida
+  revelam. Isso preserva a decisão de "rival escondido" e dá motivo para observar o tabuleiro e, adiante, sabotar.
+
+Próximas etapas do plano: calendário em 1955 e tecnologia mais escassa, blueprints nos fornecedores, tabuleiro de 20 casas com
+oficina "ver livre, agir na casa", tutorial contextual e sabotagem pelo espião.
+
+## 24. Calendário em 1955 e pesquisa básica de 2 em 2 anos (Marcus, 15/11)
+Problemas: a tecnologia era fácil e inflada (+1 por ano para todos, então o Laboratório quase não importava) e o
+começo do jogo ia ficar parado quando as peças dependessem de blueprints.
+
+Decisão:
+- **O calendário começa em 1955**: dois anos de preparação antes do Sputnik (1957). O bot e o cartão "Na história
+  real" usam ano absoluto e não mudaram. O teto passa a 45 rodadas, mas a partida acaba antes se alguém completar a escada.
+- **Pesquisa básica de 2 em 2 anos** (1955, 1957, 1959...), média de 0,5 por ano, **começando no 1º ano** (toda peça exige
+  tecnologia 1; se o 1º ganho só viesse em 1956 não daria para comprar nada no 1º ano). **O Laboratório continua rendendo todo
+  ano**, por isso é ele que faz a tecnologia andar. Sem trava por época: era difícil de explicar durante o jogo.
+- A previsão do HUD olha o **próximo** Ano novo (pode vir "+0"), e a animação do ano explica quando não há pesquisa básica.
+- **O socorro de emergência tem piso de tecnologia 1.** Descobri medindo: com tecnologia escassa ele derrubava o jogador a 0,
+  trancando a oficina por até 2 anos.
+
+O que a medição mostrou: **cortar a pesquisa básica quase não resolve a inflação** (o Laboratório no nível 3 rende +3 por
+ano e o jogo só exige até 6). Calibrar isso fica para a Etapa 7 (ver `docs/BASELINE-SIMULACAO.md`).
+
+## 25. Blueprints nos fornecedores (Marcus, 15/11)
+
+Decisão: **ninguém começa com peças e o degrau não libera mais o kit.** O jogador conquista a **blueprint** (o projeto) de cada
+peça e foguete parando na casa de **Fornecedor**: vê 3 ofertas (até 2 do que a missão atual precisa, o resto surpresa),
+escolhe e **paga** (cerca de 45% do custo da peça; **a primeira da partida é de graça**). Depois paga a peça na oficina, a
+cada nave. Isso fecha de vez a brecha de lançar no turno 1 e dá motivo para olhar o tabuleiro.
+
+Medição: o preço da blueprint pesa pouco; o que atrasa é passar pela casa. A Etapa 4 (mais casas de fornecedor) e a calibragem
+final tratam o ritmo (meta: 1º lançamento entre as rodadas 5 e 9).
+
+## 26. Tabuleiro de 20 casas e oficina "ver livre, agir na casa" (Marcus, 15/11)
+
+Decisão: o tabuleiro passa a **20 casas**, com **3 casas de Oficina de montagem** e **2 de Fornecedor**, espalhadas. A tela da
+oficina abre de qualquer lugar (dá para planejar: peças, medidores, checklist e risco), mas **comprar, vender, escolher foguete,
+ensaiar e lançar só com o peão numa casa de Oficina**. Assim o tabuleiro importa mesmo (é preciso ir até lá) e o botão da
+oficina continua sempre à vista. O nome "Oficina de reparos" virou **Reparos**, para não confundir.
+
+Medição: o 1º lançamento ainda sai por volta da rodada 14; a calibragem (Etapa 7) vai trazer isso para a faixa de 5 a 9.
+
+## 27. Tutorial contextual (Marcus, 15/11)
+
+Decisão: o jogo explica as regras **na primeira vez que elas importam**, uma explicação curta e única cada: ao conseguir a
+primeira blueprint ("agora a oficina faz isto"), ao chegar pela primeira vez a uma casa de Oficina, ao comprar a primeira peça
+e ao fazer o primeiro lançamento. Quem desliga as dicas não vê nada disso. Isso ataca o "tem coisa demais para aprender de uma vez".
+
+## 28. Espião com sabotagem (Marcus, 15/11)
+
+Decisão: a casa do espião deixa de ser só "ver o rival" e vira um menu de uma ação por ano: **observar** (12) ou **sabotar** (15).
+Sabotar arma uma **interferência na telemetria** que chega na **etapa final** do voo do rival (se ele voar naquele ano): ele
+escolhe entre reenviar os comandos à mão, de graça mas com mais risco, ou pagar a rede de estações de reserva, que custa verba e
+quase zera o risco. Contra a agência rival do solo, a sabotagem **atrasa o próximo degrau dela em 1 ano**. O evento nunca sai no
+sorteio comum. Dá motivo para olhar o rival e para investir em redundância. "Roubar blueprint" fica no roadmap.
+
+## 29. Calibragem final (Marcus, 15/11)
+
+Com o simulador (`npm run simulate`) o que atrasava o começo não era dinheiro, era **andar até o fornecedor e depois até a oficina**.
+O fornecedor passou a oferecer até 4 blueprints por visita (o kit que a missão precisa vem primeiro) e as blueprints ficaram mais
+baratas (30% da peça, 35% do foguete). O 1º lançamento de um jogador eficiente caiu da rodada 14 para a rodada 10 (mediana). Também
+corrigi um abuso: sabotar a agência rival do solo agora atrasa **um degrau uma única vez**, senão uma sabotagem por ano a seguraria
+para sempre. O que ficou em aberto está em `docs/LIMITACOES-E-BUGS.md`.

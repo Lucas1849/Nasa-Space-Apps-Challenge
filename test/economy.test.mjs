@@ -6,14 +6,14 @@ import assert from 'node:assert/strict';
 import { createInitialState } from '../src/sim/state.js';
 import { startGame, rollAndMove, buyItem, chooseLauncher, launch } from '../src/sim/actions.js';
 import { MISSIONS } from '../src/data/missions.js';
-import { CATALOG } from '../src/sim/resources.js';
+import { CATALOG, discover } from '../src/sim/resources.js';
 import { LAUNCHERS } from '../src/data/launchers.js';
 
-// rng 0 → EUA para o jogador; 0.99 → URSS. O dado 1 cai num terreno livre (sem verba extra).
+// rng 0 → EUA para o jogador; 0.99 → URSS. O dado 2 cai na oficina de montagem (sem verba extra), onde se pode comprar e lançar.
 function soloAs(rngValue) {
   const state = createInitialState();
   startGame(state, [{ name: 'A' }], { rng: () => rngValue });
-  rollAndMove(state, () => 0.01);
+  rollAndMove(state, () => 0.18);
   return state;
 }
 
@@ -30,6 +30,7 @@ for (const [label, rngValue] of [['EUA', 0], ['URSS', 0.99]]) {
     const state = soloAs(rngValue);
     const p = state.players[0];
     p.tech = 5; // isola a verba: os EUA precisariam de tecnologia 2 para o foguete pequeno
+    discover(p, MISSIONS.first_satellite.kit); // com as blueprints já conseguidas, o que pesa é só a verba
     chooseLauncher(state, 'small');
     for (const id of ['radio_beacon', 'solar_small', 'antenna_basic']) buyItem(state, id);
     assert.ok(p.milestones.includes('first_satellite:design_ready'));

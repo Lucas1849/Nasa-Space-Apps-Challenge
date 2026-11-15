@@ -84,20 +84,17 @@ test('o tabuleiro não oferece a Oficina enquanto a nave voa', () => {
   assert.match(boardScreen(state, actions).textContent, /só pode ser montada quando esta cumprir a missão/);
 });
 
-test('cumprir o degrau libera o kit do próximo, mostra no relatório e reabre a oficina', () => {
+test('cumprir o degrau passa a mirar o próximo, sem liberar blueprint de graça, e reabre a oficina', () => {
   const { state, p } = launched();
   finishFlight(state, noFailure);
   assert.equal(p.lastResult.success, true);
   assert.equal(p.missionId, 'living_being');
-  assert.ok(p.unlocked.includes('life_support'));
-
-  const report = reportScreen(state, actions).textContent.replace(/\s+/g, ' ');
-  assert.match(report, /Peças liberadas/);
-  assert.match(report, /Cápsula com suporte de vida/);
+  assert.ok(!p.unlocked.includes('life_support'), 'a blueprint vem do fornecedor, não do degrau');
+  assert.equal(p.lastResult.unlocked, undefined);
+  assert.ok(!/Peças liberadas/.test(reportScreen(state, actions).textContent), 'o relatório não promete peças');
 
   const shop = workshopScreen(state, actions);
   assert.ok(!/Oficina fechada/.test(shop.textContent));
-  assert.ok(textsOf(shop, 'card-head').some((t) => /Cápsula com suporte de vida/.test(t)));
 });
 
 test('falhar o voo não libera nada e o relatório não mostra "Peças liberadas"', () => {

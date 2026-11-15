@@ -1,13 +1,13 @@
-// Calendário da corrida espacial (IDEIA.md v3 seção 3): 3 rodadas = 1 ano, começando em 1957.
+// Calendário da corrida espacial (IDEIA.md v3 seção 3): 3 rodadas = 1 ano, começando em 1955 (dois anos de preparação antes do Sputnik, em 1957).
 // Os marcos reais foram conferidos nas páginas de história da NASA (links em `source`).
 // Usamos só o ano: algumas páginas divergem no dia exato.
 // `sides` = ano em que cada lado cumpriu a missão de verdade (null = nunca). O bot do modo solo
 // segue estes anos, com variação de um ano para mais ou para menos.
 
-export const START_YEAR = 1957;
+export const START_YEAR = 1955;
 export const END_YEAR = 1969;          // Apollo 11: limite da partida
 export const ROUNDS_PER_YEAR = 3;
-export const MAX_ROUNDS = (END_YEAR - START_YEAR + 1) * ROUNDS_PER_YEAR; // 39 rodadas
+export const MAX_ROUNDS = (END_YEAR - START_YEAR + 1) * ROUNDS_PER_YEAR; // 45 rodadas (teto: a partida acaba antes se alguém completa a escada)
 
 export const yearOf = (round) => START_YEAR + Math.floor((round - 1) / ROUNDS_PER_YEAR);
 export const isNewYear = (round) => (round - 1) % ROUNDS_PER_YEAR === 0;

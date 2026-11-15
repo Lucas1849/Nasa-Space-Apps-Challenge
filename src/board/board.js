@@ -8,31 +8,40 @@
 //   funds    verba (positiva ou negativa)
 //   event    carta de dilema (em solo) ou imprevisto na próxima etapa (com a nave em voo)
 //   tech     cooperação científica: +tecnologia
-//   shop     feira de fornecedores: desconto na próxima compra
+//   shop     fornecedor: até 4 ofertas de blueprint por visita (peças e foguetes); a 1ª é de graça
 //   lot      terreno: construir prédio ou usar o prédio do rival
 //   spy      espionagem: paga para ver o estado de um rival (uma vez por ano)
-//   repair   oficina de reparos: +1 proteção contra falha
+//   workshop oficina de montagem: onde se compra, vende e lança (3 casas, espalhadas)
+//   repair   reparos: +1 proteção contra falha
 //   catchup  choque do Sputnik: verba de recuperação para quem está atrás
 // As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
 
 export const TILES = [
   { id: 0, type: 'start', label: 'Largada', funds: 10 },
   { id: 1, type: 'lot', label: 'Terreno livre' },
-  { id: 2, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
-  { id: 3, type: 'event', label: 'Evento' },
-  { id: 4, type: 'spy', label: 'Espionagem' },
-  { id: 5, type: 'lot', label: 'Terreno livre' },
+  { id: 2, type: 'workshop', label: 'Oficina de montagem' },
+  { id: 3, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
+  { id: 4, type: 'event', label: 'Evento' },
+  { id: 5, type: 'spy', label: 'Espionagem' },
   { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
-  { id: 7, type: 'event', label: 'Evento' },
-  { id: 8, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
-  { id: 9, type: 'lot', label: 'Terreno livre' },
-  { id: 10, type: 'shop', label: 'Feira de fornecedores', discount: 15 },
-  { id: 11, type: 'event', label: 'Evento' },
-  { id: 12, type: 'repair', label: 'Oficina de reparos', shield: 1 },
+  { id: 7, type: 'shop', label: 'Fornecedor' },
+  { id: 8, type: 'lot', label: 'Terreno livre' },
+  { id: 9, type: 'event', label: 'Evento' },
+  { id: 10, type: 'workshop', label: 'Oficina de montagem' },
+  { id: 11, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
+  { id: 12, type: 'repair', label: 'Reparos', shield: 1 },
   { id: 13, type: 'lot', label: 'Terreno livre' },
-  { id: 14, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
+  { id: 14, type: 'shop', label: 'Fornecedor' },
   { id: 15, type: 'event', label: 'Evento' },
+  { id: 16, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
+  { id: 17, type: 'workshop', label: 'Oficina de montagem' },
+  { id: 18, type: 'lot', label: 'Terreno livre' },
+  { id: 19, type: 'event', label: 'Evento' },
 ];
+
+// A oficina de montagem: só nela (ou no sandbox) dá para comprar, vender, escolher foguete/órbita, ensaiar e lançar.
+// A TELA da oficina abre de qualquer lugar, para planejar sem gastar.
+export const atWorkshopTile = (player) => TILES[player.position]?.type === 'workshop';
 
 export function rollDie(rng = Math.random) {
   return 1 + Math.floor(rng() * 6);
@@ -68,9 +77,7 @@ export function applyTile(player, tile, { isLast = false } = {}) {
       messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
       break;
     case 'shop':
-      p.discount = Math.max(p.discount || 0, tile.discount);
-      messages.push(`${tile.label}: ${tile.discount}% de desconto na próxima compra.`);
-      break;
+      break; // as ofertas de blueprint abrem em sim/actions.js (moveBy, pendingTile 'supplier')
     case 'repair':
       p.shields = (p.shields || 0) + tile.shield;
       messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);

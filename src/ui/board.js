@@ -14,11 +14,13 @@ import { TILE_ART, BUILDING_ART, ORBIT_ART, PRINT_COLORS, pawnSvg, dieSvg } from
 import { guideCard, hl } from './guide.js';
 import { sinceCard } from './summary.js';
 import { walkPawn, scrollIntoViewIfNeeded } from './motion.js';
-import { TILES } from '../board/board.js';
-import { currentPlayer, SPY_COST } from '../sim/state.js';
+import { TILES, atWorkshopTile } from '../board/board.js';
+import { currentPlayer, SPY_COST, SABOTAGE_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
 import { useFeeFor } from '../sim/actions.js';
 import { MISSIONS } from '../data/missions.js';
+import { blueprintPrice, blueprintCostFor, itemOf, isLauncherId } from '../sim/suppliers.js';
+import { ORBITS } from '../data/orbits.js';
 import { ladderOf } from '../data/sides.js';
 import { BUILDINGS, upgradeCost } from '../data/buildings.js';
 import { FLIGHT_EVENTS } from '../data/events.js';
@@ -26,13 +28,16 @@ import { STAGES } from '../data/stages.js';
 import { DILEMMAS } from '../data/dilemmas.js';
 import { yearOf, START_YEAR, END_YEAR } from '../data/history.js';
 
-// Anel 5×5 no sentido horário a partir do canto superior esquerdo (o miolo 3×3 fica para os dados).
-// As casas 0, 4, 8 e 12 caem nos cantos, que são maiores, como num tabuleiro de verdade.
-const RING_POS = ['1/1', '1/2', '1/3', '1/4', '1/5', '2/5', '3/5', '4/5', '5/5', '5/4', '5/3', '5/2', '5/1', '4/1', '3/1', '2/1'];
-const CORNERS = new Set([0, 4, 8, 12]);
+// Anel 6×6 (20 casas) no sentido horário a partir do canto superior esquerdo (o miolo 4×4 fica para os dados).
+// As casas 0, 5, 10 e 15 caem nos cantos, que são maiores, como num tabuleiro de verdade.
+const RING_POS = [
+  '1/1', '1/2', '1/3', '1/4', '1/5', '1/6', '2/6', '3/6', '4/6', '5/6', '6/6',
+  '6/5', '6/4', '6/3', '6/2', '6/1', '5/1', '4/1', '3/1', '2/1',
+];
+const CORNERS = new Set([0, 5, 10, 15]);
 const KIND = {
   start: 'Largada', lot: 'Terreno', funds: 'Verba', event: 'Evento', spy: 'Espionagem',
-  tech: 'Ciência', shop: 'Fornecedor', repair: 'Oficina', catchup: 'Recuperação',
+  tech: 'Ciência', shop: 'Fornecedor', workshop: 'Oficina', repair: 'Reparos', catchup: 'Recuperação',
 };
 
 // Memória da animação entre um desenho e outro (a tela é redesenhada inteira a cada clique).
@@ -51,7 +56,8 @@ function shortSub(state, t) {
     case 'start': return `+${t.funds} ao passar`;
     case 'event': return 'sorteio';
     case 'tech': return `+${t.tech} tecnologia`;
-    case 'shop': return 'peças novas';
+    case 'shop': return 'blueprints';
+    case 'workshop': return 'montar e lançar';
     case 'spy': return 'ver um rival';
     case 'repair': return '+1 proteção';
     case 'catchup': return 'ajuda a quem está atrás';
@@ -66,7 +72,8 @@ function tileSub(state, t) {
     case 'start': return `+${t.funds} ao passar`;
     case 'event': return 'carta de dilema; em voo, imprevisto';
     case 'tech': return `+${t.tech} tecnologia`;
-    case 'shop': return `−${t.discount}% na próxima compra`;
+    case 'shop': return 'escolha blueprints e pague (a 1ª é de graça)';
+    case 'workshop': return 'aqui você compra, vende e lança a nave';
     case 'spy': return `ver um rival: ${SPY_COST} (1 vez por ano)`;
     case 'repair': return '+1 proteção';
     case 'catchup': return `+${t.funds} se estiver atrás`;
@@ -105,7 +112,11 @@ function boardTile(state, t, i, current, simple) {
     el('div', { class: 'gb-name' }, name),
     el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t)),
     here.length ? el('div', { class: 'gb-pawns' }, here.map((pl) =>
-      el('span', { class: 'gb-pawn', 'data-pid': String(pl.id), title: pl.name, html: pawnSvg(PRINT_COLORS[pl.id % 4], pl.name[0].toUpperCase()) }))) : null,
+      el('span', {
+        class: `gb-pawn${pl.flight ? ' in-flight' : ''}`, 'data-pid': String(pl.id),
+        title: pl.flight ? `${pl.name}: nave em voo` : pl.name, // lançar é público: todos veem quem está com a nave no ar
+        html: pawnSvg(PRINT_COLORS[pl.id % 4], pl.name[0].toUpperCase()),
+      }, pl.flight ? [el('i', { class: 'gb-flight', 'aria-label': 'em voo' }, icon('rocket', { size: 10 }))] : []))) : null,
   ]);
 }
 
@@ -116,6 +127,15 @@ function deckCard(kind, title, text, buttons, extraClass = '') {
     text ? el('p', {}, text) : null,
     el('div', { class: 'gb-card-actions' }, buttons),
   ]);
+}
+
+// O que uma oferta do fornecedor dá e custa, em uma linha para o balão.
+function offerInfo(id) {
+  const it = itemOf(id);
+  if (isLauncherId(id)) return `Foguete: carga ${it.maxMass}, lançar custa ${it.cost}, alcança ${it.reach.join(', ')}. Exige tecnologia ${it.minTech}.`;
+  const gains = [it.powerGen && `+${it.powerGen} energia`, it.commsRate && `+${it.commsRate} comunicação`, it.science && `+${it.science} ciência`, it.lifetimeBonus && `+${it.lifetimeBonus} ano(s)`, it.lifeSupport && 'suporte de vida'].filter(Boolean);
+  const costs = [`${it.mass} massa`, it.power && `${it.power} energia`, it.dataRate && `${it.dataRate} dados`, `peça custa ${it.cost}`].filter(Boolean);
+  return `Ganha: ${gains.join(', ') || 'nada'}. Custa: ${costs.join(', ')}. Exige tecnologia ${it.minTech}.`;
 }
 
 // Carta de dilema: sempre uma escolha, conforme a situação do jogador.
@@ -141,10 +161,23 @@ function tileDecision(state, p, actions) {
       skip,
     ], cls);
   }
+  if (pending.kind === 'supplier') {
+    const first = !p.freeBlueprintUsed;
+    return deckCard('shop', 'Fornecedor: escolha uma blueprint', first
+      ? 'A primeira blueprint é de graça. Ela é o projeto da peça (paga uma vez); a peça em si você compra na oficina.'
+      : 'A blueprint é o projeto da peça: paga uma vez, vale para sempre. A peça em si você compra na oficina.', [
+      ...pending.offers.map((id) => {
+        const price = blueprintCostFor(p, id);
+        return button([el('span', {}, itemOf(id).name), el('span', { class: 'gb-price' }, price ? `${price}` : 'grátis')], () => actions.buyBlueprint(id), { class: 'gb-btn', disabled: p.funds < price, title: `${offerInfo(id)} Blueprint: ${price || 'grátis'} (preço normal ${blueprintPrice(id)}).` });
+      }),
+      button('Seguir', () => actions.skipTile(), { class: 'gb-btn ghost' }),
+    ], cls);
+  }
   if (pending.kind === 'spy') {
     const rivals = state.players.filter((r) => r.id !== p.id);
-    return deckCard('spy', `Espionagem: ver o estado real de um rival por ${SPY_COST}?`, 'O espião mostra degraus, missão e quanto a nave dele está pronta.', [
-      ...rivals.map((r) => button([`${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'gb-btn', disabled: p.funds < SPY_COST })),
+    return deckCard('spy', 'Espionagem: observar ou sabotar?', `Observar (${SPY_COST}) mostra degraus, missão e quanto a nave do rival está pronta. Sabotar (${SABOTAGE_COST}) atrapalha o rival: contra uma agência, uma interferência na telemetria da etapa final do voo; contra a agência rival do solo, atrasa o degrau dela em 1 ano. Uma ação de espião por ano.`, [
+      ...rivals.map((r) => button([`Observar ${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'gb-btn', disabled: p.funds < SPY_COST })),
+      ...rivals.map((r) => button([`Sabotar ${r.name}, `, ...[].concat(sideBadge(r))], () => actions.sabotage(r.id), { class: 'gb-btn', disabled: p.funds < SABOTAGE_COST || Boolean(r.interference), title: r.bot ? 'Atrasa o próximo degrau dele em 1 ano.' : 'Arma uma interferência na etapa final do voo dele.' })),
       button('Seguir sem espionar', () => actions.skipTile(), { class: 'gb-btn ghost' }),
     ], cls);
   }
@@ -232,7 +265,7 @@ function turnSteps(state, p, design) {
   const steps = [
     { label: 'Rolar e andar', done: moved },
     { label: 'Resolver a casa', done: tileDone },
-    { label: p.flight ? 'Avançar o voo' : design.ok ? 'Lançar (opcional)' : 'Montar a nave', done: shipDone, optional: !p.flight },
+    { label: p.flight ? 'Avançar o voo' : design.ok ? 'Lançar (opcional)' : 'Montar a nave (casa de Oficina)', done: shipDone, optional: !p.flight },
     { label: 'Passar a vez', done: false },
   ];
   const current = steps.findIndex((s) => !s.done && !(s.optional && tileDone));
@@ -246,9 +279,11 @@ function turnSteps(state, p, design) {
 // Barra fixa do turno: os passos à esquerda e, à direita, só as ações que fazem sentido agora.
 // A ação recomendada é a primária (cheia); as outras ficam discretas.
 function turnDock(state, p, design, actions, simple) {
-  const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn;
+  const inShop = atWorkshopTile(p);
+  const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn && inShop;
   const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
     : !p.rolled ? 'Ande no tabuleiro antes de lançar.'
+      : !inShop ? 'Só dá para lançar parado numa casa de Oficina do tabuleiro.'
       : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
   const mustAdvance = p.flight && !p.flightAdvanced;
   const deciding = Boolean(state.pendingDilemma || state.pendingTile);
@@ -272,7 +307,7 @@ function turnDock(state, p, design, actions, simple) {
   // Antes ela só aparecia depois de rolar, e o jogador não a encontrava. Com a nave em voo ela fecha.
   const showWorkshop = !p.flight;
   const early = showWorkshop && !(p.rolled && !state.dice)
-    ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: 'Montar a nave: peças, foguete e o que falta para lançar.' })
+    ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: inShop ? 'Montar a nave: peças, foguete e o que falta para lançar.' : 'Planejar a nave: ver peças e risco. Para comprar e lançar, pare numa casa de Oficina.' })
     : null;
 
   // Depois de andar: oficina, voo, lançar e passar a vez (interface enxuta: um passo de cada vez).
@@ -315,7 +350,8 @@ export function boardScreen(state, actions) {
 
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
   const showLadder = !simple;
-  const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3;
+  const rivalFlying = state.players.some((r) => r.id !== p.id && r.flight); // lançamento é público
+  const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3 || rivalFlying;
   // Faixa de prédios sob o tabuleiro: sempre à vista; na interface enxuta só depois do 1º prédio.
   const showStrip = !simple || Object.values(p.buildings).some(Boolean);
   const deciding = Boolean(state.pendingDilemma || state.pendingTile);

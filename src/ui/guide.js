@@ -5,12 +5,13 @@
 import { el } from './components.js';
 import { icon } from './icons.js';
 import { guideOn } from './prefs.js';
-import { currentPlayer, SPY_COST } from '../sim/state.js';
+import { currentPlayer, SPY_COST, SABOTAGE_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
 import { isHidden } from '../sim/needs.js';
 import { REHEARSAL_COST } from '../sim/state.js';
 import { isLocked, requiredTech, isDiscovered } from '../sim/resources.js';
 import { LAUNCHERS } from '../data/launchers.js';
+import { nameOf } from '../sim/resources.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
 import { STAGES } from '../data/stages.js';
@@ -30,7 +31,10 @@ export function endTurnBlocker(state) {
 function noLauncherYet(player) {
   if (player.spacecraft.launcherId) return null;
   const all = Object.values(LAUNCHERS).filter((l) => isDiscovered(player, l));
-  if (!all.length || !all.every((l) => isLocked(player, l))) return null;
+  if (!all.length) {
+    return { title: 'Você ainda não tem a blueprint de nenhum foguete', text: 'Pare numa casa de Fornecedor do tabuleiro: ele sempre oferece o que a sua missão precisa (a primeira blueprint é de graça). Depois você compra as peças na oficina.' };
+  }
+  if (!all.every((l) => isLocked(player, l))) return null;
   const need = Math.min(...all.map((l) => requiredTech(player, l)));
   return {
     title: 'Nenhum foguete liberado ainda',
@@ -58,14 +62,17 @@ export function nextStep(state, screen) {
       return { title: 'Escolha um dos dados', text: 'Olhe as casas à frente do seu peão e escolha o dado que para na melhor casa para você agora.', target: 'die' };
     }
     if (!p.rolled) {
-      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, peças novas, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
+      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, blueprints no Fornecedor, uma carta de dilema ou um prédio.', target: 'roll' };
     }
     const pending = state.pendingTile;
     if (pending?.kind === 'build') {
       return { title: 'Terreno livre: construir?', text: 'Um prédio dá vantagem até o fim da partida. Laboratório acelera a tecnologia, Fábrica dá desconto, Controle de missão reduz o risco do voo e Patrocinador rende um pouco de verba. Ou clique em Seguir.', target: 'tile' };
     }
     if (pending?.kind === 'spy') {
-      return { title: 'Espionagem', text: `Por ${SPY_COST} de verba você vê em que degrau um rival está e quão pronta está a nave dele. Útil para decidir se lança agora ou se pode esperar.`, target: 'tile' };
+      return { title: 'Espionagem: observar ou sabotar', text: `Por ${SPY_COST} de verba você vê em que degrau um rival está e quão pronta está a nave dele. Por ${SABOTAGE_COST} você o sabota: uma interferência na telemetria da etapa final do voo dele, ou 1 ano de atraso para a agência rival do solo. Só uma ação por ano.`, target: 'tile' };
+    }
+    if (pending?.kind === 'supplier') {
+      return { title: 'Fornecedor: escolha uma blueprint', text: 'A blueprint é o projeto de uma peça ou foguete. Ela vale para sempre; a peça em si você compra na oficina. A primeira é de graça. O fornecedor sempre oferece algo que a sua missão precisa.', target: 'tile' };
     }
     if (pending) {
       return { title: 'Prédio de um rival', text: 'Você pode pagar para usar o prédio. Você ganha o benefício, mas o dono recebe a taxa.', target: 'tile' };
@@ -86,7 +93,7 @@ export function nextStep(state, screen) {
       const fail = firstHardFailure(p);
       return {
         title: `Monte a nave: ${mission.name}`,
-        text: `${fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.'} Não precisa montar tudo agora: andar pelo tabuleiro rende verba e peças novas.`,
+        text: `${fail ? `Falta resolver: ${fail.text}.` : 'Monte a nave do degrau atual.'} Você pode ver o projeto na Oficina a qualquer hora, mas só compra e lança parando numa casa de Oficina do tabuleiro (são 3).`,
         target: 'workshop',
       };
     }
@@ -140,11 +147,35 @@ export function nextStep(state, screen) {
   return null;
 }
 
+// Dicas contextuais (Etapa 5): cada uma aparece uma única vez, no momento em que o jogador chega nela
+// (sim/actions.js, raiseTip). Explicam só aquilo, sem despejar o resto das regras.
+const TIPS = {
+  blueprint: (item) => ({ title: `Agora a oficina faz isto: você tem a blueprint${item ? ` de ${nameOf(item)}` : ''}`, text: 'Blueprint é o projeto: vale para sempre. Na Oficina você paga a peça em si, e paga de novo a cada nave que montar. Só dá para comprar e lançar parado numa casa de Oficina do tabuleiro.' }),
+  workshop: () => ({ title: 'Você está numa casa de Oficina', text: 'Aqui você compra e vende peças, escolhe o foguete, faz o ensaio e lança. Fora dessas casas a tela da Oficina serve só para planejar.' }),
+  part: () => ({ title: 'Primeira peça a bordo', text: 'Cada peça tem custo em massa, energia e dados. No painel de recursos, barra vermelha impede o lançamento e barra amarela só reduz a ciência. Vender devolve metade do preço.' }),
+  launch: () => ({ title: 'Primeiro lançamento', text: 'A subida foi sorteada agora. As próximas etapas do voo acontecem uma por turno, e o risco de cada uma depende da sua nave. Se falhar, o relatório explica o porquê.' }),
+};
+
+function tipCard(state) {
+  const tip = state.tip;
+  if (!tip || !TIPS[tip.id] || tip.playerId !== currentPlayer(state)?.id) return null;
+  const t = TIPS[tip.id](tip.item);
+  return el('div', { class: 'guide-card guide-tip', role: 'status' }, [
+    icon('compass', { size: 22, className: 'guide-icon' }),
+    el('div', {}, [el('span', { class: 'tip-tag' }, 'Primeira vez'), el('strong', {}, t.title), el('p', {}, t.text)]),
+  ]);
+}
+
 // Cartão "Próximo passo" exibido sob o HUD quando as dicas estão ligadas.
 export function guideCard(state, screen) {
   if (!guideOn()) return null;
+  const tip = tipCard(state);
   const step = nextStep(state, screen);
-  if (!step) return null;
+  if (tip) return el('div', { class: 'guide-stack' }, [tip, step ? stepCard(step) : null]);
+  return step ? stepCard(step) : null;
+}
+
+function stepCard(step) {
   return el('div', { class: 'guide-card', role: 'status' }, [
     icon('compass', { size: 22, className: 'guide-icon' }),
     el('div', {}, [

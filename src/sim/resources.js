@@ -61,6 +61,12 @@ export function priceFor(player, itemId) {
   return Math.max(1, Math.round(base * (1 - discountFor(player) / 100)));
 }
 
+// Revenda: a peça física perde valor ao ser revendida (sucata). Devolve metade do custo BASE (arredondado para
+// baixo). Como o desconto máximo é 50% (MAX_DISCOUNT), o preço pago nunca fica abaixo do reembolso: não existe
+// lucro comprando com desconto e vendendo (antes devolvia o custo cheio e dava dinheiro de graça).
+export const SELL_REFUND_RATE = 0.5;
+export const refundFor = (itemId) => Math.floor(CATALOG[itemId].cost * SELL_REFUND_RATE);
+
 // Nível de tecnologia exigido. Lançadores (têm `reach`) recebem o ajuste do lado (data/sides.js).
 export const requiredTech = (player, item) => Math.max(1, (item.minTech || 0) + (item.reach ? player.launcherTech || 0 : 0));
 

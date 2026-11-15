@@ -1,6 +1,7 @@
 // Testes do tabuleiro, do turno, dos dilemas, da espionagem, dos prédios e da tecnologia.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { standOn } from './tiles.mjs';
 import { TILES, rollDie, movePlayer, applyTile } from '../src/board/board.js';
 import { createInitialState, YEARLY_BUDGET, STARTING_FUNDS, SPY_COST } from '../src/sim/state.js';
 import {
@@ -9,7 +10,8 @@ import {
 } from '../src/sim/actions.js';
 import { SIDES } from '../src/data/sides.js';
 import { LAUNCHERS } from '../src/data/launchers.js';
-import { CATALOG, discover } from '../src/sim/resources.js';
+import { CATALOG, discover, refundFor } from '../src/sim/resources.js';
+import { yearOf } from '../src/data/history.js';
 import { upgradeCost } from '../src/data/buildings.js';
 import { dilemmasFor } from '../src/data/dilemmas.js';
 
@@ -28,10 +30,12 @@ test('dado devolve 1..6', () => {
   assert.equal(rollDie(() => 0.999), 6);
 });
 
-test('tabuleiro tem 16 casas com ids em ordem, com evento, espião e terrenos', () => {
-  assert.equal(TILES.length, 16);
+test('tabuleiro tem 20 casas com ids em ordem, 3 oficinas e 2 fornecedores', () => {
+  assert.equal(TILES.length, 20);
+  assert.equal(TILES.filter((t) => t.type === 'workshop').length, 3);
+  assert.equal(TILES.filter((t) => t.type === 'shop').length, 2);
   TILES.forEach((t, i) => assert.equal(t.id, i));
-  for (const type of ['event', 'spy', 'lot', 'shop', 'funds']) assert.ok(TILES.some((t) => t.type === type), type);
+  for (const type of ['event', 'spy', 'lot', 'shop', 'funds', 'workshop']) assert.ok(TILES.some((t) => t.type === type), type);
 });
 
 test('movimento dá a volta no tabuleiro e marca passagem pela largada', () => {
@@ -78,14 +82,15 @@ test('2 dados: o jogador escolhe qual usar', () => {
 test('turno completo: andar, comprar, vender, passar a vez; 3 rodadas = 1 ano', () => {
   const state = twoPlayers();
   assert.match(endTurn(state), /Role os dados/);
-  rollAndMove(state, die(2)); // casa 2: verba
+  rollAndMove(state, die(2)); // casa 2: oficina de montagem
   assert.match(rollAndMove(state, die(2)), /já rolou/);
   const before = state.players[0].funds;
   discover(state.players[0], ['camera']);
   assert.equal(buyItem(state, 'camera'), null);
   assert.ok(state.players[0].funds < before);
   assert.equal(sellItem(state, 'camera'), null);
-  assert.equal(state.players[0].funds, before);
+  // revenda como sucata: devolve metade do custo base, então comprar e revender custa a outra metade
+  assert.equal(state.players[0].funds, before - CATALOG.camera.cost + refundFor('camera'));
   endTurn(state);
   assert.equal(state.turn, 1);
   rollAndMove(state, die(2));
@@ -96,7 +101,7 @@ test('turno completo: andar, comprar, vender, passar a vez; 3 rodadas = 1 ano', 
 
 test('carta de dilema precisa ser resolvida e aplica o efeito escolhido', () => {
   const state = twoPlayers();
-  rollAndMove(state, die(3)); // casa 3: evento
+  rollAndMove(state, die(4)); // casa 4: evento
   assert.ok(state.pendingDilemma);
   assert.match(endTurn(state), /dilema/);
   assert.equal(chooseDilemma(state, 0, () => 0.99), null);
@@ -116,20 +121,21 @@ test('espionagem revela o estado real do rival, uma vez por ano', () => {
   const state = twoPlayers();
   const [a, b] = state.players;
   b.step = 1;
-  rollAndMove(state, die(4)); // casa 4: espionagem
+  rollAndMove(state, die(5)); // casa 5: espionagem
   assert.equal(state.pendingTile.kind, 'spy');
   const funds = a.funds;
   assert.equal(spyOn(state, b.id), null);
   assert.equal(a.funds, funds - SPY_COST);
   assert.equal(a.intel[b.id].steps, 1);
   assert.equal(a.intel[b.id].rumor, false);
-  assert.equal(a.lastSpyYear, 1957);
+  assert.equal(a.lastSpyYear, yearOf(1));
 });
 
 test('peça e lançador bloqueados por tecnologia; o lado muda o lançador', () => {
   const state = twoPlayers();
   const a = state.players[0]; // URSS: lançadores exigem −1
   a.funds = 999;
+  standOn(state, 'workshop');
   discover(a, ['hires_camera', 'heavy']);
   assert.match(buyItem(state, 'hires_camera'), /exige tecnologia 4/);
   assert.match(chooseLauncher(state, 'heavy'), /exige tecnologia 4/);
@@ -174,11 +180,11 @@ test('upgrade custa mais a cada nível; Laboratório soma tecnologia no Ano novo
   upgradeBuilding(state, 'lab');
   assert.ok(f1 - a.funds > firstCost);
   assert.match(upgradeBuilding(state, 'lab'), /máximo/);
-  state.round = 3; // a próxima rodada abre 1958
+  state.round = 6; // a próxima rodada (7) abre 1957: ano de pesquisa básica, o Laboratório soma por cima
   rollAndMove(state, die(2)); endTurn(state);
   rollAndMove(state, die(2)); endTurn(state);
-  assert.equal(state.round, 4);
-  assert.equal(a.tech, 1 + 1 + 3);
+  assert.equal(state.round, 7);
+  assert.equal(a.tech, 1 + 1 + 3); // a tecnologia de 1955 + a pesquisa básica de 1957 + o Laboratório nível 3
 });
 
 test('socorro de emergência só com pouca verba e custa tecnologia', () => {
@@ -195,59 +201,45 @@ test('socorro de emergência só com pouca verba e custa tecnologia', () => {
 test('comprar sem verba devolve mensagem de erro', () => {
   const state = twoPlayers();
   state.players[0].funds = 0;
+  standOn(state, 'workshop');
   discover(state.players[0], ['camera']);
   assert.match(buyItem(state, 'camera'), /Verba insuficiente/);
 });
 
-// ---------------------------------------------------------------- descoberta de peças
+// ---------------------------------------------------------------- blueprints (sem kit automático)
 
-test('começa só com o kit do 1º degrau: peça fora do kit não aparece nem se compra', () => {
+test('ninguém começa com peças: sem blueprint não dá para comprar a peça nem escolher o foguete', () => {
   const state = twoPlayers();
   const a = state.players[0];
-  assert.deepEqual([...a.unlocked].sort(), ['antenna_basic', 'radio_beacon', 'small', 'solar_small']);
-  assert.equal(a.spacecraft.orbitId, 'leo'); // a órbita da missão já vem escolhida
+  assert.deepEqual(a.unlocked, []);
+  assert.equal(a.spacecraft.orbitId, 'leo'); // a órbita da missão continua já escolhida
   a.funds = 999;
-  assert.match(buyItem(state, 'camera'), /ainda não foi descoberta/);
-  assert.match(chooseLauncher(state, 'heavy'), /ainda não foi descoberto/);
-  assert.equal(buyItem(state, 'radio_beacon'), null);
+  standOn(state, 'workshop');
+  assert.match(buyItem(state, 'radio_beacon'), /blueprint/);
+  assert.match(chooseLauncher(state, 'small'), /blueprint/);
 });
 
-test('Feira de fornecedores revela até 3 peças escondidas e mantém o desconto', () => {
+test('a casa de tecnologia só dá tecnologia: não revela peça nenhuma', () => {
   const state = twoPlayers();
   const a = state.players[0];
-  const before = a.unlocked.length;
-  a.position = 8;
-  rollAndMove(state, die(2)); // 8 -> 10: Feira
-  assert.equal(a.position, 10);
-  assert.equal(a.unlocked.length, before + 3);
-  assert.equal(a.discount, TILES[10].discount);
-  assert.match(state.log.find((l) => /descobriu/.test(l.text)).text, /descobriu: /);
-});
-
-test('casa de tecnologia só revela peças que o nível já alcança', () => {
-  const state = twoPlayers();
-  const a = state.players[0];
+  const tech = a.tech;
   a.position = 4;
-  rollAndMove(state, die(2)); // 4 -> 6: Ano Geofísico, +1 de tecnologia (nível 2)
+  rollAndMove(state, die(2)); // 4 -> 6: Ano Geofísico
   assert.equal(a.position, 6);
-  const found = a.unlocked.filter((id) => !['antenna_basic', 'radio_beacon', 'small', 'solar_small'].includes(id));
-  assert.equal(found.length, 2);
-  for (const id of found) assert.ok(CATALOG[id].minTech <= a.tech, id);
+  assert.equal(a.tech, tech + 1);
+  assert.deepEqual(a.unlocked, []);
 });
 
-test('Ano novo libera a peça mais simples que o nível alcança', () => {
+test('o Ano novo não libera peça de graça: só os fornecedores dão blueprint', () => {
   const state = twoPlayers();
   const a = state.players[0];
-  assert.ok(!a.unlocked.includes('magnetometer'));
-  // rodada 4 = 2º ano: o jogador A começa o turno com +1 de tecnologia e a pesquisa libera uma peça
   state.round = 3;
   a.rolled = true;
   state.players[1].rolled = true;
   state.turn = 1;
-  endTurn(state); // fecha a rodada 3, vira para a rodada 4 e o jogador A inicia o turno
+  endTurn(state); // fecha a rodada 3 e abre a 4 (novo ano)
   assert.equal(state.round, 4);
-  assert.ok(a.unlocked.length > 4);
-  assert.match(state.log.find((l) => /a pesquisa do ano liberou/.test(l.text)).text, /liberou/);
+  assert.deepEqual(a.unlocked, []);
 });
 
 test('sandbox libera todas as peças e lançadores', () => {
@@ -290,21 +282,14 @@ test('aposta do dilema conta se deu certo ou errado', () => {
 test('parar numa casa mostra o que ela deu; casa de decisão não repete a carta', () => {
   const state = twoPlayers();
   const a = state.players[0];
-  rollAndMove(state, die(2)); // casa 2: discurso, +10 de verba
+  rollAndMove(state, die(3)); // casa 3: discurso, +10 de verba
   assert.match(state.outcome.title, /Discurso/);
   assert.ok(state.outcome.notes.some((n) => /\+10 de verba/.test(n)));
   assert.equal(state.outcome.playerId, a.id);
   const b = twoPlayers();
-  rollAndMove(b, die(3)); // casa 3: evento, só a carta de dilema
+  rollAndMove(b, die(4)); // casa 4: evento, só a carta de dilema
   assert.equal(b.outcome, null);
   assert.ok(b.pendingDilemma);
-});
-
-test('Feira: o retorno inclui as peças descobertas', () => {
-  const state = twoPlayers();
-  state.players[0].position = 8;
-  rollAndMove(state, die(2)); // 8 -> 10: Feira
-  assert.ok(state.outcome.notes.some((n) => n.startsWith('Descobriu:')));
 });
 
 test('construir, espionar e usar prédio de rival também devolvem o resultado', () => {
@@ -322,9 +307,9 @@ test('construir, espionar e usar prédio de rival também devolvem o resultado',
   assert.ok(state.outcome.changes.some((c) => c.label === 'Tecnologia' && c.value === 1));
   endTurn(state);
   const a = state.players[0];
-  a.position = 2;
+  a.position = 3;
   a.funds = 100; // verba inicial menor (balanceamento de 15/11): garante o custo do espião
-  rollAndMove(state, die(2)); // A: 2 -> 4, espionagem
+  rollAndMove(state, die(2)); // A: 3 -> 5, espionagem
   assert.equal(spyOn(state, 1), null);
   assert.match(state.outcome.title, /Espião:/);
   assert.deepEqual(state.outcome.changes, [{ label: 'Verba', value: -SPY_COST }]);
@@ -333,7 +318,7 @@ test('construir, espionar e usar prédio de rival também devolvem o resultado',
 
 test('o retorno some quando começa o próximo turno', () => {
   const state = twoPlayers();
-  rollAndMove(state, die(2));
+  rollAndMove(state, die(3));
   assert.ok(state.outcome);
   endTurn(state); // vez do jogador B
   assert.equal(state.outcome, null);

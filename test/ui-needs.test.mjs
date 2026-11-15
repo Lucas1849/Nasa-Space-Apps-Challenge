@@ -2,6 +2,7 @@
 // descoberto, e o relatório explica o que foi descoberto. Usa o DOM de mentira (sem navegador).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { standOn } from './tiles.mjs';
 import { noActions as actions, textsOf, walk } from './dom-stub.mjs';
 
 const { createInitialState } = await import('../src/sim/state.js');
@@ -14,10 +15,11 @@ const { setGuide } = await import('../src/ui/prefs.js');
 const die = (steps) => () => (steps - 1) / 6 + 0.01;
 const noFailure = () => 0.99;
 
-function soloShortScience() {
+function soloShortScience(onWorkshop = true) {
   const state = createInitialState();
   sim.startGame(state, [{ name: 'A' }], { rng: () => 0 });
   const p = state.players[0];
+  if (onWorkshop) standOn(state, 'workshop');
   p.spacecraft = { instruments: [], parts: ['solar_small', 'antenna_basic'], launcherId: 'small', orbitId: 'leo' };
   return { state, p };
 }
@@ -84,7 +86,7 @@ test('depois do ensaio, a oficina mostra o resultado em palavras', () => {
 });
 
 test('relatório: errar pelo mínimo escondido explica o que faltou e o que foi descoberto', () => {
-  const { state, p } = soloShortScience();
+  const { state, p } = soloShortScience(false);
   sim.rollAndMove(state, die(2));
   sim.launch(state, noFailure);
   sim.endTurn(state);

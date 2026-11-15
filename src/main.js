@@ -29,8 +29,8 @@ let lastStats = null;     // verba e tecnologia do jogador da vez no desenho ant
 // como useFeeFor etc., que têm outra assinatura ou efeitos que não fazem sentido vindos
 // de um cliente).
 const NETWORKED_ACTION_NAMES = [
-  'rollDice', 'moveBy', 'chooseDilemma', 'spyOn', 'buyItem', 'sellItem', 'chooseLauncher',
-  'chooseOrbit', 'chooseMission', 'buildOnLot', 'useRivalBuilding', 'skipTile',
+  'rollDice', 'moveBy', 'chooseDilemma', 'spyOn', 'sabotage', 'buyItem', 'sellItem', 'chooseLauncher',
+  'chooseOrbit', 'chooseMission', 'buildOnLot', 'useRivalBuilding', 'skipTile', 'buyBlueprint',
   'upgradeBuilding', 'requestBailout', 'rehearse', 'launch', 'advanceFlight',
   'chooseStageOption',
 ];
@@ -157,6 +157,7 @@ const actions = {
   moveBy: netWrap('moveBy'),
   chooseDilemma: netWrap('chooseDilemma'),
   spyOn: netWrap('spyOn'),
+  sabotage: netWrap('sabotage'),
   buyItem: netWrap('buyItem'),
   sellItem: netWrap('sellItem'),
   chooseLauncher: netWrap('chooseLauncher'),
@@ -165,6 +166,7 @@ const actions = {
   buildOnLot: netWrap('buildOnLot'),
   useRivalBuilding: netWrap('useRivalBuilding'),
   skipTile: netWrap('skipTile'),
+  buyBlueprint: netWrap('buyBlueprint'),
   upgradeBuilding: netWrap('upgradeBuilding'),
   requestBailout: netWrap('requestBailout'),
   rehearse: netWrap('rehearse'),

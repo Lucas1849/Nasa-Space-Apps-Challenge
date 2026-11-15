@@ -2,6 +2,7 @@
 // pode lançar mesmo assim, descobre ao errar (ou por um ensaio em solo) e depois o checklist volta a travar.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { standOn } from './tiles.mjs';
 import { createInitialState, REHEARSAL_COST } from '../src/sim/state.js';
 import {
   startGame, rollAndMove, endTurn, launch, advanceFlight, chooseStageOption, chooseDilemma, skipTile,
@@ -10,6 +11,7 @@ import {
 import { checkDesign } from '../src/sim/simulate.js';
 import { isHidden, learnNeeds, needLevel } from '../src/sim/needs.js';
 import { MISSIONS } from '../src/data/missions.js';
+import { discover } from '../src/sim/resources.js';
 
 const die = (steps) => () => (steps - 1) / 6 + 0.01;
 const noFailure = () => 0.99;
@@ -114,6 +116,7 @@ test('depois de descoberto, lançar de novo a nave curta é travado pelo checkli
   shortScience(a);
   a.funds = 100;
   walk(state);
+  standOn(state, 'workshop');
   assert.match(launch(state, noFailure), /pendências/);
 });
 
@@ -134,9 +137,11 @@ test('acertar o mínimo escondido: cumpre a missão e também revela os números
 
 test('"Projeto pronto" depende só do que é visível: não vaza se a nave atende', () => {
   const state = soloGame();
+  standOn(state, 'workshop');
   const a = state.players[0];
   a.funds = 100;
   a.tech = 2; // solo com rng 0 sorteia os EUA, que exigem tecnologia 2 para o foguete pequeno
+  discover(a, MISSIONS.first_satellite.kit); // blueprints já conseguidas nos fornecedores
   assert.equal(chooseLauncher(state, 'small'), null);
   buyItem(state, 'solar_small');
   buyItem(state, 'antenna_basic'); // sem instrumento: a ciência está curta, mas isso é escondido
@@ -145,6 +150,7 @@ test('"Projeto pronto" depende só do que é visível: não vaza se a nave atend
 
 test('ensaio em solo: custa, diz em palavras, não gasta foguete e é 1 por turno', () => {
   const state = soloGame();
+  standOn(state, 'workshop');
   const a = state.players[0];
   shortScience(a);
   const funds = a.funds;
@@ -161,6 +167,7 @@ test('ensaio em solo: custa, diz em palavras, não gasta foguete e é 1 por turn
 
 test('ensaio de uma nave que atende diz que nada indica falta de requisito', () => {
   const state = soloGame();
+  standOn(state, 'workshop');
   goodShip(state.players[0]);
   rehearse(state);
   assert.match(state.outcome.notes.join(' '), /Ciência: atende/);
@@ -169,6 +176,7 @@ test('ensaio de uma nave que atende diz que nada indica falta de requisito', () 
 
 test('ensaio: recusa sem verba, com requisito já conhecido e no sandbox', () => {
   const state = soloGame();
+  standOn(state, 'workshop');
   const a = state.players[0];
   a.funds = REHEARSAL_COST - 1;
   assert.match(rehearse(state), /Verba insuficiente/);

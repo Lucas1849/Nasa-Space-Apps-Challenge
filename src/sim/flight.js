@@ -94,6 +94,7 @@ export function stageOptions(player, pending) {
         effect,
         risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: 'decisão arriscada no imprevisto' }),
         lesson: opt.lesson,
+        disabled: effect.funds < 0 && player.funds < -effect.funds, // não dá para pagar a opção
       };
     });
   }

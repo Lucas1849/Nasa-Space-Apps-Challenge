@@ -63,7 +63,10 @@ estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida
    parte, peça liberada pela pesquisa) e a UI **anima um calendário no meio da tela** (`yearOverlayNode`,
    `src/ui/yearOverlay.js`): ~2 s, some sozinho, um clique pula, sem confirmar. Só aparece no tabuleiro
    do jogador da vez (`yearOverlayKey`), nunca na tela de troca, porque os ganhos são secretos. A partida
-   vai de 1957 a 1969.
+   vai de 1955 a 1969 (45 rodadas no teto: dois anos de
+   preparação antes do Sputnik, de 1957). **A pesquisa básica rende de 2 em 2 anos** (1955, 1957, ...: o
+   1º ano rende para dar para comprar a primeira peça); o **Laboratório rende todo ano**. O socorro de
+   emergência tem piso de tecnologia 1 (`TECH_FLOOR`), senão tranca a oficina.
 4. **Tabuleiro** (16 casas, `src/board/board.js`): rola 2 dados e escolhe um. Casas de evento sorteiam
    uma **carta de dilema** conforme a situação (`src/data/dilemmas.js`); terrenos recebem prédios
    (`src/data/buildings.js`); prédio de rival pode ser usado pagando ao dono; a **espionagem** revela
@@ -76,7 +79,13 @@ estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida
    O resto é revelado na **Feira de fornecedores** (até 3 peças), no **Ano Geofísico** (até 2, só
    o que o nível alcança) e a cada **Ano novo** a partir do 2º ano (a peça mais simples que o nível
    alcança). Comprar continua exigindo o nível de tecnologia. O sandbox libera tudo.
-6. **Lançamento**: paga o lançador, a nave sai da oficina e a **subida** é sorteada na hora. Lançar
+6. **Lançamento é público**: todos recebem o anúncio ("A URSS lançou a missão ...") e o peão de quem está
+   com a nave no ar ganha o marcador **em voo** (também no painel de Rivais, mesmo na interface enxuta).
+   Continuam secretos a nave por dentro e se o voo deu certo (só o espião ou o fim da partida revelam).
+   **Revenda como sucata**: vender uma peça devolve **50% do custo base** (`refundFor`,
+   `src/sim/resources.js`), nunca mais que o preço pago, então não há lucro comprando com desconto e
+   revendendo (antes devolvia o custo cheio: +97 de verba comprando e revendendo tudo com 50% de desconto).
+   O lançamento paga o lançador, a nave sai da oficina e a **subida** é sorteada na hora. Lançar
    encerra o turno. **Com a nave em voo a oficina fica fechada** (jogo normal; o sandbox segue livre):
    a missão continua sendo o degrau que voa e `buyItem`, `sellItem`, `chooseLauncher`, `chooseOrbit` e
    `rehearse` recusam (`inFlightLock`). O **kit do degrau seguinte só é liberado quando este é cumprido**
@@ -130,6 +139,41 @@ Todas devolvem um texto explicativo que aparece na oficina (preview) e no relat�
 | Verba | ≥ custo do lançador (ignorada na avaliação depois do voo, `modifiers.launched`) |
 | Falha aleatória | no jogo, substituída pelo risco por etapa (`src/sim/flight.js`); `simulate` ainda aceita a falha única de 15 % para testes |
 
+## Fornecedores e blueprints (`src/sim/suppliers.js`)
+
+Ninguém começa com peças: o jogador conquista a **blueprint** (projeto, paga uma vez, entra em `player.unlocked`) parando
+na casa `shop` (Fornecedor), e depois paga a **peça** na oficina. A visita cria `pendingTile = { kind: 'supplier', offers }`
+com até 4 ofertas (o kit que falta vem primeiro, o resto é surpresa, `makeOffers`); `buyBlueprint(state, id)` cobra `blueprintCostFor`
+(a 1ª da partida é grátis, `freeBlueprintUsed`). `buyItem`/`chooseLauncher` recusam item sem blueprint. Preços FICTÍCIOS
+(`BLUEPRINT_RATE` 30%, foguete 35%), calibrados na Etapa 7 com `npm run simulate`.
+
+## Tabuleiro de 20 casas e oficina de montagem
+
+`TILES` (`src/board/board.js`) tem 20 casas: 3 `workshop` (oficina de montagem), 2 `shop` (fornecedor), 4 terrenos, 4 eventos,
+espião, tecnologia, reparos, choque do Sputnik, 2 de verba e a largada, espalhadas. **Ver é livre, agir exige a casa:** a tela
+da oficina abre de qualquer lugar (planejar), mas `buyItem`, `sellItem`, `chooseLauncher`, `chooseOrbit`, `rehearse` e `launch`
+só funcionam com o peão numa casa `workshop` (`workshopLock` em `sim/actions.js`; o sandbox ignora). A UI mostra o "modo
+planejamento" e desabilita os gastos (`ui/workshop.js`, `turnDock` em `ui/board.js`). O anel impresso é 6×6 (`RING_POS`,
+`ui/board.js`; CSS `.gameboard`). Testes usam `test/tiles.mjs` (`tileOf`, `stepsTo`, `standOn`) em vez de números de casa.
+
+## Tutorial contextual (dicas de primeira vez)
+
+Em vez de despejar as regras no começo, o jogo explica cada coisa **na primeira vez** que ela acontece. `raiseTip(state, p, id, item)`
+(`sim/actions.js`) grava `state.tip = { playerId, id, item }` e marca `p.tipsSeen` (uma vez por jogador). Gatilhos: 1ª blueprint
+(`buyBlueprint`), 1ª chegada a uma casa de oficina (`moveBy`), 1ª peça comprada (`buyItem`), 1º lançamento (`launch`). A dica
+some no `startTurn`; sandbox e bots não recebem. Os textos ficam em `TIPS` (`ui/guide.js`) e aparecem acima do cartão do próximo
+passo, só com as dicas ligadas. Tudo é estado serializável: nada novo na rede.
+
+## Espião com sabotagem
+
+A casa do espião é um menu: **Observar** (`spyOn`, 12) ou **Sabotar** (`sabotage`, `SABOTAGE_COST` 15). As duas gastam a ação
+anual (`lastSpyYear`). Contra um jogador, `rival.interference = { fromId, year }` arma o evento `interference`
+(`data/events.js`, `armed: true`, **fora do sorteio** de `pickEvent`), entregue em `advanceFlight` na **etapa final** do voo
+dele, no lugar de qualquer outro imprevisto; expira na virada do ano (`startTurn`). Opções: reenviar em modo manual (grátis,
++15% de falha) ou rede de reserva (−15 de verba, +3%); `stageOptions` desabilita a opção paga sem verba. Contra o bot do solo,
+`bot.schedule[bot.step] += 1` (atraso de 1 ano). A vítima não é avisada na hora (diário privado); quem sabotou recebe o aviso
+quando chega. `sabotage` está na lista de ações de rede (`src/main.js`).
+
 ## Risco por etapa (`src/sim/flight.js`)
 
 | Sistema da etapa | Aumenta o risco | Reduz o risco |
@@ -160,6 +204,10 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
 - **Peça nova**: entrada em `parts.js` ou `instruments.js` com os mesmos campos. Entra sozinha no
   sorteio de descoberta (Feira, Ano Geofísico, Ano novo). Para garantir a peça em um degrau, ponha
   o id no `kit` da missão; sem isso o jogador só a vê se a descobrir.
+- **Medir o ritmo do jogo**: `npm run simulate -- <partidas> <greedy|random> <semente>` (`scripts/simulate.mjs`)
+  joga partidas inteiras só com a API de `src/sim` e imprime 1º lançamento, rodada de cada degrau e quem vence
+  (jogador x bot). É repetível (mesma semente, mesma partida) e `playGame` pode ser importado. A linha de base
+  está em `docs/BASELINE-SIMULACAO.md`; rode de novo depois de mexer em economia, tabuleiro ou tecnologia.
 - **Regra nova**: função em `simulate.js` que faz `add(id, ok, okText, failText)` + teste em `test/simulate.test.mjs`.
 - **Casa nova no tabuleiro**: entrada em `TILES` e um `case` em `applyTile`.
 - **Tela nova**: arquivo em `src/ui/`, registrar em `screens.js`.

@@ -32,7 +32,7 @@ function fundsOrigin(yc) {
 }
 function techOrigin(yc) {
   const { base, lab } = yc.techParts;
-  return [`Pesquisa do ano ${base}`, lab ? `Laboratório +${lab}` : null].filter(Boolean).join(' · ');
+  return [base ? `Pesquisa básica +${base}` : null, lab ? `Laboratório +${lab}` : null].filter(Boolean).join(' · ') || 'Sem pesquisa básica neste ano';
 }
 
 // `reduced`: movimento reduzido (sem o ano antigo saindo), só o ano novo e os ganhos.
@@ -52,17 +52,12 @@ export function yearOverlayNode(yc, { reduced = false } = {}) {
   ].filter((g) => g.value !== 0).map((g, i) => el('span', { class: `gain ${g.cls} ${g.value > 0 ? 'up' : 'down'}`, title: g.title, style: `animation-delay:${GAIN_START_S + i * GAIN_STEP_S}s` }, [
     icon(g.ic, { size: 18 }), `${g.label} `, el('strong', { class: 'num' }, `${g.value > 0 ? '+' : ''}${g.value}`),
   ]));
-  if (yc.part) {
-    gains.push(el('span', { class: 'gain part', title: 'A pesquisa do ano liberou uma peça nova na oficina.', style: `animation-delay:${GAIN_START_S + gains.length * GAIN_STEP_S}s` }, [
-      icon('flask', { size: 18 }), 'Peça liberada ', el('strong', {}, yc.part),
-    ]));
-  }
 
   return el('div', { class: 'year-overlay', role: 'status', 'aria-live': 'polite', title: 'Clique para pular' }, [
     el('div', { class: 'year-card' }, [
       el('p', { class: 'eyebrow' }, first ? 'Começa a corrida espacial' : 'Ano novo'),
       calendar,
-      el('p', { class: 'hint' }, `Nível de tecnologia ${yc.techLevel}`),
+      el('p', { class: 'hint' }, `Nível de tecnologia ${yc.techLevel}${yc.techParts.base ? '' : '. A pesquisa básica vem de 2 em 2 anos: construa um Laboratório para acelerar'}`),
       el('div', { class: 'gains' }, gains),
       el('small', { class: 'hint year-skip' }, 'Clique para continuar'),
     ]),

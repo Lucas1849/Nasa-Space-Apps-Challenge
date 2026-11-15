@@ -22,7 +22,9 @@ export const TILE_ART = {
   tech: icon('<ellipse cx="16" cy="16" rx="12" ry="4.6"/><ellipse cx="16" cy="16" rx="12" ry="4.6" transform="rotate(60 16 16)"/><ellipse cx="16" cy="16" rx="12" ry="4.6" transform="rotate(120 16 16)"/><circle cx="16" cy="16" r="1.4" fill="currentColor"/>'),
   // Feira de fornecedores: caixote de madeira
   shop: icon('<path d="M5 11h22v15H5z"/><path d="M5 16h22M5 21h22"/><path d="M9 11 12 5h8l3 6"/>'),
-  // Oficina de reparos: chave inglesa
+  // Oficina de montagem: nave em cima do suporte, com a torre de lançamento
+  workshop: icon('<path d="M16 3c3 2.6 4.4 6.4 4.4 11v7h-8.8v-7c0-4.6 1.4-8.4 4.4-11z"/><path d="M11.6 17 8 22v3l3.6-2M20.4 17l3.6 5v3l-3.6-2"/><circle cx="16" cy="11" r="2"/><path d="M4 29h24M6 29V13h3M26 29V13h-3M6 17h3M6 22h3"/>'),
+  // Reparos: chave inglesa
   repair: icon('<path d="M20.5 5.5a6 6 0 0 0-6.7 8.2L5.6 21.9a2.1 2.1 0 0 0 3 3l8.2-8.2a6 6 0 0 0 8.2-6.7l-3.6 3.6-3.4-.6-.6-3.4z"/>'),
   // Choque do Sputnik: a esfera com as quatro antenas
   catchup: icon('<circle cx="13" cy="13" r="6"/><path d="M17.5 17 28 27M15.5 18.5 23 29M18.5 15.5 29 22.5M16.8 17.8 26 30.5"/><path d="M9 11c1-1.6 2.4-2.4 4-2.4"/>'),

@@ -11,17 +11,21 @@ import { LAUNCHERS } from '../data/launchers.js';
 import { ORBITS } from '../data/orbits.js';
 import { MISSIONS } from '../data/missions.js';
 import { currentPlayer, REHEARSAL_COST } from '../sim/state.js';
+import { atWorkshopTile } from '../board/board.js';
 import { isHidden, needLevel } from '../sim/needs.js';
-import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems } from '../sim/resources.js';
+import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems, refundFor } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
+
+// Fora de uma casa de oficina a tela é só de planejamento: ver é livre, agir exige a casa (sim/actions.js, workshopLock).
+const AWAY_HINT = 'Vá a uma casa de Oficina do tabuleiro para comprar, vender e lançar.';
 
 // Peças a bordo no desenho anterior (por jogador), para a peça recém-comprada "entrar" com um pulo.
 let lastOwned = { playerId: null, counts: {} };
 
 const ownedCount = (player, id) => [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((x) => x === id).length;
 
-function itemCard(player, item, actions, justBought) {
+function itemCard(player, item, actions, justBought, canAct = true) {
   const owned = ownedCount(player, item.id);
   const price = priceFor(player, item.id);
   const locked = isLocked(player, item);
@@ -50,20 +54,20 @@ function itemCard(player, item, actions, justBought) {
     el('div', { class: 'row' }, [
       locked
         ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, [icon('lock', { size: 14 }), `exige tecnologia ${requiredTech(player, item)}`])
-        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
-      button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
+        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: !canAct || player.funds < price, class: 'small', title: canAct ? '' : AWAY_HINT }),
+      button(`Vender +${refundFor(item.id)}`, () => actions.sellItem(item.id), { disabled: !canAct || !owned, class: 'small ghost', title: canAct ? `Revende como sucata: devolve ${refundFor(item.id)} (metade do custo). Planejar antes de comprar evita perder verba.` : AWAY_HINT }),
     ]),
   ]);
 }
 
-function choice(label, options, selectedId, onPick, describe, player, cls = '') {
+function choice(label, options, selectedId, onPick, describe, player, cls = '', canAct = true) {
   return el('div', { class: `choice ${cls}` }, [
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
       return button(locked ? [icon('lock', { size: 14 }), `${o.name}: exige tecnologia ${requiredTech(player, o)}`] : describe(o), () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
-        disabled: locked,
+        disabled: locked || !canAct,
       });
     })),
   ]);
@@ -90,6 +94,8 @@ function riskPanel(player) {
     el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Cada proteção salva uma etapa que falharia.'),
   ]);
 }
+
+const launchersCount = (obj) => Object.keys(obj).length;
 
 export function workshopScreen(state, actions) {
   const p = currentPlayer(state);
@@ -133,7 +139,9 @@ export function workshopScreen(state, actions) {
     `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
+  const canAct = state.sandbox || atWorkshopTile(p);
   const blocked = p.flight ? 'Você já tem uma nave em voo: monte esta para depois.'
+    : !canAct ? 'Modo planejamento: vá a uma casa de Oficina para lançar.'
     : !state.sandbox && !p.rolled ? 'Ande no tabuleiro antes de lançar.'
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
@@ -143,15 +151,20 @@ export function workshopScreen(state, actions) {
   const launchers = Object.fromEntries(known(LAUNCHERS).map((l) => [l.id, l]));
   const instruments = known(INSTRUMENTS);
   const parts = known(PARTS);
+  const noBlueprints = !state.sandbox && !launchersCount(launchers) && !instruments.length && !parts.length;
   const moreToDiscover = !state.sandbox && undiscoveredItems(p).length > 0;
   const prevCounts = lastOwned.playerId === p.id ? lastOwned.counts : {};
   const counts = Object.fromEntries([...instruments, ...parts].map((item) => [item.id, ownedCount(p, item.id)]));
   const bought = new Set(Object.keys(counts).filter((id) => counts[id] > (prevCounts[id] ?? counts[id])));
   lastOwned = { playerId: p.id, counts };
-  const card = (item) => itemCard(p, item, actions, bought.has(item.id));
+  const card = (item) => itemCard(p, item, actions, bought.has(item.id), canAct);
 
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop', actions),
+    canAct ? null : el('div', { class: 'panel planning' }, [
+      panelTitle('clipboard', 'Modo planejamento'),
+      el('p', {}, 'Você pode ver as peças, o projeto e o risco daqui, mas só compra, vende e lança com o peão numa casa de Oficina (são 3 no tabuleiro).'),
+    ]),
     guideCard(state, 'workshop'),
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
@@ -159,17 +172,17 @@ export function workshopScreen(state, actions) {
         el('div', { class: `spacecraft-box ${bought.size ? 'build-pulse' : ''}` }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
         choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher'), canAct),
         // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
         state.sandbox
           ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'))
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'), canAct)
           : null,
         instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
         instruments.length ? el('div', { class: 'cards' }, instruments.map(card)) : null,
         parts.length ? el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida') : null,
         parts.length ? el('div', { class: 'cards' }, parts.map(card)) : null,
-        moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais peças para descobrir: na Feira de fornecedores, no Ano Geofísico Internacional e a cada Ano novo.']) : null,
+        noBlueprints ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Você ainda não tem nenhuma blueprint. Pare numa casa de Fornecedor do tabuleiro para conseguir as primeiras: a primeira é de graça.']) : (moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais blueprints nas casas de Fornecedor do tabuleiro: o fornecedor sempre oferece o que a sua missão precisa.']) : null),
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
@@ -180,13 +193,13 @@ export function workshopScreen(state, actions) {
         glossary(),
       ]),
     ]),
-    launchDock(state, p, design, blocked, hidden, back, actions),
+    launchDock(state, p, design, blocked, hidden, back, actions, canAct),
   ]);
 }
 
 // Barra fixa da oficina: o estado do projeto numa frase e o Lançar sempre à vista (antes ficava no fim
 // de uma coluna longa, depois do painel, da checagem e do risco).
-function launchDock(state, p, design, blocked, hidden, back, actions) {
+function launchDock(state, p, design, blocked, hidden, back, actions, canAct) {
   const firstFail = checkDesign(p).checks.find((c) => !c.hidden && !c.ok && c.hard);
   const status = !design.ok
     ? [icon('x', { size: 16 }), firstFail ? `Falta: ${firstFail.text}` : 'O projeto ainda não fecha.']
@@ -201,7 +214,7 @@ function launchDock(state, p, design, blocked, hidden, back, actions) {
     el('div', { class: 'row dock-buttons' }, [
       back,
       hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
-        disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
+        disabled: !canAct || p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
         class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
         title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
       }) : null,

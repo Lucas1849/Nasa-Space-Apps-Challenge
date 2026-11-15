@@ -84,9 +84,30 @@ export const FLIGHT_EVENTS = {
   },
 };
 
+// Evento que NÃO entra no sorteio: só chega pela ação do espião rival (sim/actions.js, sabotage).
+// Entregue na etapa final do voo. ATENÇÃO: números FICTÍCIOS para balanceamento.
+FLIGHT_EVENTS.interference = {
+  id: 'interference',
+  title: 'Interferência na telemetria',
+  text: 'Na etapa final, o sinal da nave começa a falhar de um jeito que não parece natural: há suspeita de que uma agência rival interferiu na sua telemetria.',
+  armed: true, // fora do sorteio comum
+  options: [
+    {
+      label: 'Reenviar os comandos em modo manual (sem custo)',
+      effect: { failChance: 0.15 },
+      lesson: 'Sem um canal limpo, o controle de missão precisa refazer comandos à mão e perde margem. Funciona, mas com mais chance de erro.',
+    },
+    {
+      label: 'Trocar para a rede de estações de reserva (15 de verba)',
+      effect: { funds: -15, failChance: 0.03 },
+      lesson: 'Ter um canal alternativo custa caro, mas isola a interferência. Missões reais mantêm redes redundantes de estações de solo por isso.',
+    },
+  ],
+};
+
 // Escolhe um evento aleatório. `rng` injetável para testes.
 export function pickEvent(rng = Math.random) {
-  const list = Object.values(FLIGHT_EVENTS);
+  const list = Object.values(FLIGHT_EVENTS).filter((e) => !e.armed);
   return list[Math.floor(rng() * list.length)];
 }
 
