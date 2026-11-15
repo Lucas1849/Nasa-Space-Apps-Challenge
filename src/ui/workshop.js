@@ -1,7 +1,7 @@
 // Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
 // e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
-import { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle, outcomeCard } from './components.js';
+import { el, button, hud, gauges, checklist, glossary, missionPicker, ITEM_ICONS, panelTitle, outcomeCard } from './components.js';
 import { icon } from './icons.js';
 import { guideCard, hl } from './guide.js';
 import { spacecraftSvg } from './spacecraft.js';
@@ -16,8 +16,13 @@ import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscover
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
 
-function itemCard(player, item, actions) {
-  const owned = [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((id) => id === item.id).length;
+// Peças a bordo no desenho anterior (por jogador), para a peça recém-comprada "entrar" com um pulo.
+let lastOwned = { playerId: null, counts: {} };
+
+const ownedCount = (player, id) => [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((x) => x === id).length;
+
+function itemCard(player, item, actions, justBought) {
+  const owned = ownedCount(player, item.id);
   const price = priceFor(player, item.id);
   const locked = isLocked(player, item);
   const gains = [
@@ -32,7 +37,7 @@ function itemCard(player, item, actions) {
     item.power && `${item.power} energia`,
     item.dataRate && `${item.dataRate} dados`,
   ].filter(Boolean);
-  return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''}` }, [
+  return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''} ${justBought ? 'just-bought' : ''}` }, [
     el('div', { class: 'card-head' }, [
       el('span', { class: 'icon' }, icon(ITEM_ICONS[item.visual] || 'hexnut', { size: 22 })),
       el('strong', {}, item.name),
@@ -61,6 +66,18 @@ function choice(label, options, selectedId, onPick, describe, player, cls = '') 
         disabled: locked,
       });
     })),
+  ]);
+}
+
+// Checagem do projeto enxuta: primeiro o que falta (vermelho impede o lançamento, amarelo só reduz a
+// ciência, cinza é desconhecido); o que já está certo fica recolhido em "N itens ok".
+function compactChecklist(player) {
+  const checks = checkDesign(player).checks;
+  const open = checks.filter((c) => c.hidden || !c.ok);
+  const done = checks.filter((c) => !c.hidden && c.ok);
+  return el('div', { class: 'checks-compact' }, [
+    open.length ? checklist(open) : el('p', { class: 'all-ok' }, [icon('check', { size: 16 }), 'Tudo certo no projeto.']),
+    done.length ? el('details', { class: 'checks-ok' }, [el('summary', {}, `${done.length} ${done.length === 1 ? 'item ok' : 'itens ok'}`), checklist(done)]) : null,
   ]);
 }
 
@@ -127,6 +144,11 @@ export function workshopScreen(state, actions) {
   const instruments = known(INSTRUMENTS);
   const parts = known(PARTS);
   const moreToDiscover = !state.sandbox && undiscoveredItems(p).length > 0;
+  const prevCounts = lastOwned.playerId === p.id ? lastOwned.counts : {};
+  const counts = Object.fromEntries([...instruments, ...parts].map((item) => [item.id, ownedCount(p, item.id)]));
+  const bought = new Set(Object.keys(counts).filter((id) => counts[id] > (prevCounts[id] ?? counts[id])));
+  lastOwned = { playerId: p.id, counts };
+  const card = (item) => itemCard(p, item, actions, bought.has(item.id));
 
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop', actions),
@@ -134,7 +156,7 @@ export function workshopScreen(state, actions) {
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
-        el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
+        el('div', { class: `spacecraft-box ${bought.size ? 'build-pulse' : ''}` }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
         choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
           (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
@@ -144,29 +166,46 @@ export function workshopScreen(state, actions) {
             (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'))
           : null,
         instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
-        instruments.length ? el('div', { class: 'cards' }, instruments.map((i) => itemCard(p, i, actions))) : null,
+        instruments.length ? el('div', { class: 'cards' }, instruments.map(card)) : null,
         parts.length ? el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida') : null,
-        parts.length ? el('div', { class: 'cards' }, parts.map((i) => itemCard(p, i, actions))) : null,
+        parts.length ? el('div', { class: 'cards' }, parts.map(card)) : null,
         moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais peças para descobrir: na Feira de fornecedores, no Ano Geofísico Internacional e a cada Ano novo.']) : null,
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
-        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'O que falta no projeto'), compactChecklist(p)]),
+        // Só o resultado do que foi feito AQUI (ensaio em solo); o da casa do tabuleiro já apareceu lá.
+        state.outcome?.where === 'workshop' ? outcomeCard(state, p) : null,
         design.ok ? riskPanel(p) : null,
-        blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
-        hidden && design.ok ? el('p', { class: 'hint with-icon' }, [icon('eye', { size: 16 }), 'Você ainda não sabe se a nave atende aos mínimos da missão. Faça um ensaio em solo ou lance e descubra: errar também ensina.']) : null,
-        outcomeCard(state, p),
-        el('div', { class: 'row', style: 'margin:0' }, [
-          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
-          hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
-            disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
-            class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
-            title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
-          }) : null,
-          back,
-        ]),
         glossary(),
       ]),
+    ]),
+    launchDock(state, p, design, blocked, hidden, back, actions),
+  ]);
+}
+
+// Barra fixa da oficina: o estado do projeto numa frase e o Lançar sempre à vista (antes ficava no fim
+// de uma coluna longa, depois do painel, da checagem e do risco).
+function launchDock(state, p, design, blocked, hidden, back, actions) {
+  const firstFail = checkDesign(p).checks.find((c) => !c.hidden && !c.ok && c.hard);
+  const status = !design.ok
+    ? [icon('x', { size: 16 }), firstFail ? `Falta: ${firstFail.text}` : 'O projeto ainda não fecha.']
+    : blocked || hidden ? [icon(blocked ? 'alert' : 'eye', { size: 16 }), [
+      blocked || 'Pronto para lançar.',
+      hidden ? 'Você ainda não sabe se a nave atende aos mínimos da missão: descubra no voo ou num ensaio.' : null,
+    ].filter(Boolean).join(' ')]
+      : [icon('check', { size: 16 }), 'Pronto para lançar.'];
+  const ready = design.ok && !blocked;
+  return el('div', { class: `launch-dock ${ready ? 'ready' : ''}`, role: 'region', 'aria-label': 'Lançamento' }, [
+    el('p', { class: `dock-status ${design.ok ? (blocked ? 'warn' : 'ok') : 'bad'}` }, status),
+    el('div', { class: 'row dock-buttons' }, [
+      back,
+      hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+        disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
+        class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
+        title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
+      }) : null,
+      button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !ready, class: `primary ${ready ? 'launch-ready' : ''} ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
     ]),
   ]);
 }
