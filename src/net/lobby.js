@@ -63,3 +63,10 @@ export function assignmentsFor(session) {
   session.slots.forEach((s, i) => { if (s) map[s.peerId] = i; });
   return map;
 }
+
+// Trava de turno (Fase 4 do PLANO-SALAS.md): só a agência da vez pode agir.
+// Devolve o motivo (vira toast) ou null se pode agir. `playerId` undefined = peer sem vaga.
+export function turnBlockError(playerId, turn) {
+  if (playerId === turn) return null;
+  return playerId == null ? 'Você está sem vaga nesta partida.' : 'Não é a vez da sua agência.';
+}

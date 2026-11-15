@@ -7,6 +7,7 @@ import { setGuide, guideOn } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 import { createNetworkController } from './net/sync.js';
+import { waitScreen } from './ui/wait.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 
 const app = document.getElementById('app');
@@ -56,12 +57,22 @@ function render() {
   const changed = state.screen !== lastScreen || state.turn !== lastTurn;
   const scrollY = window.scrollY;
   trackTurn(state);
-  const node = SCREENS[state.screen](state, actions);
+  // Partida online (Fase 4 do PLANO-SALAS.md): cada um vê só a própria agência.
+  // Fora da sua vez: tela de espera, sem tabuleiro de ninguém (o fim de jogo é público
+  // e aparece para todos). Na sua vez: a tela de troca do hot-seat é pulada — você já
+  // está no seu dispositivo, não há para quem "passar".
+  let waiting = false;
+  if (net.isPlaying() && state.screen !== 'gameover') {
+    if (state.turn !== net.getMyPlayerId()) waiting = true;
+    else if (state.screen === 'handoff') state.screen = 'board';
+  }
+  const node = waiting ? waitScreen(state, net.getMyPlayerId()) : SCREENS[state.screen](state, actions);
   if (changed) node.classList.add('enter');
   app.replaceChildren(node);
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  if (waiting) return; // na espera não há virada de ano a animar (os ganhos são de quem joga)
   // Virada de ano: anima uma vez, só no tabuleiro do jogador da vez (os ganhos são secretos: nunca na tela de troca).
   const yearKey = yearOverlayKey(state, lastYearShown);
   if (yearKey) {

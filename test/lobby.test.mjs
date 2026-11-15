@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, MIN_SLOTS,
+  createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, turnBlockError, MIN_SLOTS,
 } from '../src/net/lobby.js';
 
 test('createSession: cria as vagas pedidas, entre 2 e 4, todas livres', () => {
@@ -65,6 +65,13 @@ test('depois de começar, ninguém mais mexe nas vagas', () => {
   const started = { ...session, started: true };
   assert.ok(claimSlot(started, 'peer-3', 0, 'Gama').error);
   assert.ok(removeSlot(started, 0).error);
+});
+
+test('turnBlockError: só a agência da vez age; sem vaga, nunca', () => {
+  assert.equal(turnBlockError(0, 0), null);                       // minha vez: pode
+  assert.ok(turnBlockError(1, 0));                                // vez de outro: bloqueia
+  assert.ok(turnBlockError(undefined, 0));                        // peer sem vaga: bloqueia
+  assert.ok(turnBlockError(null, 0));
 });
 
 test('assignmentsFor: a ordem das vagas é a ordem das agências no jogo', () => {
