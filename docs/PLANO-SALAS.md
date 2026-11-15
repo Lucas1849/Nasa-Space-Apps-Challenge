@@ -124,6 +124,50 @@ no turno de qualquer um, e quem erra não vê o motivo.
 - **Critério de aceite**: aba B não consegue rolar o dado no turno da aba A; quem age
   e erra vê o toast explicando.
 
+## Fase 4b — Espectador ativo: planejar enquanto o rival joga (A FAZER)
+
+> Requisito levantado em 15/11, depois da Fase 4 entrar. Status: **documentado, não
+> implementado** — dono a definir.
+
+Hoje, fora da sua vez, o jogador online vê só a tela de espera (`ui/wait.js`). Isso
+protege os segredos, mas deixa o jogador parado. O pedido da equipe:
+
+1. **Ver o tabuleiro** enquanto o rival joga: posição dos peões, prédios, casas — o que
+   já é público no hot-seat. NÃO mostrar o que é privado do rival (diário dele, nave
+   dele, cartas dele).
+2. **Interagir com a própria nave** para planejar a próxima jogada: abrir a oficina,
+   montar/desmontar peças, ver o checklist e o risco do voo — tudo da MINHA agência.
+
+### Caminho sugerido de implementação
+
+- **Onde entra**: o desvio está em `render()` no `src/main.js` (branch `waiting`); hoje
+  ele troca tudo por `waitScreen(state, myPlayerId)`. A mudança é esse modo de espera
+  virar uma visão navegável em vez de um cartão estático.
+- **Tabuleiro espectador**: renderizar `boardScreen` com um "modo espectador": banner
+  fixo "Vez de X — você pode planejar", sem os botões de ação (rolar, resolver casa,
+  passar a vez). Atenção à lateral: o diário/painel mostrado deve ser o do MEU
+  `myPlayerId`, não o de `state.turn` (hoje as telas assumem que quem olha é o jogador
+  da vez — esse é o trabalho de verdade desta fase).
+- **Oficina de planejamento**: duas opções, decidir com a equipe antes de codar:
+  - *(a) Rascunho local*: fora da vez, `buyItem`/`sellItem` etc. agem numa CÓPIA local da
+    nave (não passam por `net.dispatch`); ao chegar a minha vez, ofereço "aplicar o
+    rascunho" (reexecuta as ações na ordem via rede). Mais trabalho, experiência melhor.
+  - *(b) Liberar ações da própria nave fora da vez*: afrouxar a trava de turno
+    (`turnBlockError`) para um subconjunto de ações que só tocam `players[myPlayerId]`
+    (`buyItem`, `sellItem`, `chooseLauncher`, `chooseOrbit`). Mais simples, mas CUIDADO:
+    essas ações gastam verba de verdade e hoje operam em `currentPlayer(state)` — seria
+    preciso que aceitassem o jogador explícito, senão o espectador mexe na nave do rival.
+    Mudança em `src/sim/actions.js` com testes.
+- **O que continua travado fora da vez, sempre**: rolar dado, resolver casa, dilemas,
+  espionagem, construir, lançar, avançar voo, passar a vez.
+- **Teste**: casos novos em `test/lobby.test.mjs` (quais ações a trava libera para o
+  espectador) e teste de UI garantindo que a lateral do tabuleiro espectador mostra a
+  agência de quem olha.
+- **Critério de aceite**: com a vez do rival, consigo abrir meu tabuleiro e minha
+  oficina, mexer na minha nave e ver meu checklist; não consigo ver a nave/diário do
+  rival nem executar nenhuma ação de turno; quando minha vez chega, a tela troca sozinha
+  como hoje.
+
 ## Fase 5 — Robustez (depois do prazo)
 
 Explicitamente fora do escopo de hoje; registrado para não se perder:
