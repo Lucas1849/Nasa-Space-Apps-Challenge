@@ -95,6 +95,7 @@ export const ICONS = {
   arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  chevronDown: '<path d="M6 9l6 6 6-6"/>',
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.8" r=".9" ' + F + '/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.1" ' + F + '/><circle cx="4.5" cy="12" r="1.1" ' + F + '/><circle cx="4.5" cy="18" r="1.1" ' + F + '/>',

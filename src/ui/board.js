@@ -2,7 +2,7 @@
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
 import {
-  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, panelTitle, missionIcon,
+  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS,
 } from './components.js';
 import { icon, dieFace } from './icons.js';
 import { guideCard, hl } from './guide.js';
@@ -129,22 +129,22 @@ function missionPanel(state, p, actions) {
     const f = p.flight;
     const next = STAGES[f.plan[f.stageIndex]];
     const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
-    return el('div', { class: 'panel' }, [
-      panelTitle('satellite', `Em voo: ${MISSIONS[f.missionId].name}`),
+    return sidePanel('mission', 'satellite', `Em voo: ${MISSIONS[f.missionId].name}`, [
       el('p', { class: 'hint' }, `Próxima etapa: ${next.name} (${f.stageIndex + 1} de ${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
       p.flightAdvanced
         ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
         : button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}`, disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
       !p.rolled ? el('p', { class: 'hint' }, 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.') : null,
       el('p', { class: 'hint' }, 'Enquanto a nave voa, você já pode montar a próxima na oficina.'),
-    ]);
+    ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
   }
-  if (!p.missionId) return el('div', { class: 'panel' }, [panelTitle('flag', 'Escada completa'), el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')]);
-  return el('div', { class: 'panel' }, [
-    el('h3', { class: 'panel-title' }, [missionIcon(p.missionId, { size: 18 }), MISSIONS[p.missionId].name]),
+  if (!p.missionId) {
+    return sidePanel('mission', 'flag', 'Escada completa', [el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')], { hint: 'Todos os degraus cumpridos' });
+  }
+  return sidePanel('mission', MISSION_ICONS[p.missionId] || 'rocket', MISSIONS[p.missionId].name, [
     el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
     milestoneTrack(p),
-  ]);
+  ], { hint: 'Missão atual' });
 }
 
 // Passo a passo do turno, sempre visível: o que já foi feito e o que falta.

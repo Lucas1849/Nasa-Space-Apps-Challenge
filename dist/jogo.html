@@ -291,6 +291,23 @@ select option { background: #0f1736; }
 .tile.owned.o0 { border-color: #38bdf8; } .tile.owned.o1 { border-color: #fbbf24; } .tile.owned.o2 { border-color: #34d399; } .tile.owned.o3 { border-color: #f472b6; }
 .tile-decision { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius-sm); background: rgba(0,0,0,.25); border: 1px solid var(--line); max-width: 420px; }
 .side-stack { display: grid; gap: 12px; }
+
+/* Abas expansíveis da lateral: cabeçalho clicável (abre/fecha) + corpo recolhível. */
+.panel.collapsible { padding: 0; overflow: hidden; }
+.panel.collapsible > .panel-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; user-select: none; list-style: none; }
+.panel.collapsible > .panel-head::-webkit-details-marker { display: none; }
+.panel.collapsible > .panel-head:hover { background: rgba(255, 255, 255, 0.03); }
+.panel.collapsible > .panel-head .head-icon { color: var(--accent); flex: none; }
+.panel.collapsible > .panel-head .head-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.panel.collapsible > .panel-head .head-text strong { font-size: .98rem; }
+.panel.collapsible > .panel-head .head-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel.collapsible > .panel-head .chev { flex: none; color: var(--muted); transition: transform .2s ease; }
+.panel.collapsible[open] > .panel-head { border-bottom: 1px solid var(--line); }
+.panel.collapsible[open] > .panel-head .chev { transform: rotate(180deg); }
+.panel.collapsible[open] > .panel-head .head-text small { display: none; }
+.panel.collapsible > .panel-body { padding: 12px 16px 16px; }
+.panel.collapsible.log { max-height: none; overflow: visible; }
+.panel.collapsible.log > .panel-body { max-height: 260px; overflow: auto; }
 .chip.small { padding: 2px 8px; font-size: .75rem; }
 .chip.year { border-color: var(--accent); }
 
@@ -2399,6 +2416,7 @@ const ICONS = {
   arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  chevronDown: '<path d="M6 9l6 6 6-6"/>',
   compass: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.8" r=".9" ' + F + '/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.1" ' + F + '/><circle cx="4.5" cy="12" r="1.1" ' + F + '/><circle cx="4.5" cy="18" r="1.1" ' + F + '/>',
@@ -2469,7 +2487,23 @@ function setGuide(on) {
   try { localStorage.setItem(GUIDE_KEY, guide ? 'on' : 'off'); } catch { /* ignora */ }
 }
 
-return { guideOn, setGuide };
+// Quais abas da lateral estão fechadas. Guarda só o que foge do padrão (fica curto no armazenamento).
+const PANELS_KEY = 'smdg.panels';
+let collapsed = {};
+try {
+  const saved = localStorage.getItem(PANELS_KEY);
+  if (saved) collapsed = JSON.parse(saved) || {};
+} catch { /* sem armazenamento: usa o padrão de cada aba */ }
+
+// Uma aba está aberta se o jogador não a fechou; na primeira vez vale o padrão (defaultOpen).
+const panelOpen = (id, defaultOpen = true) => (id in collapsed ? !collapsed[id] : defaultOpen);
+
+function setPanelOpen(id, open) {
+  collapsed[id] = !open;
+  try { localStorage.setItem(PANELS_KEY, JSON.stringify(collapsed)); } catch { /* ignora */ }
+}
+
+return { guideOn, setGuide, panelOpen, setPanelOpen };
 })();
 
 // ---- src/ui/components.js
@@ -2488,7 +2522,7 @@ const { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } = __mods["src/data/history.js"];
 const { BUILDINGS, MAX_LEVEL, upgradeCost } = __mods["src/data/buildings.js"];
 const { STAGES } = __mods["src/data/stages.js"];
 const { icon } = __mods["src/ui/icons.js"];
-const { guideOn } = __mods["src/ui/prefs.js"];
+const { guideOn, panelOpen, setPanelOpen } = __mods["src/ui/prefs.js"];
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -2569,6 +2603,23 @@ function guideToggle(actions) {
 // Título de painel com ícone.
 const panelTitle = (iconName, text) => el('h3', { class: 'panel-title' }, [icon(iconName, { size: 18 }), text]);
 
+// Aba expansível da lateral: cabeçalho clicável (abre/fecha) + corpo. O estado fica salvo por `id`,
+// então cada jogador escolhe o que deixa aberto. `hint` é um subtítulo curto, sempre visível.
+// Como toda a tela é redesenhada a cada ação, o abrir/fechar guarda a preferência em vez de re-render.
+function sidePanel(id, iconName, title, children, { defaultOpen = true, hint = null, extraClass = '' } = {}) {
+  const d = el('details', { class: `panel collapsible ${extraClass}`.trim() }, [
+    el('summary', { class: 'panel-head' }, [
+      icon(iconName, { size: 18, className: 'head-icon' }),
+      el('div', { class: 'head-text' }, [el('strong', {}, title), hint ? el('small', { class: 'hint' }, hint) : null]),
+      icon('chevronDown', { size: 16, className: 'chev' }),
+    ]),
+    el('div', { class: 'panel-body' }, children),
+  ]);
+  if (panelOpen(id, defaultOpen)) d.open = true;
+  d.addEventListener('toggle', () => setPanelOpen(id, d.open));
+  return d;
+}
+
 function progressBar(fraction, status = 'ok') {
   return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
 }
@@ -2577,8 +2628,7 @@ function progressBar(fraction, status = 'ok') {
 function ladderPanel(state, player) {
   const ladder = ladderOf(player);
   const prog = ladderProgress(player);
-  return el('div', { class: 'panel' }, [
-    panelTitle(SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`),
+  return sidePanel('ladder', SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`, [
     progressBar(prog.pct, prog.done ? 'done' : 'ok'),
     el('ol', { class: 'ladder' }, ladder.map((m, i) => {
       const done = player.completed.find((c) => c.missionId === m);
@@ -2592,15 +2642,14 @@ function ladderPanel(state, player) {
       ]);
     })),
     el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
-  ]);
+  ], { hint: `${prog.steps}/${prog.total} degraus cumpridos` });
 }
 
 // Rival escondido (IDEIA.md v3 seção 8): só aparece o que o espião ou os boatos revelaram.
 function rivalsPanel(state, player) {
   const rivals = state.players.filter((r) => r.id !== player.id);
   if (!rivals.length) return null;
-  return el('div', { class: 'panel' }, [
-    panelTitle('eye', 'Rivais'),
+  return sidePanel('rivals', 'eye', 'Rivais', [
     ...rivals.map((r) => {
       const info = player.intel[r.id];
       let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
@@ -2615,13 +2664,13 @@ function rivalsPanel(state, player) {
         el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
       ]);
     }),
-  ]);
+  ], { defaultOpen: false, hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida` });
 }
 
 // Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
 function agencyPanel(state, player, actions) {
-  return el('div', { class: 'panel' }, [
-    panelTitle('building', 'Sua agência'),
+  const built = Object.values(BUILDINGS).filter((b) => player.buildings[b.id]).length;
+  return sidePanel('agency', 'building', 'Sua agência', [
     el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
       const level = player.buildings[b.id];
       const cost = level ? upgradeCostFor(state, player, b.id) : null;
@@ -2639,7 +2688,7 @@ function agencyPanel(state, player, actions) {
     player.funds < BAILOUT_LIMIT
       ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
       : null,
-  ]);
+  ], { defaultOpen: false, hint: `${built} de ${Object.keys(BUILDINGS).length} prédios construídos` });
 }
 
 // Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
@@ -2711,7 +2760,9 @@ function milestoneTrack(player, missionId = player.missionId) {
 // Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
 function logPanel(state, viewer) {
   const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
-  return el('div', { class: 'panel log' }, [panelTitle('book', 'Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
+  return sidePanel('log', 'book', 'Diário da agência', [el('ul', {}, entries.map((l) => el('li', {}, l.text)))], {
+    defaultOpen: false, extraClass: 'log', hint: entries[0] ? entries[0].text : 'Sem registros ainda',
+  });
 }
 
 function glossary(open = false) {
@@ -2723,7 +2774,7 @@ function glossary(open = false) {
   return d;
 }
 
-return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, hud, guideToggle, panelTitle, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, hud, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
 })();
 
 // ---- src/ui/spacecraft.js
@@ -3329,7 +3380,7 @@ __mods["src/ui/board.js"] = (() => {
 // Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
-const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, panelTitle, missionIcon } = __mods["src/ui/components.js"];
+const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS } = __mods["src/ui/components.js"];
 const { icon, dieFace } = __mods["src/ui/icons.js"];
 const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { sinceCard } = __mods["src/ui/summary.js"];
@@ -3455,22 +3506,22 @@ function missionPanel(state, p, actions) {
     const f = p.flight;
     const next = STAGES[f.plan[f.stageIndex]];
     const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
-    return el('div', { class: 'panel' }, [
-      panelTitle('satellite', `Em voo: ${MISSIONS[f.missionId].name}`),
+    return sidePanel('mission', 'satellite', `Em voo: ${MISSIONS[f.missionId].name}`, [
       el('p', { class: 'hint' }, `Próxima etapa: ${next.name} (${f.stageIndex + 1} de ${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
       p.flightAdvanced
         ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
         : button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}`, disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
       !p.rolled ? el('p', { class: 'hint' }, 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.') : null,
       el('p', { class: 'hint' }, 'Enquanto a nave voa, você já pode montar a próxima na oficina.'),
-    ]);
+    ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
   }
-  if (!p.missionId) return el('div', { class: 'panel' }, [panelTitle('flag', 'Escada completa'), el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')]);
-  return el('div', { class: 'panel' }, [
-    el('h3', { class: 'panel-title' }, [missionIcon(p.missionId, { size: 18 }), MISSIONS[p.missionId].name]),
+  if (!p.missionId) {
+    return sidePanel('mission', 'flag', 'Escada completa', [el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')], { hint: 'Todos os degraus cumpridos' });
+  }
+  return sidePanel('mission', MISSION_ICONS[p.missionId] || 'rocket', MISSIONS[p.missionId].name, [
     el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
     milestoneTrack(p),
-  ]);
+  ], { hint: 'Missão atual' });
 }
 
 // Passo a passo do turno, sempre visível: o que já foi feito e o que falta.

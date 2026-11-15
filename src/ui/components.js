@@ -12,7 +12,7 @@ import { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } from '../data/history.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
-import { guideOn } from './prefs.js';
+import { guideOn, panelOpen, setPanelOpen } from './prefs.js';
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -93,6 +93,23 @@ export function guideToggle(actions) {
 // Título de painel com ícone.
 export const panelTitle = (iconName, text) => el('h3', { class: 'panel-title' }, [icon(iconName, { size: 18 }), text]);
 
+// Aba expansível da lateral: cabeçalho clicável (abre/fecha) + corpo. O estado fica salvo por `id`,
+// então cada jogador escolhe o que deixa aberto. `hint` é um subtítulo curto, sempre visível.
+// Como toda a tela é redesenhada a cada ação, o abrir/fechar guarda a preferência em vez de re-render.
+export function sidePanel(id, iconName, title, children, { defaultOpen = true, hint = null, extraClass = '' } = {}) {
+  const d = el('details', { class: `panel collapsible ${extraClass}`.trim() }, [
+    el('summary', { class: 'panel-head' }, [
+      icon(iconName, { size: 18, className: 'head-icon' }),
+      el('div', { class: 'head-text' }, [el('strong', {}, title), hint ? el('small', { class: 'hint' }, hint) : null]),
+      icon('chevronDown', { size: 16, className: 'chev' }),
+    ]),
+    el('div', { class: 'panel-body' }, children),
+  ]);
+  if (panelOpen(id, defaultOpen)) d.open = true;
+  d.addEventListener('toggle', () => setPanelOpen(id, d.open));
+  return d;
+}
+
 export function progressBar(fraction, status = 'ok') {
   return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
 }
@@ -101,8 +118,7 @@ export function progressBar(fraction, status = 'ok') {
 export function ladderPanel(state, player) {
   const ladder = ladderOf(player);
   const prog = ladderProgress(player);
-  return el('div', { class: 'panel' }, [
-    panelTitle(SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`),
+  return sidePanel('ladder', SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`, [
     progressBar(prog.pct, prog.done ? 'done' : 'ok'),
     el('ol', { class: 'ladder' }, ladder.map((m, i) => {
       const done = player.completed.find((c) => c.missionId === m);
@@ -116,15 +132,14 @@ export function ladderPanel(state, player) {
       ]);
     })),
     el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
-  ]);
+  ], { hint: `${prog.steps}/${prog.total} degraus cumpridos` });
 }
 
 // Rival escondido (IDEIA.md v3 seção 8): só aparece o que o espião ou os boatos revelaram.
 export function rivalsPanel(state, player) {
   const rivals = state.players.filter((r) => r.id !== player.id);
   if (!rivals.length) return null;
-  return el('div', { class: 'panel' }, [
-    panelTitle('eye', 'Rivais'),
+  return sidePanel('rivals', 'eye', 'Rivais', [
     ...rivals.map((r) => {
       const info = player.intel[r.id];
       let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
@@ -139,13 +154,13 @@ export function rivalsPanel(state, player) {
         el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
       ]);
     }),
-  ]);
+  ], { defaultOpen: false, hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida` });
 }
 
 // Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
 export function agencyPanel(state, player, actions) {
-  return el('div', { class: 'panel' }, [
-    panelTitle('building', 'Sua agência'),
+  const built = Object.values(BUILDINGS).filter((b) => player.buildings[b.id]).length;
+  return sidePanel('agency', 'building', 'Sua agência', [
     el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
       const level = player.buildings[b.id];
       const cost = level ? upgradeCostFor(state, player, b.id) : null;
@@ -163,7 +178,7 @@ export function agencyPanel(state, player, actions) {
     player.funds < BAILOUT_LIMIT
       ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
       : null,
-  ]);
+  ], { defaultOpen: false, hint: `${built} de ${Object.keys(BUILDINGS).length} prédios construídos` });
 }
 
 // Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
@@ -235,7 +250,9 @@ export function milestoneTrack(player, missionId = player.missionId) {
 // Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
 export function logPanel(state, viewer) {
   const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
-  return el('div', { class: 'panel log' }, [panelTitle('book', 'Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
+  return sidePanel('log', 'book', 'Diário da agência', [el('ul', {}, entries.map((l) => el('li', {}, l.text)))], {
+    defaultOpen: false, extraClass: 'log', hint: entries[0] ? entries[0].text : 'Sem registros ainda',
+  });
 }
 
 export function glossary(open = false) {
