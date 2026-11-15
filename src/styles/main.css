@@ -2,7 +2,7 @@
    Space Mission Design Game — Sistema Visual inspirado na Íris (Tesela)
    Tokens editoriais: papel técnico (#efeeeb) + tinta (#16171a) no tema claro,
    e grafite neutro (#0f1012 / #17181b) no tema escuro (:root[data-tema="escuro"]).
-   Tipografia: IBM Plex Sans (títulos e texto) e IBM Plex Mono (números e rótulos técnicos).
+   Tipografia: DM Sans (títulos e texto, geométrica e arredondada) e DM Mono (números e rótulos técnicos).
    ========================================================= */
 
 :root {
@@ -41,9 +41,9 @@
   --av-1: #835600; --av-1-f: #f7ecd2;
   --av-2: #0b6a4a; --av-2-f: #dcf2e9;
   --av-3: #a33f12; --av-3-f: #fbe6dc;
-  --display: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --texto: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --display: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --texto: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --rapido: 150ms cubic-bezier(.2, .7, .2, 1);
   --radius: 6px;
   --radius-sm: 4px;
@@ -2457,8 +2457,38 @@ body:has(.side-rail) #app { padding-left: max(88px, calc(88px + env(safe-area-in
 .main-menu-item:hover:not(:disabled), .main-menu-item:focus-visible { background: var(--superficie); padding-left: 12px; }
 .main-menu-item:hover .mm-chev, .main-menu-item:focus-visible .mm-chev { opacity: 1; transform: none; }
 .main-menu-foot { font: 400 11px var(--mono); color: var(--tinta-3); margin: 0; }
+/* planetas em pixel do menu: miniatura em cada opção e um Júpiter ao lado do título */
+.mm-planet { display: block; width: 34px; height: 34px; border-radius: 8px; background: #07080b; overflow: hidden; flex: none; }
+.mm-planet .pixel-space, .mm-title-planet .pixel-space, .splash-only-art .pixel-space { width: 100%; height: 100%; display: block; }
+:root[data-tema="escuro"] .mm-planet { box-shadow: 0 0 0 1px var(--linha-forte); }
+.main-menu-title-row { display: flex; align-items: center; gap: 14px; }
+.mm-title-planet { display: block; width: 58px; height: 58px; }
 .credits-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 13.5px; color: var(--tinta-2); }
 .credits-list strong { display: block; font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-3); margin-bottom: 2px; }
+
+/* Relógio do turno no topo (ui/turnClock.js): âmbar nos últimos 30 s, vermelho piscando nos últimos 10 */
+.turn-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 11px 3px 9px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+  border: 1px solid var(--linha);
+  color: var(--tinta);
+}
+.turn-clock .ic { color: var(--tinta-2); }
+.turn-clock .tc-num { font: 500 17px/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 3.2ch; }
+.turn-clock .tc-bar { position: relative; width: 56px; height: 4px; background: var(--linha); overflow: hidden; }
+.turn-clock .tc-fill { position: absolute; inset: 0 auto 0 0; background: var(--tinta); transition: width .25s linear; }
+.turn-clock.warn { border-color: color-mix(in srgb, var(--ambar) 55%, var(--linha)); background: var(--ambar-fundo); }
+.turn-clock.warn .tc-num, .turn-clock.warn .ic { color: var(--ambar); }
+.turn-clock.warn .tc-fill { background: var(--ambar); }
+.turn-clock.danger { border-color: var(--alerta); background: var(--alerta-fundo); animation: clockPulse 1s ease-in-out infinite; }
+.turn-clock.danger .tc-num, .turn-clock.danger .ic { color: var(--alerta); }
+.turn-clock.danger .tc-fill { background: var(--alerta); }
+@keyframes clockPulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--alerta) 25%, transparent); } }
 
 /* Cartões de opção da Nova Partida (como jogar, modo) */
 .option-cards { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px; }

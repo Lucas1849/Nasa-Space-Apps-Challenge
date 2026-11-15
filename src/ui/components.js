@@ -14,6 +14,7 @@ import { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } from '../data/history.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
+import { turnClock } from './turnClock.js';
 import { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } from './prefs.js';
 
 export function el(tag, attrs = {}, children = []) {
@@ -100,6 +101,7 @@ export function hud(state, player, step, actions = null) {
       income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}${income.techParts.base ? '' : ' (a pesquisa básica vem de 2 em 2 anos: só o Laboratório rende)'}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
       income ? `+${income.tech} ${when}` : null),
     player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
+    actions ? turnClock(state) : null,
     el('span', { class: 'spacer' }),
     // Sem `actions` (tela só de leitura) a trilha de etapas fica no topo; com `actions` ela vira a navegação
     // da barra lateral.

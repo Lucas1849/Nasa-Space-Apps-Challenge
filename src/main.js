@@ -3,13 +3,15 @@ import { createInitialState } from './sim/state.js';
 import * as game from './sim/actions.js';
 import { SCREENS } from './ui/screens.js';
 import { rocketSvg } from './ui/icons.js';
-import { setGuide, guideOn } from './ui/prefs.js';
+import { setGuide, guideOn, timerSeconds } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 import { createNetworkController } from './net/sync.js';
 import { waitScreen } from './ui/wait.js';
 import { spectateScreen } from './ui/spectate.js';
 import { workshopScreen } from './ui/workshop.js';
+import { timeoutTurn } from './sim/turnTimer.js';
+import { tickClock } from './ui/turnClock.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 import { floatDelta, countUp } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
@@ -41,6 +43,13 @@ const NETWORKED_ACTION_NAMES = [
   'chooseStageOption',
 ];
 const networkedActions = Object.fromEntries(NETWORKED_ACTION_NAMES.map((name) => [name, game[name]]));
+// Tempo do turno esgotado (sim/turnTimer.js): termina o turno pelas mesmas ações dos botões. Viaja pela rede
+// como as outras ações: no online, quem aplica é o anfitrião.
+networkedActions.turnTimeout = (s) => {
+  const error = timeoutTurn(s);
+  if (!error) markTurnEnd(s);
+  return error;
+};
 networkedActions.endTurn = (s) => {
   if (s.sandbox) return game.endTurn(s);
   const blocker = endTurnBlocker(s);
@@ -168,7 +177,8 @@ function wrapAndSync(fn) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrapAndSync((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
+  // O tempo por turno escolhido antes da partida fica gravado nela (state.turnSeconds), igual para todos no online.
+  startGame: wrapAndSync((s, ...args) => { resetSummaries(); lastYearShown = null; const error = game.startGame(s, ...args); s.turnSeconds = timerSeconds(); return error; }),
   rollDice: netWrap('rollDice'),
   moveBy: netWrap('moveBy'),
   chooseDilemma: netWrap('chooseDilemma'),
@@ -194,6 +204,7 @@ const actions = {
   // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
   // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
   endTurn: netWrap('endTurn'),
+  turnTimeout: netWrap('turnTimeout', () => showToast('Tempo esgotado: o turno terminou sozinho.')),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
   newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
@@ -227,7 +238,9 @@ const actions = {
       const error = net.startSession((players) => {
         resetSummaries();
         lastYearShown = null;
-        return game.startGame(state, players, {});
+        const error = game.startGame(state, players, {});
+        state.turnSeconds = timerSeconds(); // tempo por turno escolhido pelo anfitrião vale para todos
+        return error;
       });
       if (typeof error === 'string') showToast(error);
       render();
@@ -290,6 +303,13 @@ function showYearOverlay(yc) {
   const timer = setTimeout(() => node.remove(), reduced ? YEAR_OVERLAY_REDUCED_MS : YEAR_OVERLAY_MS);
   node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
+
+// Relógio do turno (ui/turnClock.js): só o aparelho de quem está jogando conta e dispara o tempo esgotado
+// (no online, os outros estão na tela de espera e não podem disparar pela vez de outra agência).
+setInterval(() => {
+  if (net.isPlaying() && state.turn !== net.getMyPlayerId()) return;
+  tickClock(state, () => actions.turnTimeout());
+}, 250);
 
 // Exposto para depuração no console do navegador.
 window.__game = { get state() { return state; }, actions };

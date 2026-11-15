@@ -469,7 +469,7 @@ export function createAsciiCanvas({
     s.width = cellPx * RAMP.length;
     s.height = cellPx;
     const g = s.getContext('2d');
-    g.font = `700 ${Math.max(8, Math.round(cellPx * 1.04))}px 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace`;
+    g.font = `700 ${Math.max(8, Math.round(cellPx * 1.04))}px 'DM Mono', ui-monospace, Menlo, Consolas, monospace`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     const fg = isDark ? '240, 240, 242' : '18, 19, 22';

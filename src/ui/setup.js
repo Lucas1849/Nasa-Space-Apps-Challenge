@@ -7,8 +7,8 @@
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
 import { el, button, themeToggle, openRulesModal } from './components.js';
 import { icon } from './icons.js';
-import { guideOn, themeOf, toggleTheme } from './prefs.js';
-import { createAsciiCanvas } from './art.js';
+import { guideOn, themeOf, toggleTheme, timerSeconds, setTimerSeconds } from './prefs.js';
+import { pixelSpace } from './pixelArt.js';
 import { START_YEAR, END_YEAR } from '../data/history.js';
 
 
@@ -144,13 +144,8 @@ function createSplashStarfield() {
 
 function buildSplashView(onEnter) {
   const starfield = createSplashStarfield();
-  const { canvas } = createAsciiCanvas({
-    scene: 'olho',
-    cycle: true,
-    width: 440,
-    height: 360,
-    cell: 5,
-  });
+  // Terra em pixel colorido com retícula, girando devagar (ui/pixelArt.js)
+  const canvas = pixelSpace({ items: [{ kind: 'earth', x: 0.5, y: 0.5, size: 0.86 }], width: 340, height: 340, cells: 60 });
 
   let entered = false;
   const triggerEnter = () => {
@@ -208,6 +203,12 @@ const MODES = [
   { id: 'local', icon: 'die', label: 'Mesmo aparelho', desc: '2 a 4 agências revezando' },
   { id: 'online', icon: 'wifi', label: 'Online', desc: 'Cada um no seu, com link' },
 ];
+
+// Tempo do relógio do turno: desligado ou 60/90/120/180 s (sim/turnTimer.js). Salvo no navegador e gravado
+// na partida ao começar (main.js), para valer igual para todos no online.
+function timerChoice(onChange) {
+  return segmented('Tempo por turno', [0, 60, 90, 120, 180].map((n) => ({ value: n, label: n ? `${n} s` : 'Sem relógio' })), timerSeconds(), (v) => { setTimerSeconds(v); onChange(); });
+}
 
 // Cartões de opção (ícone, nome e uma linha do que é): escolha que precisa de explicação, não só um rótulo.
 function optionCards(label, options, value, onPick) {
@@ -282,6 +283,7 @@ function renderConfigView(actions, backToSplash) {
     return sw;
   };
 
+
   const start = () => {
     const count = draft.mode === 'solo' ? 1 : draft.localCount;
     actions.startGame(draft.names.slice(0, count).map((name) => ({ name: name.trim() })), { sandbox: draft.sandbox });
@@ -327,6 +329,12 @@ function renderConfigView(actions, backToSplash) {
       ]));
     }
 
+    if (draft.mode !== 'solo' && !(draft.mode === 'local' && draft.sandbox)) {
+      rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
+        rowLabel('Tempo por turno', 'Ao zerar, o turno termina sozinho'),
+        timerChoice(() => render()),
+      ]));
+    }
     rows.push(el('div', { class: 'setup-row' }, [
       rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'),
       guideSwitch(),
@@ -381,8 +389,10 @@ function renderConfigView(actions, backToSplash) {
 // Menu principal (entre a capa e a Nova Partida), como nos jogos: jogar, regras, configurações, créditos.
 function renderMainMenu(go) {
   // Lista secundária: ícone, nome e uma seta que aparece no foco/hover (o que é clicável fica evidente).
-  const item = (iconName, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
-    icon(iconName, { size: 18 }),
+  // Cada opção leva um planeta em pixel animado (ui/pixelArt.js) no lugar do ícone de linha.
+  const planet = (kind, size) => el('span', { class: 'mm-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind, x: 0.5, y: 0.5, size }], cells: 17, fps: 8, ambient: 0.35, minCell: 2 })]);
+  const item = (kind, size, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
+    planet(kind, size),
     el('span', { class: 'mm-label' }, label),
     el('span', { class: 'mm-chev', 'aria-hidden': 'true' }, icon('arrowRight', { size: 16 })),
   ]);
@@ -395,15 +405,18 @@ function renderMainMenu(go) {
     el('div', { class: 'main-menu-box' }, [
       el('div', { class: 'main-menu-head' }, [
         el('span', { class: 'eyebrow' }, `${START_YEAR} — ${END_YEAR}`),
-        el('h1', { class: 'main-menu-title' }, 'Apogeu'),
+        el('div', { class: 'main-menu-title-row' }, [
+          el('h1', { class: 'main-menu-title' }, 'Apogeu'),
+          el('span', { class: 'mm-title-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind: 'jupiter', x: 0.5, y: 0.5, size: 0.86 }], cells: 26, fps: 8, ambient: 0.2, minCell: 2 })]),
+        ]),
         el('p', { class: 'main-menu-sub' }, 'Projete, lance e opere missões espaciais com recursos limitados.'),
       ]),
       // A ação de quase todo mundo que abre o jogo é a principal, cheia; o resto fica na lista.
       button([icon('rocket', { size: 18 }), 'Nova partida'], () => go('config'), { class: 'primary main-menu-primary' }),
       el('nav', { class: 'main-menu-list', 'aria-label': 'Menu principal' }, [
-        item('bulb', 'Como funciona', openRulesModal),
-        item('compass', 'Configurações', () => go('settings')),
-        item('users', 'Créditos', () => go('credits')),
+        item('moon', 0.8, 'Como funciona', openRulesModal),
+        item('nebula', 0.82, 'Configurações', () => go('settings')),
+        item('saturn', 0.46, 'Créditos', () => go('credits')),
       ]),
       el('p', { class: 'main-menu-foot' }, 'NASA Space Apps Challenge 2026 · Space Mission Design Game'),
     ]),
@@ -426,10 +439,14 @@ function renderSettings(actions, go) {
     type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': 'Dicas passo a passo',
     onclick: () => { const on = !guideOn(); actions.setGuide(on); sw.setAttribute('aria-checked', String(on)); },
   });
+  const timerBox = el('div', {});
+  const drawTimer = () => timerBox.replaceChildren(timerChoice(drawTimer));
+  drawTimer();
   return menuSheet('Configurações', [
     el('div', { class: 'setup-group' }, [
       el('div', { class: 'setup-row' }, [rowLabel('Tema', 'Papel claro ou grafite escuro'), themeSeg]),
       el('div', { class: 'setup-row' }, [rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'), sw]),
+      el('div', { class: 'setup-row setup-row-stack' }, [rowLabel('Tempo por turno', 'Em partidas com 2 ou mais agências; ao zerar, o turno termina sozinho'), timerBox]),
     ]),
     el('small', { class: 'setup-row-sub' }, 'As preferências ficam salvas neste navegador.'),
   ], go);
@@ -442,7 +459,7 @@ function renderCredits(go) {
       entry('Desafio', 'NASA Space Apps Challenge 2026, desafio Space Mission Design Game.'),
       entry('Base do jogo', 'Processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e a atividade Marsbound do JPL. Datas históricas: NASA History.'),
       entry('Números', 'Os valores de peças, foguetes e missões são fictícios, criados para o aprendizado.'),
-      entry('Tipografia', 'IBM Plex Sans e IBM Plex Mono (licença SIL Open Font).'),
+      entry('Tipografia', 'DM Sans e DM Mono (licença SIL Open Font).'),
       entry('Código', 'Feito com apoio de IA, declarado na submissão conforme as regras do evento.'),
     ]),
   ], go);
