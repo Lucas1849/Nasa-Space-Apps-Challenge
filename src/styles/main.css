@@ -313,10 +313,6 @@ select option { background: #0f1736; }
 .records { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: .86rem; }
 .records li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .records li.taken span:first-child { color: var(--amber); }
-.buildings { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; }
-.buildings li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; font-size: .86rem; }
-.buildings .b-icon { font-size: 1.3rem; }
-.buildings small { display: block; }
 .swap { margin-top: 10px; font-size: .88rem; }
 .swap summary { cursor: pointer; color: var(--accent); }
 .swap .mission-grid { margin-top: 10px; }
@@ -411,8 +407,6 @@ p.with-icon .ic, small.with-icon .ic { margin-top: 2px; }
 .tile-tech .t-icon, .tile-spy .t-icon { color: #c4b5fd; }
 .tile-repair .t-icon, .tile-catchup .t-icon { color: var(--accent); }
 .avatar .ic { color: #06101f; }
-.buildings .b-icon { color: var(--accent); }
-.buildings li.not-built .b-icon { color: var(--muted); }
 .ladder-name { display: inline-flex; align-items: center; gap: 7px; }
 .ladder li.done .ladder-name .ic { color: var(--ok); }
 .checklist li .ic { margin-top: 1px; }
@@ -503,3 +497,52 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 }
 .choice.guide-target, .panel.guide-target { border-radius: var(--radius); }
 .choice.guide-target { padding: 2px 12px 10px; }
+
+/* ---- HUD: recursos em números grandes e sempre à vista ---- */
+.hud .stat { display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 10px; border-radius: var(--radius-sm); background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.hud .stat .ic { color: var(--accent); flex: none; }
+.hud .stat-body { display: grid; line-height: 1.1; }
+.hud .stat-num { font-family: var(--mono); font-size: 1.45rem; font-weight: 700; color: var(--fg); }
+.hud .stat-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.hud .stat-next { font-size: .72rem; color: var(--ok); margin-top: 2px; }
+.hud .stat.funds .ic { color: var(--amber); }
+.hud .stat.shield .ic { color: var(--ok); }
+
+/* ---- Faixa de prédios sob o tabuleiro ---- */
+.agency-strip { margin-top: 12px; }
+.agency-strip .strip-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.agency-strip .strip-head .panel-title { margin: 0; }
+.building-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.building-card { display: grid; gap: 6px; align-content: start; padding: 10px 11px; border-radius: var(--radius-sm); background: rgba(0,0,0,.22); border: 1px solid var(--line); font-size: .84rem; }
+.building-card .bc-head { display: flex; align-items: center; gap: 8px; }
+.building-card .b-icon { color: var(--accent); display: inline-flex; }
+.building-card .bc-level { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+.building-card .pips { display: inline-flex; gap: 4px; }
+.building-card .pip { width: 14px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.14); }
+.building-card .pip.on { background: var(--accent); }
+.building-card .upgrade { justify-self: start; }
+.building-card.not-built { opacity: .55; border-style: dashed; }
+.building-card.not-built .b-icon { color: var(--muted); }
+.building-card.maxed { border-color: rgba(52,211,153,.4); }
+.building-card .badge.max { justify-self: start; color: var(--ok); border-color: rgba(52,211,153,.4); }
+@media (max-width: 900px) { .building-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Virada de ano: calendário no meio da tela e os ganhos do ano ---- */
+.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .25s ease, yearFadeOut .35s ease 1.95s forwards; }
+.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .35s ease both; }
+.year-calendar { width: 190px; border-radius: 14px; overflow: hidden; background: #f4f6ff; color: #0a1030; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.year-calendar .cal-top { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; background: var(--danger); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .2em; }
+.year-calendar .cal-digits { position: relative; height: 92px; overflow: hidden; display: grid; place-items: center; font-family: var(--mono); font-size: 3.6rem; font-weight: 800; }
+.year-calendar .year-old, .year-calendar .year-new { position: absolute; }
+.year-calendar .year-old { animation: yearOut .45s ease .55s forwards; }
+.year-calendar .year-new { animation: yearIn .45s ease .55s both; }
+.year-overlay .gains { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 40px; }
+.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .4s ease both; }
+.year-overlay .gain.up { color: var(--ok); border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.1); }
+.year-overlay .gain.down { color: var(--danger); border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.1); }
+.year-overlay .gain.part { color: var(--accent); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.1); }
+@keyframes yearOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+@keyframes yearIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes yearCardIn { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes yearFadeOut { to { opacity: 0; } }
+@keyframes gainPop { from { transform: translateY(8px) scale(.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }

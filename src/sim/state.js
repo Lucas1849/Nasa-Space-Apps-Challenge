@@ -8,6 +8,7 @@ export const SANDBOX_FUNDS = 999;
 export const SANDBOX_TECH = 99;
 export const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
 export const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
+export const SPONSOR_FUNDS_PER_LEVEL = 10; // verba por ano de cada nível do Patrocinador
 export const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 export const BAILOUT_TECH_COST = 2;
 export const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
@@ -73,6 +74,7 @@ export function createInitialState() {
     pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
     pendingDilemma: null,  // { id } carta de dilema aguardando escolha
     outcome: null,         // retorno imediato ao jogador: { playerId, title, choice, changes, notes, lesson }
+    yearChange: null,      // virada de ano do jogador da vez: { playerId, round, year, funds, tech, techLevel, parts, techParts, part } (a UI anima uma vez por round:playerId)
     winners: [],
     gameOver: false,
   };

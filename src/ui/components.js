@@ -5,6 +5,7 @@ import { isHidden, needLevel } from '../sim/needs.js';
 import { flightPlan, pct } from '../sim/flight.js';
 import { ladderProgress } from '../sim/progress.js';
 import { upgradeCostFor } from '../sim/actions.js';
+import { yearlyIncome } from '../sim/income.js';
 import { BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
 import { GLOSSARY } from '../data/glossary.js';
@@ -71,6 +72,19 @@ export function hud(state, player, step, actions = null) {
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
   const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  // Recursos sempre à vista, em números grandes, com a previsão do próximo Ano novo (de onde vem o recurso).
+  // Na interface enxuta a previsão fica só no balão, para não somar texto no começo.
+  const income = state.sandbox || !player.side ? null : yearlyIncome(player);
+  const roundsLeft = ROUNDS_PER_YEAR - ((state.round - 1) % ROUNDS_PER_YEAR);
+  const when = `em ${roundsLeft} ${roundsLeft === 1 ? 'rodada' : 'rodadas'}`;
+  const stat = (cls, iconName, label, value, title, next = null) => el('div', { class: `stat ${cls}`, title }, [
+    icon(iconName, { size: 22, label }),
+    el('div', { class: 'stat-body' }, [
+      el('span', { class: 'stat-num num' }, value),
+      el('span', { class: 'stat-label' }, label),
+      next && !simple ? el('small', { class: 'stat-next' }, next) : null,
+    ]),
+  ]);
   return el('div', { class: 'hud' }, [
     state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), 'sandbox'])
       : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), simple ? null : el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
@@ -79,9 +93,13 @@ export function hud(state, player, step, actions = null) {
     el('span', { class: 'chip' }, mission
       ? [missionIcon(mission.id, { size: 15 }), state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ', em voo' : '']
       : state.sandbox ? [icon('target', { size: 15 }), 'escolhendo missão'] : [icon('flag', { size: 15 }), 'escada completa']),
-    el('span', { class: 'chip', title: 'Verba' }, [icon('coins', { size: 15, label: 'Verba' }), el('span', { class: 'num' }, player.funds)]),
-    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, [icon('chip', { size: 15, label: 'Tecnologia' }), 'tec', el('span', { class: 'num' }, player.tech)]),
-    player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, [icon('shield', { size: 15, label: 'Proteções' }), el('span', { class: 'num' }, player.shields)]) : null,
+    stat('funds', 'coins', 'Verba', player.funds,
+      income ? `Verba. No próximo Ano novo entram +${income.funds} (${Object.entries({ orçamento: income.parts.base, lado: income.parts.side, Patrocinador: income.parts.sponsor }).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ')}).` : 'Verba',
+      income ? `+${income.funds} ${when}` : null),
+    state.sandbox ? null : stat('tech', 'chip', 'Tecnologia', player.tech,
+      income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
+      income ? `+${income.tech} ${when}` : null),
+    player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
     el('span', { class: 'spacer' }),
     simple ? null : el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
     actions ? guideToggle(actions) : null,
@@ -166,28 +184,39 @@ export function rivalsPanel(state, player) {
   ], { defaultOpen: false, hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida` });
 }
 
-// Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
-export function agencyPanel(state, player, actions) {
-  const built = Object.values(BUILDINGS).filter((b) => player.buildings[b.id]).length;
-  return sidePanel('agency', 'building', 'Sua agência', [
-    el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
-      const level = player.buildings[b.id];
-      const cost = level ? upgradeCostFor(state, player, b.id) : null;
-      return el('li', { class: level ? '' : 'not-built' }, [
-        el('span', { class: 'b-icon' }, icon(b.icon, { size: 20 })),
-        el('div', {}, [
-          el('strong', {}, `${b.name}${level ? `, nível ${level}/${MAX_LEVEL}` : ''}`),
-          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
-        ]),
-        level && level < MAX_LEVEL
-          ? button([icon('arrowUp', { size: 14 }), el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: `Subir para o nível ${level + 1} por ${cost}` })
-          : null,
-      ]);
-    })),
-    player.funds < BAILOUT_LIMIT
-      ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
-      : null,
-  ], { defaultOpen: false, hint: `${built} de ${Object.keys(BUILDINGS).length} prédios construídos` });
+// Faixa da agência, sempre visível sob o tabuleiro e os botões de ação: os 4 prédios em cartões (nível,
+// o que dão e o botão de subir com o custo) e o socorro de emergência. Prédio não construído aparece
+// esmaecido, para o jogador ver o que existe. Construir continua sendo num terreno livre do tabuleiro.
+export function agencyStrip(state, player, actions) {
+  const cards = Object.values(BUILDINGS).map((b) => {
+    const level = player.buildings[b.id] || 0;
+    const built = level > 0;
+    const maxed = level >= MAX_LEVEL;
+    const cost = built && !maxed ? upgradeCostFor(state, player, b.id) : null;
+    return el('div', { class: `building-card${built ? '' : ' not-built'}${maxed ? ' maxed' : ''}` }, [
+      el('div', { class: 'bc-head' }, [el('span', { class: 'b-icon' }, icon(b.icon, { size: 22 })), el('strong', {}, b.name)]),
+      el('div', { class: 'bc-level' }, built
+        ? [el('span', { class: 'pips' }, Array.from({ length: MAX_LEVEL }, (_, i) => el('span', { class: `pip${i < level ? ' on' : ''}` }))), el('span', {}, `nível ${level}/${MAX_LEVEL}`)]
+        : el('span', { class: 'hint' }, 'não construído')),
+      el('small', { class: 'hint' }, built ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
+      built && !maxed
+        ? button([icon('arrowUp', { size: 14 }), 'Subir ', el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), {
+          class: 'small upgrade', disabled: player.funds < cost,
+          title: player.funds < cost ? `Faltam ${cost - player.funds} de verba para subir ao nível ${level + 1}` : `Subir para o nível ${level + 1} por ${cost}`,
+        })
+        : null,
+      maxed ? el('span', { class: 'badge max' }, 'nível máximo') : null,
+    ]);
+  });
+  return el('section', { class: 'panel agency-strip' }, [
+    el('div', { class: 'strip-head' }, [
+      panelTitle('building', 'Sua agência'),
+      player.funds < BAILOUT_LIMIT
+        ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
+        : null,
+    ]),
+    el('div', { class: 'building-grid' }, cards),
+  ]);
 }
 
 // Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).

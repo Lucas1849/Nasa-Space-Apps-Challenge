@@ -6,12 +6,14 @@ import { rocketSvg } from './ui/icons.js';
 import { setGuide, guideOn } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
+import { yearOverlayKey, yearOverlayNode } from './ui/yearOverlay.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
+let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -25,6 +27,12 @@ function render() {
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  // Virada de ano: anima uma vez, só no tabuleiro do jogador da vez (os ganhos são secretos: nunca na tela de troca).
+  const yearKey = yearOverlayKey(state, lastYearShown);
+  if (yearKey) {
+    lastYearShown = yearKey;
+    showYearOverlay(state.yearChange);
+  }
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
@@ -39,7 +47,7 @@ function wrap(fn, after) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); return game.startGame(s, ...args); }),
+  startGame: wrap((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
   rollDice: wrap(game.rollDice),
   moveBy: wrap(game.moveBy),
   chooseDilemma: wrap(game.chooseDilemma),
@@ -71,7 +79,7 @@ const actions = {
   }),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); }),
+  newGame: wrap(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
 };
 
 function showToast(text) {
@@ -98,6 +106,17 @@ function showLaunchOverlay() {
     setTimeout(() => o.remove(), 1400),
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
+}
+
+// Calendário da virada de ano (ui/yearOverlay.js): ~2,3 s, some sozinho, um clique pula, sem confirmar.
+// Com movimento reduzido mostra só o ano novo e os ganhos, sem o ano antigo saindo.
+function showYearOverlay(yc) {
+  document.querySelector('.year-overlay')?.remove();
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const node = yearOverlayNode(yc, { reduced });
+  document.body.appendChild(node);
+  const timer = setTimeout(() => node.remove(), reduced ? 1800 : 2300);
+  node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
 
 // Exposto para depuração no console do navegador.

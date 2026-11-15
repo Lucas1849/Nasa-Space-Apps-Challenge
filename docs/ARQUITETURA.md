@@ -58,7 +58,12 @@ estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida
    Solo: o outro lado é um **bot** que cumpre cada degrau no ano real (±1).
 2. **Tela de troca** entre turnos: "passe o dispositivo". O diário é privado; rivais ficam escondidos.
 3. **Ano novo** (a cada 3 rodadas, `src/data/history.js`): verba e tecnologia (mais Laboratório e
-   Patrocinador). A partida vai de 1957 a 1969.
+   Patrocinador), calculadas em um só lugar (`yearlyIncome`, `src/sim/income.js`, usado também pela
+   previsão do HUD). `startTurn` grava `state.yearChange` (jogador, ano, o que entrou, origem de cada
+   parte, peça liberada pela pesquisa) e a UI **anima um calendário no meio da tela** (`yearOverlayNode`,
+   `src/ui/yearOverlay.js`): ~2 s, some sozinho, um clique pula, sem confirmar. Só aparece no tabuleiro
+   do jogador da vez (`yearOverlayKey`), nunca na tela de troca, porque os ganhos são secretos. A partida
+   vai de 1957 a 1969.
 4. **Tabuleiro** (16 casas, `src/board/board.js`): rola 2 dados e escolhe um. Casas de evento sorteiam
    uma **carta de dilema** conforme a situação (`src/data/dilemmas.js`); terrenos recebem prédios
    (`src/data/buildings.js`); prédio de rival pode ser usado pagando ao dono; a **espionagem** revela
@@ -169,9 +174,15 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
   jogador não cumpriu nenhum degrau, com as dicas ligadas e fora do sandbox. Nela o tabuleiro mostra
   só a missão e o diário na lateral, legendas curtas nas casas (a completa fica no balão), nenhum botão
   antes de rolar (depois aparecem Oficina e Passar a vez; Lançar só com o projeto pronto) e o
-  cabeçalho sem a trilha de etapas. Rivais e Sua agência surgem ao usar o espião ou construir. Desligar
+  cabeçalho sem a trilha de etapas. A escada e os rivais surgem ao usar o espião ou avançar; a faixa de prédios, ao construir o primeiro. Desligar
   as dicas ou cumprir o 1º degrau mostra tudo. Só muda o que aparece, nenhuma regra depende disso.
   Para esconder algo mais no começo, use `simpleUi` na tela; teste em `test/ui-simple.test.mjs`.
+- **HUD e faixa de prédios (sempre à vista, fora dos menus)**: `hud()` (`src/ui/components.js`) mostra
+  verba, tecnologia e proteções em números grandes, com a previsão do próximo Ano novo (só no balão
+  na interface enxuta). `agencyStrip()` fica **sob o tabuleiro e a barra de ações**: os 4 prédios em
+  cartões (nível, efeito, botão de subir com o custo de `upgradeCostFor`, "nível máximo") e o socorro de
+  emergência; prédio não construído aparece esmaecido. Substituiu a aba "Sua agência". Subir de nível
+  grava `state.outcome` (retorno imediato).
 - **Retorno imediato**: depois de escolher num dilema, parar numa casa, construir, espionar ou usar o
   prédio de um rival, a ação grava `state.outcome` (`setOutcome` em `src/sim/actions.js`: título,
   opção escolhida, `changes` numéricos, `notes` e a lição). O tabuleiro mostra isso no centro
