@@ -6,7 +6,8 @@
 // Funções puras, sem DOM.
 import { MISSIONS } from '../data/missions.js';
 import { effectiveTotals } from './resources.js';
-import { t as tr } from '../i18n/index.js'; // `tr`: `t` é usado como variável local (totais da nave)
+// `tr`: `t` é usado como variável local (totais da nave) em funções deste módulo.
+import { t as tr } from '../i18n/index.js';
 
 export const HIDDEN_KINDS = ['science', 'comms'];
 // Rótulos em i18n (needs.label.<kind>); getters para trocar com o idioma.

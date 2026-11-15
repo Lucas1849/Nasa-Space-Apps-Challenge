@@ -7,7 +7,8 @@ import { isHidden, needLevel } from './needs.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
 import { LAUNCHERS } from '../data/launchers.js';
-import { t as tr } from '../i18n/index.js'; // `tr`: `t` é usado como variável local (totais da nave)
+// `tr`: `t` é usado como variável local (totais da nave) em funções deste módulo.
+import { t as tr } from '../i18n/index.js';
 
 export const FAILURE_CHANCE = 0.15; // chance base de falha aleatória de componente (sem escudo)
 

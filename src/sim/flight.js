@@ -9,7 +9,8 @@ import {
   STAGES, FLIGHT_PLANS, SYSTEM_NAMES, FAILURE_DATA_BONUS, MAX_FAILURE_DATA, MIN_RISK, MAX_RISK,
   REVIEW_COST, REVIEW_RISK_CUT,
 } from '../data/stages.js';
-import { t as tr } from '../i18n/index.js'; // `tr`: `t` é usado como variável local (totais da nave)
+// `tr`: `t` é usado como variável local (totais da nave) em funções deste módulo.
+import { t as tr } from '../i18n/index.js';
 
 export const CONTROL_RISK_CUT = 0.03; // por nível do Controle de missão
 
