@@ -51,6 +51,43 @@ export function setupScreen(state, actions) {
   guideBox.querySelector('input').addEventListener('change', (e) => actions.setGuide(e.target.checked));
   toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
+  // Sala online (experimental, ver docs/PLANO-P2P.md): cada jogador no seu dispositivo,
+  // conectados direto por WebRTC. Quem cria a sala vira o host (guarda o jogo oficial);
+  // quem entra pelo link recebe o estado do host e passa a jogar à distância.
+  const onlineStatus = el('p', { class: 'hint' });
+  const joinInput = el('input', { type: 'text', placeholder: 'Cole o link ou o código da sala' });
+  const onlinePanel = el('div', { class: 'panel online-room' }, [
+    el('strong', { class: 'with-icon' }, [icon('wifi', { size: 18 }), 'Jogar à distância (experimental)']),
+    el('p', { class: 'hint' }, 'Um jogador cria a sala e manda o link para os outros. Precisa de internet; quem criou tem que deixar a aba aberta durante a partida.'),
+    el('div', { class: 'row' }, [
+      button('Criar sala', async () => {
+        onlineStatus.textContent = 'Criando sala...';
+        try {
+          const id = await actions.hostOnline();
+          const link = `${location.origin}${location.pathname}?sala=${id}`;
+          onlineStatus.innerHTML = '';
+          onlineStatus.append('Link da sala: ', el('code', {}, link));
+        } catch (err) {
+          onlineStatus.textContent = err.message || 'Não foi possível criar a sala.';
+        }
+      }),
+      joinInput,
+      button('Entrar na sala', async () => {
+        const raw = joinInput.value.trim();
+        if (!raw) return;
+        const id = raw.includes('sala=') ? new URL(raw, location.href).searchParams.get('sala') : raw;
+        onlineStatus.textContent = 'Conectando...';
+        try {
+          await actions.joinOnline(id);
+          onlineStatus.textContent = 'Conectado! Aguardando o estado do host...';
+        } catch (err) {
+          onlineStatus.textContent = err.message || 'Não foi possível entrar na sala.';
+        }
+      }),
+    ]),
+    onlineStatus,
+  ]);
+
   return el('section', { class: 'screen setup' }, [
     el('div', { class: 'hero' }, [
       el('div', {}, [
@@ -80,6 +117,7 @@ export function setupScreen(state, actions) {
     soloNote,
     toggle,
     guideBox,
+    onlinePanel,
     el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
     glossary(),
     el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
