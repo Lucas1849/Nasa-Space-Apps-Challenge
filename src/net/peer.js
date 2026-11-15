@@ -2,6 +2,8 @@
 // Não exige servidor nosso: usa o broker público gratuito do PeerJS só para o aperto de
 // mão inicial (achar os dois navegadores); depois disso os dados trafegam direto entre
 // eles. Carregado de CDN sob demanda, então não precisa de `npm install`.
+import { t } from '../i18n/index.js';
+
 const PEERJS_CDN = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
 
 let loadPromise = null;
@@ -15,7 +17,7 @@ function loadPeerJs() {
     script.onerror = () => {
       loadPromise = null; // permite tentar de novo (ex.: a internet voltou)
       script.remove();
-      reject(new Error('Não foi possível carregar a conexão online (sem internet?).'));
+      reject(new Error(t('net.loadFail')));
     };
     document.head.appendChild(script);
   });

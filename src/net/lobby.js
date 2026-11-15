@@ -7,6 +7,8 @@
 // Toda função devolve { session } com um objeto NOVO, ou { error } com o motivo em
 // português (vira toast para quem tentou).
 
+import { t } from '../i18n/index.js';
+
 export const MIN_SLOTS = 2;
 export const MAX_SLOTS = 4;
 export const MAX_NAME_LENGTH = 20; // mesmo limite do input de nome do hot-seat (setup.js)
@@ -24,12 +26,12 @@ function cleanName(name) {
 // próprio peer (renomear); nome obrigatório. Quem já tinha outra vaga é movido — a
 // antiga é liberada, como trocar de cadeira na mesa.
 export function claimSlot(session, peerId, slot, name) {
-  if (session.started) return { error: 'A partida já começou.' };
+  if (session.started) return { error: t('net.started') };
   const target = session.slots[slot];
-  if (target === undefined) return { error: 'Essa vaga não existe.' };
-  if (target && target.peerId !== peerId) return { error: 'Essa vaga já foi ocupada.' };
+  if (target === undefined) return { error: t('net.noSlot') };
+  if (target && target.peerId !== peerId) return { error: t('net.slotTaken') };
   const cleaned = cleanName(name);
-  if (!cleaned) return { error: 'Dê um nome à sua agência.' };
+  if (!cleaned) return { error: t('net.nameRequired') };
   const slots = session.slots.map((s, i) => {
     if (i === slot) return { peerId, name: cleaned };
     return s?.peerId === peerId ? null : s; // libera a vaga antiga de quem se moveu
@@ -45,9 +47,9 @@ export function releaseSlot(session, peerId) {
 
 // Host remove uma vaga VAZIA (alguém desistiu de vir): a sala encolhe, mínimo de 2.
 export function removeSlot(session, slot) {
-  if (session.started) return { error: 'A partida já começou.' };
-  if (session.slots[slot] === undefined) return { error: 'Essa vaga não existe.' };
-  if (session.slots[slot] !== null) return { error: 'Só dá para remover uma vaga livre.' };
+  if (session.started) return { error: t('net.started') };
+  if (session.slots[slot] === undefined) return { error: t('net.noSlot') };
+  if (session.slots[slot] !== null) return { error: t('net.removeFree') };
   if (session.slots.length <= MIN_SLOTS) return { error: `A sala precisa de pelo menos ${MIN_SLOTS} vagas.` };
   return { session: { ...session, slots: session.slots.filter((_, i) => i !== slot) } };
 }
@@ -68,5 +70,5 @@ export function assignmentsFor(session) {
 // Devolve o motivo (vira toast) ou null se pode agir. `playerId` undefined = peer sem vaga.
 export function turnBlockError(playerId, turn) {
   if (playerId === turn) return null;
-  return playerId == null ? 'Você está sem vaga nesta partida.' : 'Não é a vez da sua agência.';
+  return playerId == null ? t('net.noSeat') : t('net.notYourTurn');
 }

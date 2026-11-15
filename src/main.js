@@ -13,7 +13,7 @@ import { workshopScreen } from './ui/workshop.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 import { floatDelta, countUp } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
-import { toggleLang } from './i18n/index.js';
+import { toggleLang, t } from './i18n/index.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -204,14 +204,14 @@ const actions = {
   // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
   hostOnline: async (count) => {
     try { await net.host(count); } catch (err) {
-      showToast(err?.message || 'Não foi possível criar a sala. Confira a internet.');
+      showToast(err?.message || t('net.createFailNet'));
     }
   },
   joinOnline: async (raw) => {
     try { await net.join(raw); } catch (err) {
       showToast(err?.type === 'peer-unavailable'
-        ? 'Sala não encontrada. Confira o código com o anfitrião.'
-        : err?.message || 'Não foi possível entrar na sala.');
+        ? t('net.roomNotFound')
+        : err?.message || t('net.joinFailGeneric'));
     }
   },
   isOnline: () => net.isConnected(),
@@ -242,7 +242,7 @@ const actions = {
 // tabuleiro público e a sua oficina em modo leitura, mais o botão de dicas. Nenhuma
 // jogada viaja pela rede: os botões de jogada nem são renderizados/ficam desabilitados
 // e, se algo escapar, a trava de turno (net.dispatch) barra do mesmo jeito.
-const blockedInSpectate = () => showToast('Você poderá mexer na oficina na sua vez.');
+const blockedInSpectate = () => showToast(t('net.spectateBlocked'));
 const spectatorActions = {
   openWorkshop: () => { spectateView = 'workshop'; render(); },
   go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
@@ -278,7 +278,7 @@ function showLaunchOverlay() {
   const timers = [
     setTimeout(() => { count.textContent = '2'; }, 300),
     setTimeout(() => { count.textContent = '1'; }, 600),
-    setTimeout(() => { count.textContent = 'Lançar!'; }, 900),
+    setTimeout(() => { count.textContent = t('ui.launchGo'); }, 900),
     setTimeout(() => o.remove(), 1400),
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
@@ -304,6 +304,6 @@ render();
 // cai no lobby da sala, sem passar pela tela de setup.
 const roomCode = new URLSearchParams(window.location.search).get('sala');
 if (roomCode) {
-  showToast('Conectando à sala...');
+  showToast(t('net.connecting'));
   actions.joinOnline(roomCode);
 }

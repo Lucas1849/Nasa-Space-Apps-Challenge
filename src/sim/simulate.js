@@ -7,6 +7,7 @@ import { isHidden, needLevel } from './needs.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
 import { LAUNCHERS } from '../data/launchers.js';
+import { t as tr } from '../i18n/index.js'; // `tr`: `t` é usado como variável local (totais da nave)
 
 export const FAILURE_CHANCE = 0.15; // chance base de falha aleatória de componente (sem escudo)
 
@@ -25,31 +26,31 @@ export function checkDesign(player, modifiers = {}) {
   const checks = [];
   const add = (id, ok, okText, failText, hard = true) => checks.push({ id, ok, hard, text: ok ? okText : failText });
 
-  add('launcher', Boolean(launcher), `Lançador: ${launcher?.name}.`, 'Nenhum lançador escolhido.');
-  add('orbit', Boolean(orbit), `Órbita: ${orbit?.name}.`, 'Nenhuma órbita escolhida.');
+  add('launcher', Boolean(launcher), tr('sim.launcher', { name: launcher?.name }), tr('sim.noLauncher'));
+  add('orbit', Boolean(orbit), tr('sim.orbit', { name: orbit?.name }), tr('sim.noOrbit'));
 
   if (launcher && orbit) {
     add('reach', launcher.reach.includes(orbit.id),
-      `O ${launcher.name} alcança a ${orbit.name}.`,
-      `O ${launcher.name} não alcança a ${orbit.name}. Escolha um lançador maior ou uma órbita mais baixa.`);
+      tr('sim.reachOk', { launcher: launcher.name, orbit: orbit.name }),
+      tr('sim.reachBad', { launcher: launcher.name, orbit: orbit.name }));
     add('mass', t.mass <= launcher.maxMass,
-      `Massa ${t.mass}/${launcher.maxMass}: cabe no lançador.`,
-      `Massa ${t.mass} excede a capacidade ${launcher.maxMass} do lançador. Tire peças ou use um lançador maior.`);
+      tr('sim.massOk', { mass: t.mass, max: launcher.maxMass }),
+      tr('sim.massBad', { mass: t.mass, max: launcher.maxMass }));
   }
 
   if (orbit && mission) {
     add('mission_orbit', orbit.id === mission.orbit,
-      `A órbita é a exigida pela missão.`,
-      `A missão "${mission.name}" exige a ${ORBITS[mission.orbit].name}, não a ${orbit.name}.`);
+      tr('sim.orbitOk'),
+      tr('sim.orbitBad', { mission: mission.name, req: ORBITS[mission.orbit].name, orbit: orbit.name }));
   }
 
   add('power', t.powerBalance >= 0,
-    `Energia: gera ${t.powerGen}, consome ${t.powerUse}. Sobra ${t.powerBalance}.`,
-    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione geração de energia (painel solar) ou remova instrumentos.`);
+    tr('sim.powerOk', { gen: t.powerGen, use: t.powerUse, bal: t.powerBalance }),
+    tr('sim.powerBad', { gen: t.powerGen, use: t.powerUse }));
 
   add('comms', t.commsEffective >= t.data,
-    `Comunicação ${t.commsEffective} dá conta dos ${t.data} de dados gerados.`,
-    `Os instrumentos geram ${t.data} de dados, mas a comunicação efetiva é ${t.commsEffective}${orbit?.commsPenalty ? ` (a ${orbit.name} reduz o sinal em ${orbit.commsPenalty * 100}%)` : ''}. Metade da ciência se perde: melhore a antena.`,
+    tr('sim.commsOk', { comms: t.commsEffective, data: t.data }),
+    tr('sim.commsBad', { data: t.data, comms: t.commsEffective, penalty: orbit?.commsPenalty ? tr('sim.commsPenalty', { orbit: orbit.name, n: orbit.commsPenalty * 100 }) : '' }),
     false);
 
   if (mission) {
@@ -57,32 +58,32 @@ export function checkDesign(player, modifiers = {}) {
       // Mínimo desconhecido: mostra só o que a nave entrega e a pista, sem o número, e não trava.
       const unknown = (id, label, value, kind) => checks.push({
         id, ok: true, hard: false, hidden: true,
-        text: `${label} ${value}: o mínimo desta missão ainda não é conhecido (pista: ${label.toLowerCase()} ${needLevel(kind, mission.needs[kind])}). Faça um ensaio em solo ou lance para descobrir.`,
+        text: tr('sim.unknown', { label, value, labelLower: label.toLowerCase(), hint: needLevel(kind, mission.needs[kind]) }),
       });
-      unknown('science', 'Ciência', t.scienceEffective, 'science');
-      unknown('mission_comms', 'Comunicação', t.commsEffective, 'comms');
+      unknown('science', tr('sim.labelScience'), t.scienceEffective, 'science');
+      unknown('mission_comms', tr('sim.labelComms'), t.commsEffective, 'comms');
     } else {
       add('science', t.scienceEffective >= mission.needs.science,
-        `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
-        `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
+        tr('sim.scienceOk', { value: t.scienceEffective, need: mission.needs.science }),
+        tr('sim.scienceBad', { value: t.scienceEffective, need: mission.needs.science }));
       add('mission_comms', t.commsEffective >= mission.needs.comms,
-        `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
-        `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+        tr('sim.missionCommsOk', { value: t.commsEffective, need: mission.needs.comms }),
+        tr('sim.missionCommsBad', { value: t.commsEffective, need: mission.needs.comms }));
     }
     if (mission.needs.lifeSupport) {
-      add('life', t.lifeSupport, 'Suporte de vida a bordo.', 'A missão exige cápsula com suporte de vida.');
+      add('life', t.lifeSupport, tr('sim.lifeOk'), tr('sim.lifeBad'));
     }
     const lifetime = t.lifetime + (modifiers.lifetimeDelta || 0);
     add('lifetime', lifetime >= mission.needs.lifetime,
-      `Vida útil ${lifetime} ano(s): atende aos ${mission.needs.lifetime} exigidos.`,
-      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} peças como o propulsor de manutenção ou a bateria estendem a vida, se você já as descobriu.`);
+      tr('sim.lifetimeOk', { n: lifetime, need: mission.needs.lifetime }),
+      tr('sim.lifetimeBad', { n: lifetime, need: mission.needs.lifetime, decay: orbit && orbit.baseLifetime <= 2 ? tr('sim.lifetimeDecay', { orbit: orbit.name }) : '' }));
   }
 
   // `modifiers.launched`: avaliação depois do voo, o lançamento já foi pago.
   if (!modifiers.launched) {
     add('funds', player.funds >= t.launchCost,
-      `Verba ${player.funds} cobre o lançamento (${t.launchCost}).`,
-      `Verba ${player.funds} não cobre o custo de lançamento ${t.launchCost}. Jogue mais rodadas no tabuleiro ou use um lançador mais barato.`);
+      tr('sim.fundsOk', { funds: player.funds, cost: t.launchCost }),
+      tr('sim.fundsBad', { funds: player.funds, cost: t.launchCost }));
   }
 
   const hardOk = checks.filter((c) => c.hard).every((c) => c.ok);
@@ -108,12 +109,10 @@ export function simulate(player, { rng = Math.random, modifiers = {}, randomFail
     if (rng() < chance) {
       if ((player.shields || 0) > 0) {
         usedShield = true;
-        reasons.push('Um componente falhou, mas a redundância do projeto (proteção) salvou a missão.');
+        reasons.push(tr('sim.shieldSaved'));
       } else {
         randomFailure = true;
-        reasons.push(modifiers.failChance
-          ? 'A decisão arriscada em voo custou caro: falha de componente durante a operação.'
-          : 'Falha aleatória de componente durante a operação. Proteções contra falha (eventos e milestones) evitariam isso.');
+        reasons.push(modifiers.failChance ? tr('sim.riskyFailed') : tr('sim.randomFailed'));
       }
     }
   }
@@ -130,9 +129,9 @@ export function simulate(player, { rng = Math.random, modifiers = {}, randomFail
     : 0;
 
   if (success) {
-    reasons.unshift(`Missão cumprida: ${scienceDelivered} de ciência entregue.`);
-    if (!commsOk) reasons.push('Metade da ciência se perdeu por falta de comunicação.');
-    if (modifiers.sciencePenalty) reasons.push(`A decisão em voo custou ${modifiers.sciencePenalty * 100}% da ciência.`);
+    reasons.unshift(tr('sim.missionDone', { n: scienceDelivered }));
+    if (!commsOk) reasons.push(tr('sim.commsLost'));
+    if (modifiers.sciencePenalty) reasons.push(tr('sim.sciencePenalty', { n: modifiers.sciencePenalty * 100 }));
   }
 
   return { success, score, reasons, checks, totals, usedShield, scienceDelivered };
