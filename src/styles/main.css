@@ -528,16 +528,17 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 @media (max-width: 900px) { .building-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- Virada de ano: calendário no meio da tela e os ganhos do ano ---- */
-.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .25s ease, yearFadeOut .35s ease 1.95s forwards; }
-.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .35s ease both; }
+.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .3s ease, yearFadeOut .5s ease 5.5s forwards; } /* 5.5s + .5s = YEAR_OVERLAY_MS (ui/yearOverlay.js) */
+.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .5s ease both; }
+.year-overlay .year-skip { margin-top: 4px; opacity: .8; }
 .year-calendar { width: 190px; border-radius: 14px; overflow: hidden; background: #f4f6ff; color: #0a1030; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .year-calendar .cal-top { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; background: var(--danger); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .2em; }
 .year-calendar .cal-digits { position: relative; height: 92px; overflow: hidden; display: grid; place-items: center; font-family: var(--mono); font-size: 3.6rem; font-weight: 800; }
 .year-calendar .year-old, .year-calendar .year-new { position: absolute; }
-.year-calendar .year-old { animation: yearOut .45s ease .55s forwards; }
-.year-calendar .year-new { animation: yearIn .45s ease .55s both; }
+.year-calendar .year-old { animation: yearOut .7s ease .9s forwards; }
+.year-calendar .year-new { animation: yearIn .7s ease .9s both; }
 .year-overlay .gains { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 40px; }
-.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .4s ease both; }
+.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .6s ease both; }
 .year-overlay .gain.up { color: var(--ok); border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.1); }
 .year-overlay .gain.down { color: var(--danger); border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.1); }
 .year-overlay .gain.part { color: var(--accent); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.1); }
