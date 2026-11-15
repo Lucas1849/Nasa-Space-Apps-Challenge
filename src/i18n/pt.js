@@ -381,6 +381,60 @@ export const pt = {
   'fl.noFlight': 'Nenhuma nave em voo.',
   'fl.missionEyebrow': 'Missão {name}',
   'common.back': 'Voltar',
+  'common.turnOf': 'Vez de {name}',
+
+  // ---- tela de troca (ui/handoff.js)
+  'ho.newYear': ' · Ano novo',
+  'ho.pass': 'Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto. Ao começar, você verá o que mudou desde o seu último turno.',
+  'ho.startMyTurn': 'Sou eu: começar meu turno',
+
+  // ---- tela de espera online (ui/wait.js)
+  'wait.eyebrow': '{year} · partida online',
+  'wait.yourAgency': 'Sua agência: {name} · degrau {n}: {mission}',
+  'wait.hint': 'Aguarde a sua vez — a tela atualiza sozinha. As decisões de cada agência são secretas.',
+
+  // ---- virada de ano (ui/yearOverlay.js)
+  'yo.budget': 'Orçamento do ano {n}',
+  'yo.sideBonus': 'bônus do lado {v}',
+  'yo.sponsor': 'Patrocinador +{n}',
+  'yo.basicResearch': 'Pesquisa básica +{n}',
+  'yo.lab': 'Laboratório +{n}',
+  'yo.noBasic': 'Sem pesquisa básica neste ano',
+  'yo.year': 'ANO',
+  'yo.skipTitle': 'Clique para pular',
+  'yo.first': 'Começa a corrida espacial',
+  'yo.newYear': 'Ano novo',
+  'yo.techLevel': 'Nível de tecnologia {n}',
+  'yo.techLevelSlow': '. A pesquisa básica vem de 2 em 2 anos: construa um Laboratório para acelerar',
+  'yo.skip': 'Clique para continuar',
+
+  // ---- tela de espectador (ui/spectate.js)
+  'sp.phase.roll': 'vai rolar os dados',
+  'sp.phase.die': 'escolhendo o dado',
+  'sp.phase.dilemma': 'resolvendo uma carta de dilema',
+  'sp.phase.tile': 'resolvendo a casa onde parou',
+  'sp.phase.flight': 'cuidando do voo da nave',
+  'sp.phase.ship': 'cuidando da nave',
+  'sp.banner.is': '{name} está {phase}.',
+  'sp.watching': 'Assistindo',
+  'sp.rolled': '{name} rolou — escolhendo o dado',
+  'sp.waiting': 'Vez de {name} — aguardando a rolagem',
+  'sp.flying': 'Sua nave em voo: {name}',
+  'sp.flyingText': 'Etapa {n} de {total}. Você avança o voo na sua vez.',
+  'sp.yourObjective': 'Seu objetivo atual',
+  'sp.myWorkshop': 'Minha oficina',
+  'sp.watchHint': 'Você está assistindo: pode ver sua oficina e seus objetivos, mas só joga na sua vez.',
+
+  // ---- resumo do turno (ui/summary.js)
+  'sum.steps': 'Degraus',
+  'sum.noChange': 'Nenhuma mudança na verba, na tecnologia ou nos degraus.',
+  'sum.roundLine': '{year}, rodada {inYear} de {rpy} · {rest}',
+  'sum.yearsLeft': 'faltam {n} ano(s) até {end}',
+  'sum.lastYear': 'último ano da corrida',
+  'sum.firstTurn': 'Primeiro turno de {name}',
+  'sum.firstText': '{line}. Sua missão é subir a escada do seu lado antes dos rivais.',
+  'sum.since': 'Desde o seu último turno',
+  'sum.newYear': 'Ano novo: {year}. Orçamento e tecnologia do ano entraram.',
 
   // ---- relatório (ui/report.js)
   'rep.stageRisk': '{name}: risco de {pct}{shield}',

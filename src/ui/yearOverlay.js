@@ -4,6 +4,7 @@
 // Só monta DOM a partir de state.yearChange (sim/actions.js, startTurn); nenhuma regra de jogo mora aqui.
 import { el } from './components.js';
 import { icon } from './icons.js';
+import { t } from '../i18n/index.js';
 
 // Tempos da animação, devagar o bastante para ler (o calendário vira primeiro e os ganhos entram um a um).
 // Se mudar a duração total, ajuste também o `yearFadeOut` do `.year-overlay` em styles/main.css
@@ -27,19 +28,19 @@ export function yearOverlayKey(state, shownKey = null) {
 // Origem de cada ganho, para o balão explicar de onde vem o recurso.
 function fundsOrigin(yc) {
   const { base, side, sponsor } = yc.parts;
-  return [`Orçamento do ano ${base}`, side ? `bônus do lado ${side > 0 ? '+' : ''}${side}` : null, sponsor ? `Patrocinador +${sponsor}` : null]
+  return [t('yo.budget', { n: base }), side ? t('yo.sideBonus', { v: `${side > 0 ? '+' : ''}${side}` }) : null, sponsor ? t('yo.sponsor', { n: sponsor }) : null]
     .filter(Boolean).join(' · ');
 }
 function techOrigin(yc) {
   const { base, lab } = yc.techParts;
-  return [base ? `Pesquisa básica +${base}` : null, lab ? `Laboratório +${lab}` : null].filter(Boolean).join(' · ') || 'Sem pesquisa básica neste ano';
+  return [base ? t('yo.basicResearch', { n: base }) : null, lab ? t('yo.lab', { n: lab }) : null].filter(Boolean).join(' · ') || t('yo.noBasic');
 }
 
 // `reduced`: movimento reduzido (sem o ano antigo saindo), só o ano novo e os ganhos.
 export function yearOverlayNode(yc, { reduced = false } = {}) {
   const first = yc.round === 1; // abertura da partida: não há ano anterior para sair
   const calendar = el('div', { class: 'year-calendar', 'aria-hidden': 'true' }, [
-    el('div', { class: 'cal-top' }, [icon('calendar', { size: 16 }), 'ANO']),
+    el('div', { class: 'cal-top' }, [icon('calendar', { size: 16 }), t('yo.year')]),
     el('div', { class: 'cal-digits' }, [
       !first && !reduced ? el('span', { class: 'year-old' }, String(yc.year - 1)) : null,
       el('span', { class: 'year-new' }, String(yc.year)),
@@ -47,19 +48,19 @@ export function yearOverlayNode(yc, { reduced = false } = {}) {
   ]);
 
   const gains = [
-    { cls: 'funds', ic: 'coins', label: 'Verba', value: yc.funds, title: fundsOrigin(yc) },
-    { cls: 'tech', ic: 'chip', label: 'Tecnologia', value: yc.tech, title: techOrigin(yc) },
+    { cls: 'funds', ic: 'coins', label: t('res.funds'), value: yc.funds, title: fundsOrigin(yc) },
+    { cls: 'tech', ic: 'chip', label: t('res.tech'), value: yc.tech, title: techOrigin(yc) },
   ].filter((g) => g.value !== 0).map((g, i) => el('span', { class: `gain ${g.cls} ${g.value > 0 ? 'up' : 'down'}`, title: g.title, style: `animation-delay:${GAIN_START_S + i * GAIN_STEP_S}s` }, [
     icon(g.ic, { size: 18 }), `${g.label} `, el('strong', { class: 'num' }, `${g.value > 0 ? '+' : ''}${g.value}`),
   ]));
 
-  return el('div', { class: 'year-overlay', role: 'status', 'aria-live': 'polite', title: 'Clique para pular' }, [
+  return el('div', { class: 'year-overlay', role: 'status', 'aria-live': 'polite', title: t('yo.skipTitle') }, [
     el('div', { class: 'year-card' }, [
-      el('p', { class: 'eyebrow' }, first ? 'Começa a corrida espacial' : 'Ano novo'),
+      el('p', { class: 'eyebrow' }, first ? t('yo.first') : t('yo.newYear')),
       calendar,
-      el('p', { class: 'hint' }, `Nível de tecnologia ${yc.techLevel}${yc.techParts.base ? '' : '. A pesquisa básica vem de 2 em 2 anos: construa um Laboratório para acelerar'}`),
+      el('p', { class: 'hint' }, t('yo.techLevel', { n: yc.techLevel }) + (yc.techParts.base ? '' : t('yo.techLevelSlow'))),
       el('div', { class: 'gains' }, gains),
-      el('small', { class: 'hint year-skip' }, 'Clique para continuar'),
+      el('small', { class: 'hint year-skip' }, t('yo.skip')),
     ]),
   ]);
 }

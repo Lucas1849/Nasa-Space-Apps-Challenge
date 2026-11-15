@@ -379,6 +379,60 @@ export const en = {
   'fl.noFlight': 'No ship in flight.',
   'fl.missionEyebrow': 'Mission {name}',
   'common.back': 'Back',
+  'common.turnOf': '{name}\'s turn',
+
+  // ---- handoff screen (ui/handoff.js)
+  'ho.newYear': ' · New Year',
+  'ho.pass': 'Pass the device. The other agencies should not look: each one\'s state is secret. When you start, you will see what changed since your last turn.',
+  'ho.startMyTurn': 'It\'s me: start my turn',
+
+  // ---- online wait screen (ui/wait.js)
+  'wait.eyebrow': '{year} · online match',
+  'wait.yourAgency': 'Your agency: {name} · step {n}: {mission}',
+  'wait.hint': 'Wait for your turn — the screen updates on its own. Each agency\'s decisions are secret.',
+
+  // ---- year change (ui/yearOverlay.js)
+  'yo.budget': 'Year budget {n}',
+  'yo.sideBonus': 'side bonus {v}',
+  'yo.sponsor': 'Sponsor +{n}',
+  'yo.basicResearch': 'Basic research +{n}',
+  'yo.lab': 'Laboratory +{n}',
+  'yo.noBasic': 'No basic research this year',
+  'yo.year': 'YEAR',
+  'yo.skipTitle': 'Click to skip',
+  'yo.first': 'The space race begins',
+  'yo.newYear': 'New Year',
+  'yo.techLevel': 'Technology level {n}',
+  'yo.techLevelSlow': '. Basic research comes every 2 years: build a Laboratory to speed it up',
+  'yo.skip': 'Click to continue',
+
+  // ---- spectator screen (ui/spectate.js)
+  'sp.phase.roll': 'about to roll the dice',
+  'sp.phase.die': 'choosing the die',
+  'sp.phase.dilemma': 'resolving a dilemma card',
+  'sp.phase.tile': 'resolving the tile they landed on',
+  'sp.phase.flight': 'tending to the ship\'s flight',
+  'sp.phase.ship': 'tending to the ship',
+  'sp.banner.is': '{name} is {phase}.',
+  'sp.watching': 'Watching',
+  'sp.rolled': '{name} rolled — choosing the die',
+  'sp.waiting': '{name}\'s turn — waiting for the roll',
+  'sp.flying': 'Your ship in flight: {name}',
+  'sp.flyingText': 'Stage {n} of {total}. You advance the flight on your turn.',
+  'sp.yourObjective': 'Your current objective',
+  'sp.myWorkshop': 'My workshop',
+  'sp.watchHint': 'You are watching: you can see your workshop and your objectives, but you only play on your turn.',
+
+  // ---- turn summary (ui/summary.js)
+  'sum.steps': 'Steps',
+  'sum.noChange': 'No change in funds, technology or steps.',
+  'sum.roundLine': '{year}, round {inYear} of {rpy} · {rest}',
+  'sum.yearsLeft': '{n} year(s) left until {end}',
+  'sum.lastYear': 'last year of the race',
+  'sum.firstTurn': '{name}\'s first turn',
+  'sum.firstText': '{line}. Your mission is to climb your side\'s ladder before the rivals.',
+  'sum.since': 'Since your last turn',
+  'sum.newYear': 'New Year: {year}. The year\'s budget and technology came in.',
 
   // ---- report (ui/report.js)
   'rep.stageRisk': '{name}: risk of {pct}{shield}',
