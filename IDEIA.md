@@ -597,3 +597,25 @@ Decisão:
 
 Ainda sem retorno imediato: as escolhas durante o voo (tela de voo). Vale conferir se ali o jogador
 entende o que mudou.
+
+## 20. Requisitos escondidos, descobertos por ensaio ou por tentativa (Marcus, 15/11)
+Problema: o jogador só seguia o "Checklist do projeto": ele dizia exatamente o que comprar, travava o
+lançamento até ficar tudo verde e o risco era de uns 13% no 1º satélite. Não havia dúvida nem motivo para
+errar, e o relatório do "porquê" quase nunca aparecia. Aumentar o risco por sorte só criaria falha chata.
+
+Decisão: **a falha nasce de uma decisão do jogador e ensina**.
+- No jogo normal o jogador **não vê o mínimo de ciência e de comunicação** da missão. Vê o objetivo e uma
+  pista ("ciência moderada, comunicação alta"), para manter o passo "requisitos primeiro" do processo da NASA.
+- Esses dois requisitos **não travam o lançamento**. O que é conta física na tela continua visível e
+  travando: foguete, alcance, massa, energia, suporte de vida, vida útil e verba.
+- **Ensaio em solo** (5 de verba, 1 por turno, sem gastar foguete): diz em palavras se a nave atende, está
+  um pouco ou bem abaixo. Escolha: pagar pouco para saber ou apostar e lançar. É a tensão central do jogo.
+- **Lançar sem atingir o mínimo**: o voo acontece, a avaliação final falha e o relatório diz o que faltou, com
+  os números. Eles passam a aparecer e a travar o lançamento. Errar rende **+1 de tecnologia, só na primeira
+  vez** que o requisito é descoberto, para não dar para abusar.
+- O marco "Projeto pronto" (+20) usa só o que é visível, para não revelar se a nave atende.
+- O sandbox mostra tudo.
+
+Para testar jogando: o kit do degrau já cobre o mínimo do 1º degrau, então o erro tende a aparecer a partir
+do 2º (ex.: a Tripulação na Lua pede duas antenas parabólicas). Se ninguém errar, a pista qualitativa está
+generosa demais. Ainda sem fazer: variar os mínimos a cada partida e esconder vida útil e suporte de vida.

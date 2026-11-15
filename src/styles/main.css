@@ -206,6 +206,10 @@ select option { background: #0f1736; }
 .gauge .bar { grid-column: 1 / -1; height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
 .gauge .fill { height: 100%; border-radius: 999px; background: var(--ok); transition: width .3s ease, background .3s; }
 .gauge .mark { position: absolute; top: -2px; width: 2px; height: 11px; background: #fff; opacity: .7; }
+/* Mínimo da missão ainda desconhecido (sim/needs.js): cinza, nem verde nem vermelho. */
+.gauge.unknown .g-value, .checklist li.unknown { color: var(--muted); }
+.gauge.unknown .fill { background: rgba(255,255,255,.18); }
+.checklist li.unknown .ic { color: var(--muted); }
 .gauge.bad .fill { background: var(--danger); }
 .gauge.bad .g-value { color: var(--danger); }
 .gauge.warn .fill { background: var(--amber); }

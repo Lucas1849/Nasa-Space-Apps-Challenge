@@ -218,6 +218,10 @@ select option { background: #0f1736; }
 .gauge .bar { grid-column: 1 / -1; height: 7px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
 .gauge .fill { height: 100%; border-radius: 999px; background: var(--ok); transition: width .3s ease, background .3s; }
 .gauge .mark { position: absolute; top: -2px; width: 2px; height: 11px; background: #fff; opacity: .7; }
+/* Mínimo da missão ainda desconhecido (sim/needs.js): cinza, nem verde nem vermelho. */
+.gauge.unknown .g-value, .checklist li.unknown { color: var(--muted); }
+.gauge.unknown .fill { background: rgba(255,255,255,.18); }
+.checklist li.unknown .ic { color: var(--muted); }
 .gauge.bad .fill { background: var(--danger); }
 .gauge.bad .g-value { color: var(--danger); }
 .gauge.warn .fill { background: var(--amber); }
@@ -597,6 +601,7 @@ const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 const BAILOUT_TECH_COST = 2;
 const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
 const SPY_COST = 12;          // espionagem: uma vez por ano
+const REHEARSAL_COST = 5;     // ensaio em solo: diz em palavras se a nave atende aos mínimos escondidos
 
 const emptySpacecraft = () => ({
   instruments: [],     // ids de data/instruments.js (pode repetir)
@@ -617,6 +622,9 @@ function createPlayer(id, name, missionId = null) {
     funds: STARTING_FUNDS, // verba disponível
     tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
     unlocked: [],          // ids de peças e lançadores já descobertos (sim/resources.js); o kit do degrau entra ao começar o degrau
+    hideNeeds: false,      // jogo normal: mínimos de ciência e comunicação da missão escondidos (sim/needs.js)
+    knownNeeds: {},        // { missionId: true } missões cujos mínimos já foram descobertos
+    rehearsedThisTurn: false, // 1 ensaio em solo por turno
     launcherTech: 0,       // ajuste do lado no nível exigido pelos lançadores
     discount: 0,           // % de desconto na próxima compra (evento ou degrau)
     shields: 0,            // proteções contra falha no voo
@@ -668,106 +676,100 @@ function pushLog(state, text, who = null) {
   if (state.log.length > 60) state.log.length = 60;
 }
 
-return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
+return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
 })();
 
-// ---- src/board/board.js
-__mods["src/board/board.js"] = (() => {
-// Camada do TABULEIRO (IDEIA.md v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
-// O tabuleiro alimenta a engenharia: verba, tecnologia, desconto, proteção, prédios e informação.
-// Funções puras, sem DOM. Recebem `rng` para os testes serem determinísticos.
-// ATENÇÃO: valores FICTÍCIOS para balanceamento. Casas de dinheiro são fracas de propósito.
+// ---- src/data/missions.js
+__mods["src/data/missions.js"] = (() => {
+// Missões da corrida espacial (ver IDEIA.md). Adicionar missão nova = preencher dados, sem código novo.
+// ATENÇÃO: valores FICTÍCIOS, só para balanceamento. Não são requisitos de missões históricas.
 //
-// Tipos de casa:
-//   start    largada (volta completa dá verba)
-//   funds    verba (positiva ou negativa)
-//   event    carta de dilema (em solo) ou imprevisto na próxima etapa (com a nave em voo)
-//   tech     cooperação científica: +tecnologia
-//   shop     feira de fornecedores: desconto na próxima compra
-//   lot      terreno: construir prédio ou usar o prédio do rival
-//   spy      espionagem: paga para ver o estado de um rival (uma vez por ano)
-//   repair   oficina de reparos: +1 proteção contra falha
-//   catchup  choque do Sputnik: verba de recuperação para quem está atrás
-// As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
+// needs: o que a espaçonave precisa entregar para a missão contar como cumprida.
+//   science     = valor científico mínimo (soma dos instrumentos + bônus da órbita)
+//   comms       = capacidade mínima de comunicação efetiva
+//   lifeSupport = exige cápsula com suporte de vida
+//   lifetime    = anos mínimos de operação (vida útil da órbita + bônus de peças)
+// orbit: órbita onde a missão precisa ser executada (define as etapas do voo, ver data/stages.js).
+// extraStages: etapas a mais no fim do voo (ex.: retorno da tripulação).
+// kit: peças e lançador que o degrau revela ao começar (ids de data/parts.js, instruments.js e launchers.js).
+//   É o mínimo para o degrau fechar, para ninguém ficar travado esperando a sorte do tabuleiro.
+//   As casas do tabuleiro, a tecnologia e o Ano novo revelam os extras e as alternativas.
+// Cada jogador cumpre cada missão no máximo uma vez. O primeiro do mundo leva o recorde.
+//
+// Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
+// Efeitos possíveis (só 3 tipos): 'funds' (+ verba), 'discount' (% de desconto na loja), 'shield' (proteção contra falha).
 
-const TILES = [
-  { id: 0, type: 'start', label: 'Largada', funds: 10 },
-  { id: 1, type: 'lot', label: 'Terreno livre' },
-  { id: 2, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
-  { id: 3, type: 'event', label: 'Evento' },
-  { id: 4, type: 'spy', label: 'Espionagem' },
-  { id: 5, type: 'lot', label: 'Terreno livre' },
-  { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
-  { id: 7, type: 'event', label: 'Evento' },
-  { id: 8, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
-  { id: 9, type: 'lot', label: 'Terreno livre' },
-  { id: 10, type: 'shop', label: 'Feira de fornecedores', discount: 15 },
-  { id: 11, type: 'event', label: 'Evento' },
-  { id: 12, type: 'repair', label: 'Oficina de reparos', shield: 1 },
-  { id: 13, type: 'lot', label: 'Terreno livre' },
-  { id: 14, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
-  { id: 15, type: 'event', label: 'Evento' },
+const milestones = (ready, launch, done) => [
+  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'funds', value: 20 } },
+  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'discount', value: 10 } },
+  { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
 ];
 
-function rollDie(rng = Math.random) {
-  return 1 + Math.floor(rng() * 6);
-}
+const MISSIONS = {
+  first_satellite: {
+    id: 'first_satellite',
+    name: 'Primeiro satélite',
+    difficulty: 'fácil',
+    orbit: 'leo',
+    goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
+    needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
+    kit: ['radio_beacon', 'solar_small', 'antenna_basic', 'small'],
+    milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
+  },
+  living_being: {
+    id: 'living_being',
+    name: 'Ser vivo em órbita',
+    difficulty: 'médio',
+    orbit: 'leo',
+    goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
+    needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
+    kit: ['life_support', 'solar_large', 'radio_beacon', 'antenna_basic', 'small'],
+    milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
+  },
+  weather_watch: {
+    id: 'weather_watch',
+    name: 'Satélite meteorológico',
+    difficulty: 'médio',
+    orbit: 'geo',
+    goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
+    needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
+    kit: ['camera', 'radio_beacon', 'antenna_dish', 'solar_large', 'medium'],
+    milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
+  },
+  lunar_probe: {
+    id: 'lunar_probe',
+    name: 'Sonda lunar',
+    difficulty: 'difícil',
+    orbit: 'moon',
+    goal: 'Chegar à Lua e enviar dados científicos de lá.',
+    needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
+    kit: ['spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
+    milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
+  },
+  space_station: {
+    id: 'space_station',
+    name: 'Estação espacial',
+    difficulty: 'difícil',
+    orbit: 'leo',
+    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
+    needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
+    kit: ['life_support', 'camera', 'thruster', 'antenna_basic', 'solar_large', 'medium'],
+    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+  },
+  crewed_moon: {
+    id: 'crewed_moon',
+    name: 'Tripulação na Lua',
+    difficulty: 'muito difícil',
+    orbit: 'moon',
+    goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
+    needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
+    kit: ['life_support', 'spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
+    extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
+    milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
+  },
+};
 
-// Move o jogador e devolve nova posição + se passou pela largada.
-function movePlayer(player, steps) {
-  const raw = player.position + steps;
-  const position = raw % TILES.length;
-  const passedStart = raw >= TILES.length;
-  return { ...player, position, passedStart };
-}
-
-// Aplica o efeito automático da casa. Devolve { player, messages[] }.
-// `isLast` = jogador com menos progresso (recebe a verba do choque do Sputnik).
-function applyTile(player, tile, { isLast = false } = {}) {
-  const messages = [];
-  const p = { ...player };
-
-  if (p.passedStart && tile.type !== 'start') {
-    p.funds += TILES[0].funds;
-    messages.push(`Passou pela largada: +${TILES[0].funds} de verba.`);
-  }
-
-  switch (tile.type) {
-    case 'start':
-    case 'funds':
-      p.funds += tile.funds;
-      messages.push(`${tile.label}: ${tile.funds >= 0 ? '+' : ''}${tile.funds} de verba.`);
-      break;
-    case 'tech':
-      p.tech = (p.tech || 0) + tile.tech;
-      messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
-      break;
-    case 'shop':
-      p.discount = Math.max(p.discount || 0, tile.discount);
-      messages.push(`${tile.label}: ${tile.discount}% de desconto na próxima compra.`);
-      break;
-    case 'repair':
-      p.shields = (p.shields || 0) + tile.shield;
-      messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);
-      break;
-    case 'catchup':
-      if (isLast) {
-        p.funds += tile.funds;
-        messages.push(`${tile.label}: o governo libera verba de recuperação, +${tile.funds}.`);
-      } else {
-        messages.push(`${tile.label}: só vale para quem está atrás na corrida.`);
-      }
-      break;
-    default:
-      break;
-  }
-
-  p.funds = Math.max(0, p.funds);
-  delete p.passedStart;
-  return { player: p, messages };
-}
-
-return { TILES, rollDie, movePlayer, applyTile };
+return { MISSIONS };
 })();
 
 // ---- src/data/instruments.js
@@ -943,97 +945,158 @@ const nameOf = (id) => (CATALOG[id] || LAUNCHERS[id]).name;
 return { CATALOG, itemsOf, totalsFor, effectiveTotals, FACTORY_DISCOUNT_PER_LEVEL, MAX_DISCOUNT, discountFor, priceFor, requiredTech, isLocked, isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf };
 })();
 
-// ---- src/data/missions.js
-__mods["src/data/missions.js"] = (() => {
-// Missões da corrida espacial (ver IDEIA.md). Adicionar missão nova = preencher dados, sem código novo.
-// ATENÇÃO: valores FICTÍCIOS, só para balanceamento. Não são requisitos de missões históricas.
-//
-// needs: o que a espaçonave precisa entregar para a missão contar como cumprida.
-//   science     = valor científico mínimo (soma dos instrumentos + bônus da órbita)
-//   comms       = capacidade mínima de comunicação efetiva
-//   lifeSupport = exige cápsula com suporte de vida
-//   lifetime    = anos mínimos de operação (vida útil da órbita + bônus de peças)
-// orbit: órbita onde a missão precisa ser executada (define as etapas do voo, ver data/stages.js).
-// extraStages: etapas a mais no fim do voo (ex.: retorno da tripulação).
-// kit: peças e lançador que o degrau revela ao começar (ids de data/parts.js, instruments.js e launchers.js).
-//   É o mínimo para o degrau fechar, para ninguém ficar travado esperando a sorte do tabuleiro.
-//   As casas do tabuleiro, a tecnologia e o Ano novo revelam os extras e as alternativas.
-// Cada jogador cumpre cada missão no máximo uma vez. O primeiro do mundo leva o recorde.
-//
-// Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
-// Efeitos possíveis (só 3 tipos): 'funds' (+ verba), 'discount' (% de desconto na loja), 'shield' (proteção contra falha).
+// ---- src/sim/needs.js
+__mods["src/sim/needs.js"] = (() => {
+// Requisitos escondidos da missão (IDEIA.md seção 20). No jogo normal o jogador NÃO vê o mínimo de ciência e
+// de comunicação da missão: vê só o objetivo e uma pista ("ciência moderada"). Ele descobre de dois jeitos:
+//   - Ensaio em solo (barato): diz em palavras se cada requisito atende, está um pouco ou bem abaixo.
+//   - Lançar e errar: o relatório mostra os números e eles passam a aparecer e a travar o lançamento.
+// Vida útil e suporte de vida ficam visíveis (estão no texto do objetivo). O sandbox mostra tudo.
+// Funções puras, sem DOM.
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { effectiveTotals } = __mods["src/sim/resources.js"];
 
-const milestones = (ready, launch, done) => [
-  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'funds', value: 20 } },
-  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'discount', value: 10 } },
-  { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
+const HIDDEN_KINDS = ['science', 'comms'];
+const NEED_LABELS = { science: 'ciência', comms: 'comunicação' };
+// Ids dos checks de checkDesign (sim/simulate.js) que dependem de um mínimo escondido.
+const HIDDEN_CHECK_IDS = ['science', 'mission_comms'];
+
+// Os mínimos desta missão ainda estão escondidos para o jogador? (`hideNeeds` só liga no jogo normal.)
+const isHidden = (player, missionId = player.missionId) =>
+  Boolean(player.hideNeeds && missionId && !(player.knownNeeds || {})[missionId]);
+
+// Pista qualitativa do mínimo, para o jogador ter noção sem o número.
+const LEVELS = { science: [2, 5], comms: [3, 6] }; // até o 1º valor = baixa; até o 2º = moderada; acima = alta
+function needLevel(kind, value) {
+  const [low, mid] = LEVELS[kind];
+  return value <= low ? 'baixa' : value <= mid ? 'moderada' : 'alta';
+}
+
+// Marca os mínimos da missão como conhecidos. Devolve true se era a primeira vez.
+function learnNeeds(player, missionId) {
+  player.knownNeeds = player.knownNeeds || {};
+  if (player.knownNeeds[missionId]) return false;
+  player.knownNeeds[missionId] = true;
+  return true;
+}
+
+// Ensaio em solo: compara a nave atual com os mínimos escondidos e responde só em palavras.
+function assessNeeds(player) {
+  const mission = MISSIONS[player.missionId];
+  const t = effectiveTotals(player);
+  const values = { science: t.scienceEffective, comms: t.commsEffective };
+  return HIDDEN_KINDS.map((kind) => {
+    const need = mission.needs[kind];
+    const ratio = need > 0 ? values[kind] / need : 1;
+    return {
+      kind,
+      label: NEED_LABELS[kind],
+      ok: ratio >= 1,
+      status: ratio >= 1 ? 'atende' : ratio >= 0.75 ? 'está um pouco abaixo' : 'está bem abaixo',
+    };
+  });
+}
+
+return { HIDDEN_KINDS, NEED_LABELS, HIDDEN_CHECK_IDS, isHidden, needLevel, learnNeeds, assessNeeds };
+})();
+
+// ---- src/board/board.js
+__mods["src/board/board.js"] = (() => {
+// Camada do TABULEIRO (IDEIA.md v3 seção 4): o jogador rola 2 dados, escolhe um, anda e decide.
+// O tabuleiro alimenta a engenharia: verba, tecnologia, desconto, proteção, prédios e informação.
+// Funções puras, sem DOM. Recebem `rng` para os testes serem determinísticos.
+// ATENÇÃO: valores FICTÍCIOS para balanceamento. Casas de dinheiro são fracas de propósito.
+//
+// Tipos de casa:
+//   start    largada (volta completa dá verba)
+//   funds    verba (positiva ou negativa)
+//   event    carta de dilema (em solo) ou imprevisto na próxima etapa (com a nave em voo)
+//   tech     cooperação científica: +tecnologia
+//   shop     feira de fornecedores: desconto na próxima compra
+//   lot      terreno: construir prédio ou usar o prédio do rival
+//   spy      espionagem: paga para ver o estado de um rival (uma vez por ano)
+//   repair   oficina de reparos: +1 proteção contra falha
+//   catchup  choque do Sputnik: verba de recuperação para quem está atrás
+// As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
+
+const TILES = [
+  { id: 0, type: 'start', label: 'Largada', funds: 10 },
+  { id: 1, type: 'lot', label: 'Terreno livre' },
+  { id: 2, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
+  { id: 3, type: 'event', label: 'Evento' },
+  { id: 4, type: 'spy', label: 'Espionagem' },
+  { id: 5, type: 'lot', label: 'Terreno livre' },
+  { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
+  { id: 7, type: 'event', label: 'Evento' },
+  { id: 8, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
+  { id: 9, type: 'lot', label: 'Terreno livre' },
+  { id: 10, type: 'shop', label: 'Feira de fornecedores', discount: 15 },
+  { id: 11, type: 'event', label: 'Evento' },
+  { id: 12, type: 'repair', label: 'Oficina de reparos', shield: 1 },
+  { id: 13, type: 'lot', label: 'Terreno livre' },
+  { id: 14, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
+  { id: 15, type: 'event', label: 'Evento' },
 ];
 
-const MISSIONS = {
-  first_satellite: {
-    id: 'first_satellite',
-    name: 'Primeiro satélite',
-    difficulty: 'fácil',
-    orbit: 'leo',
-    goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
-    needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
-    kit: ['radio_beacon', 'solar_small', 'antenna_basic', 'small'],
-    milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
-  },
-  living_being: {
-    id: 'living_being',
-    name: 'Ser vivo em órbita',
-    difficulty: 'médio',
-    orbit: 'leo',
-    goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
-    needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
-    kit: ['life_support', 'solar_large', 'radio_beacon', 'antenna_basic', 'small'],
-    milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
-  },
-  weather_watch: {
-    id: 'weather_watch',
-    name: 'Satélite meteorológico',
-    difficulty: 'médio',
-    orbit: 'geo',
-    goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
-    needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
-    kit: ['camera', 'radio_beacon', 'antenna_dish', 'solar_large', 'medium'],
-    milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
-  },
-  lunar_probe: {
-    id: 'lunar_probe',
-    name: 'Sonda lunar',
-    difficulty: 'difícil',
-    orbit: 'moon',
-    goal: 'Chegar à Lua e enviar dados científicos de lá.',
-    needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
-    kit: ['spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
-    milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
-  },
-  space_station: {
-    id: 'space_station',
-    name: 'Estação espacial',
-    difficulty: 'difícil',
-    orbit: 'leo',
-    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
-    needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
-    kit: ['life_support', 'camera', 'thruster', 'antenna_basic', 'solar_large', 'medium'],
-    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
-  },
-  crewed_moon: {
-    id: 'crewed_moon',
-    name: 'Tripulação na Lua',
-    difficulty: 'muito difícil',
-    orbit: 'moon',
-    goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
-    needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
-    kit: ['life_support', 'spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
-    extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
-    milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
-  },
-};
+function rollDie(rng = Math.random) {
+  return 1 + Math.floor(rng() * 6);
+}
 
-return { MISSIONS };
+// Move o jogador e devolve nova posição + se passou pela largada.
+function movePlayer(player, steps) {
+  const raw = player.position + steps;
+  const position = raw % TILES.length;
+  const passedStart = raw >= TILES.length;
+  return { ...player, position, passedStart };
+}
+
+// Aplica o efeito automático da casa. Devolve { player, messages[] }.
+// `isLast` = jogador com menos progresso (recebe a verba do choque do Sputnik).
+function applyTile(player, tile, { isLast = false } = {}) {
+  const messages = [];
+  const p = { ...player };
+
+  if (p.passedStart && tile.type !== 'start') {
+    p.funds += TILES[0].funds;
+    messages.push(`Passou pela largada: +${TILES[0].funds} de verba.`);
+  }
+
+  switch (tile.type) {
+    case 'start':
+    case 'funds':
+      p.funds += tile.funds;
+      messages.push(`${tile.label}: ${tile.funds >= 0 ? '+' : ''}${tile.funds} de verba.`);
+      break;
+    case 'tech':
+      p.tech = (p.tech || 0) + tile.tech;
+      messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
+      break;
+    case 'shop':
+      p.discount = Math.max(p.discount || 0, tile.discount);
+      messages.push(`${tile.label}: ${tile.discount}% de desconto na próxima compra.`);
+      break;
+    case 'repair':
+      p.shields = (p.shields || 0) + tile.shield;
+      messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);
+      break;
+    case 'catchup':
+      if (isLast) {
+        p.funds += tile.funds;
+        messages.push(`${tile.label}: o governo libera verba de recuperação, +${tile.funds}.`);
+      } else {
+        messages.push(`${tile.label}: só vale para quem está atrás na corrida.`);
+      }
+      break;
+    default:
+      break;
+  }
+
+  p.funds = Math.max(0, p.funds);
+  delete p.passedStart;
+  return { player: p, messages };
+}
+
+return { TILES, rollDie, movePlayer, applyTile };
 })();
 
 // ---- src/sim/simulate.js
@@ -1043,6 +1106,7 @@ __mods["src/sim/simulate.js"] = (() => {
 // Função pura. `rng` injetável para testes.
 // ATENÇÃO: regras e números FICTÍCIOS para balanceamento, não modelam física real.
 const { effectiveTotals } = __mods["src/sim/resources.js"];
+const { isHidden, needLevel } = __mods["src/sim/needs.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { ORBITS } = __mods["src/data/orbits.js"];
 const { LAUNCHERS } = __mods["src/data/launchers.js"];
@@ -1051,8 +1115,11 @@ const FAILURE_CHANCE = 0.15; // chance base de falha aleatória de componente (s
 
 // Checagens de projeto, sem aleatoriedade. Usadas na oficina (preview) e na simulação.
 // `modifiers` vem das decisões em voo (ex.: lifetimeDelta) e só é usado pela simulação.
-// Devolve { ok, designOk, checks: [{ id, ok, hard, text }], totals }.
+// Devolve { ok, designOk, checks: [{ id, ok, hard, hidden, text }], totals }.
 //   hard = true: impede o sucesso. hard = false ("leve"): só reduz a ciência entregue.
+//   hidden = true: o mínimo da missão (ciência e comunicação) ainda é desconhecido para o jogador. O check
+//   não trava o lançamento nem mostra o número (sim/needs.js). Com `modifiers.evaluate` (avaliação final
+//   da missão, espião) todos os checks valem de verdade, e a falha pós-voo continua igual.
 function checkDesign(player, modifiers = {}) {
   const mission = MISSIONS[player.missionId];
   const t = effectiveTotals(player);
@@ -1089,12 +1156,22 @@ function checkDesign(player, modifiers = {}) {
     false);
 
   if (mission) {
-    add('science', t.scienceEffective >= mission.needs.science,
-      `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
-      `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
-    add('mission_comms', t.commsEffective >= mission.needs.comms,
-      `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
-      `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+    if (isHidden(player, player.missionId) && !modifiers.evaluate) {
+      // Mínimo desconhecido: mostra só o que a nave entrega e a pista, sem o número, e não trava.
+      const unknown = (id, label, value, kind) => checks.push({
+        id, ok: true, hard: false, hidden: true,
+        text: `${label} ${value}: o mínimo desta missão ainda não é conhecido (pista: ${label.toLowerCase()} ${needLevel(kind, mission.needs[kind])}). Faça um ensaio em solo ou lance para descobrir.`,
+      });
+      unknown('science', 'Ciência', t.scienceEffective, 'science');
+      unknown('mission_comms', 'Comunicação', t.commsEffective, 'comms');
+    } else {
+      add('science', t.scienceEffective >= mission.needs.science,
+        `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
+        `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
+      add('mission_comms', t.commsEffective >= mission.needs.comms,
+        `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
+        `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+    }
     if (mission.needs.lifeSupport) {
       add('life', t.lifeSupport, 'Suporte de vida a bordo.', 'A missão exige cápsula com suporte de vida.');
     }
@@ -1123,7 +1200,7 @@ function checkDesign(player, modifiers = {}) {
 // já foi sorteado etapa por etapa (sim/flight.js) e aqui só sobra a avaliação final da operação.
 // Devolve { success, score, reasons, checks, totals, usedShield, scienceDelivered }.
 function simulate(player, { rng = Math.random, modifiers = {}, randomFailure: allowRandom = true } = {}) {
-  const { ok, checks, totals } = checkDesign(player, modifiers);
+  const { ok, checks, totals } = checkDesign(player, { ...modifiers, evaluate: true });
   const reasons = checks.filter((c) => !c.ok && c.hard).map((c) => c.text);
   let usedShield = false;
 
@@ -1687,7 +1764,8 @@ __mods["src/sim/actions.js"] = (() => {
 //      - no chão: oficina à vontade e, se quiser, LANÇA (a subida acontece na hora e encerra o turno);
 //      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado); dá para montar a próxima nave.
 //   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
-const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST } = __mods["src/sim/state.js"];
+const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST } = __mods["src/sim/state.js"];
+const { isHidden, learnNeeds, assessNeeds, HIDDEN_CHECK_IDS } = __mods["src/sim/needs.js"];
 const { TILES, rollDie, movePlayer, applyTile } = __mods["src/board/board.js"];
 const { CATALOG, priceFor, isLocked, requiredTech, isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf } = __mods["src/sim/resources.js"];
 const { checkDesign, simulate } = __mods["src/sim/simulate.js"];
@@ -1739,7 +1817,10 @@ function startGame(state, setup, options = {}) {
 
   pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
   state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
-  state.players.filter((p) => !p.bot).forEach((p) => setMission(state, p, p.missionId)); // kit do 1º degrau
+  state.players.filter((p) => !p.bot).forEach((p) => {
+    p.hideNeeds = true; // os mínimos de ciência e comunicação da missão começam escondidos (sim/needs.js)
+    setMission(state, p, p.missionId); // kit do 1º degrau
+  });
   startTurn(state);
   state.screen = humans(state).length > 1 ? 'handoff' : 'board';
   return null;
@@ -1820,6 +1901,7 @@ function startTurn(state) {
   p.rolled = false;
   p.flightAdvanced = false;
   p.launchedThisTurn = false;
+  p.rehearsedThisTurn = false;
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
@@ -2078,7 +2160,7 @@ function spyReport(state, rival) {
   if (rival.flight) {
     return { ...report, mission: MISSIONS[rival.flight.missionId].name, inFlight: true, stage: rival.flight.stageIndex, stages: rival.flight.plan.length };
   }
-  const checks = checkDesign(rival).checks.filter((c) => c.hard);
+  const checks = checkDesign(rival, { evaluate: true }).checks.filter((c) => c.hard); // o espião vê a verdade
   return { ...report, ready: checks.length ? checks.filter((c) => c.ok).length / checks.length : 0 };
 }
 
@@ -2253,6 +2335,33 @@ function checkMilestones(state, player) {
 
 // ---------------------------------------------------------------- voo em etapas
 
+// Ensaio em solo: por um custo pequeno (sem gastar foguete), diz em palavras se a nave atende aos mínimos
+// escondidos da missão. Não dá o número: para isso é preciso lançar e errar (sim/needs.js).
+function rehearse(state) {
+  const p = currentPlayer(state);
+  if (state.sandbox) return 'No sandbox os requisitos da missão já aparecem na checagem.';
+  if (!p.missionId) return 'Sua escada já está completa.';
+  if (!isHidden(p)) return 'Os requisitos desta missão já são conhecidos: veja a checagem do projeto.';
+  if (p.rehearsedThisTurn) return 'Só um ensaio por turno.';
+  if (p.funds < REHEARSAL_COST) return `Verba insuficiente: o ensaio custa ${REHEARSAL_COST}.`;
+  p.funds -= REHEARSAL_COST;
+  p.rehearsedThisTurn = true;
+  const results = assessNeeds(p);
+  const short = results.filter((r) => !r.ok);
+  pushLog(state, `${p.name} fez um ensaio em solo da missão "${MISSIONS[p.missionId].name}".`, p.id);
+  setOutcome(state, p, {
+    title: 'Ensaio em solo',
+    changes: [{ label: 'Verba', value: -REHEARSAL_COST }],
+    notes: [
+      ...results.map((r) => `${r.label[0].toUpperCase()}${r.label.slice(1)}: ${r.status}.`),
+      short.length
+        ? 'Ajuste a nave e ensaie de novo no próximo turno, ou lance para descobrir os números.'
+        : 'Nada indica falta de requisito. Ainda há o risco do voo.',
+    ],
+  });
+  return null;
+}
+
 // Lança: paga o lançador, a nave sai da oficina e a SUBIDA é sorteada na hora (encerra o turno).
 function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
@@ -2416,6 +2525,19 @@ function completeMission(state, p) {
   result.craft = flight.craft;
   const year = yearOf(state.round);
   result.year = year;
+  // Mínimos escondidos: depois da avaliação final eles passam a aparecer. Falhar por causa deles ensina:
+  // +1 de tecnologia, só na primeira vez (não dá para abusar), e o relatório explica o que faltou.
+  const wasHidden = isHidden(p, missionId);
+  const shortfalls = result.checks.filter((c) => !c.ok && c.hard && HIDDEN_CHECK_IDS.includes(c.id));
+  if (wasHidden) {
+    learnNeeds(p, missionId);
+    if (shortfalls.length) {
+      p.tech += 1;
+      const n = MISSIONS[missionId].needs;
+      result.learning = `Requisito descoberto: esta missão pede ciência ≥ ${n.science} e comunicação ≥ ${n.comms}. Os números passam a aparecer na oficina e a travar o lançamento. Errar ensinou: +1 de tecnologia.`;
+      pushLog(state, `${p.name} descobriu os requisitos de "${MISSIONS[missionId].name}" ao errar.`, p.id);
+    }
+  }
   if (result.success) {
     p.completed.push({ missionId, year, science: result.scienceDelivered });
     grant(state, p, 'mission_complete', missionId);
@@ -2438,7 +2560,7 @@ function completeMission(state, p) {
   return null;
 }
 
-return { startGame, endTurn, rollDice, moveBy, rollAndMove, chooseDilemma, spyOn, buildOnLot, useFeeFor, useRivalBuilding, skipTile, upgradeBuilding, upgradeCostFor, requestBailout, chooseMission, buyItem, sellItem, chooseLauncher, chooseOrbit, describeEffect, launch, advanceFlight, chooseStageOption };
+return { startGame, endTurn, rollDice, moveBy, rollAndMove, chooseDilemma, spyOn, buildOnLot, useFeeFor, useRivalBuilding, skipTile, upgradeBuilding, upgradeCostFor, requestBailout, chooseMission, buyItem, sellItem, chooseLauncher, chooseOrbit, describeEffect, rehearse, launch, advanceFlight, chooseStageOption };
 })();
 
 // ---- src/data/glossary.js
@@ -2656,6 +2778,7 @@ __mods["src/ui/components.js"] = (() => {
 // Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
 const { effectiveTotals } = __mods["src/sim/resources.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
+const { isHidden, needLevel } = __mods["src/sim/needs.js"];
 const { flightPlan, pct } = __mods["src/sim/flight.js"];
 const { ladderProgress } = __mods["src/sim/progress.js"];
 const { upgradeCostFor } = __mods["src/sim/actions.js"];
@@ -2864,10 +2987,27 @@ function stageTrack(plan, stages, currentIndex) {
   }));
 }
 
+// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
+// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
+function outcomeCard(state, p) {
+  const o = state.outcome;
+  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
+  return el('div', { class: 'outcome' }, [
+    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
+    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
+    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
+      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
+    ]))) : null,
+    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
+    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
+  ]);
+}
+
 // Medidores: cada recurso contra o limite ou o mínimo, com barra e cor de alerta.
 function gauges(player) {
   const t = effectiveTotals(player);
   const m = MISSIONS[player.missionId];
+  const hidden = isHidden(player);
   const g = ([iconName, label], value, limit, status, fill, hint) =>
     el('div', { class: `gauge ${status}`, title: hint }, [
       el('span', { class: 'g-label' }, [icon(iconName, { size: 15 }), label]),
@@ -2886,18 +3026,25 @@ function gauges(player) {
       ratio(t.powerUse, t.powerGen), 'Energia consumida contra a gerada. Precisa sobrar.'),
     g(['dish', 'Dados e transmissão'], t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
       ratio(t.data, t.commsEffective), 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.'),
-    g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
-      ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
-    g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
-      ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
+    // Mínimos escondidos (sim/needs.js): mostra o que a nave entrega e "?" no lugar do mínimo, em cinza.
+    hidden
+      ? g(['atom', 'Ciência'], t.scienceEffective, '?', 'unknown', 0, `O mínimo de ciência desta missão é desconhecido (pista: ${needLevel('science', m.needs.science)}). Faça um ensaio em solo ou lance para descobrir.`)
+      : g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
+        ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
+    hidden
+      ? g(['signal', 'Comunicação'], t.commsEffective, '?', 'unknown', 0, `O mínimo de comunicação desta missão é desconhecido (pista: ${needLevel('comms', m.needs.comms)}). Faça um ensaio em solo ou lance para descobrir.`)
+      : g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
+        ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
     g(['hourglass', 'Vida útil (anos)'], t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
       ratio(t.lifetime, m.needs.lifetime), 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.'),
   ]);
 }
 
 function checklist(checks) {
-  return el('ul', { class: 'checklist' }, checks.map((c) =>
-    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
+  // `hidden`: mínimo da missão ainda desconhecido (sim/needs.js): cinza, nem verde nem vermelho.
+  return el('ul', { class: 'checklist' }, checks.map((c) => c.hidden
+    ? el('li', { class: 'unknown' }, [icon('eye', { size: 15, label: 'desconhecido' }), el('span', {}, c.text)])
+    : el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
 }
 const designChecklist = (player) => checklist(checkDesign(player).checks);
 
@@ -2927,7 +3074,7 @@ function glossary(open = false) {
   return d;
 }
 
-return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, outcomeCard, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
 })();
 
 // ---- src/ui/spacecraft.js
@@ -3312,6 +3459,8 @@ const { icon } = __mods["src/ui/icons.js"];
 const { guideOn } = __mods["src/ui/prefs.js"];
 const { currentPlayer, SPY_COST } = __mods["src/sim/state.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
+const { isHidden } = __mods["src/sim/needs.js"];
+const { REHEARSAL_COST } = __mods["src/sim/state.js"];
 const { isLocked, requiredTech, isDiscovered } = __mods["src/sim/resources.js"];
 const { LAUNCHERS } = __mods["src/data/launchers.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
@@ -3413,6 +3562,10 @@ function nextStep(state, screen) {
     }
     const fail = firstHardFailure(p);
     if (fail) return { title: 'Resolva os itens em vermelho', text: fail.text, target: 'checks', tips };
+    // Projeto fecha nas contas físicas, mas os mínimos de ciência e comunicação ainda são desconhecidos.
+    if (isHidden(p) && !p.flight && !p.launchedThisTurn && !p.rehearsedThisTurn) {
+      return { title: 'Nave montada, requisitos desconhecidos', text: `A missão pede ciência e comunicação que você ainda não conhece. Faça um ensaio em solo (${REHEARSAL_COST}) para ter uma pista, ou lance e descubra no relatório. Errar ensina: os números aparecem depois.`, target: 'rehearse', tips };
+    }
     if (p.flight || p.launchedThisTurn) {
       return { title: 'Nave montada', text: 'O projeto fecha. Você poderá lançar quando a nave atual terminar o voo, ou no próximo turno.', target: 'back', tips };
     }
@@ -3471,7 +3624,7 @@ __mods["src/ui/board.js"] = (() => {
 // Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
-const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi } = __mods["src/ui/components.js"];
+const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard } = __mods["src/ui/components.js"];
 const { icon, dieFace } = __mods["src/ui/icons.js"];
 const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { sinceCard } = __mods["src/ui/summary.js"];
@@ -3582,22 +3735,6 @@ function tileDecision(state, p, actions) {
       button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
       button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
     ]),
-  ]);
-}
-
-// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
-// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
-function outcomeCard(state, p) {
-  const o = state.outcome;
-  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
-  return el('div', { class: 'outcome' }, [
-    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
-    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
-    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
-      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
-    ]))) : null,
-    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
-    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
   ]);
 }
 
@@ -3744,7 +3881,7 @@ __mods["src/ui/workshop.js"] = (() => {
 // Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
 // e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
-const { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle } = __mods["src/ui/components.js"];
+const { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle, outcomeCard } = __mods["src/ui/components.js"];
 const { icon } = __mods["src/ui/icons.js"];
 const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
@@ -3753,7 +3890,8 @@ const { PARTS } = __mods["src/data/parts.js"];
 const { LAUNCHERS } = __mods["src/data/launchers.js"];
 const { ORBITS } = __mods["src/data/orbits.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
-const { currentPlayer } = __mods["src/sim/state.js"];
+const { currentPlayer, REHEARSAL_COST } = __mods["src/sim/state.js"];
+const { isHidden, needLevel } = __mods["src/sim/needs.js"];
 const { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems } = __mods["src/sim/resources.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
 const { missionRisk, describeRisk, pct } = __mods["src/sim/flight.js"];
@@ -3834,9 +3972,11 @@ function workshopScreen(state, actions) {
 
   const mission = MISSIONS[p.missionId];
   const design = checkDesign(p);
+  // Mínimos de ciência e comunicação escondidos (sim/needs.js): só a pista, sem o número.
+  const hidden = isHidden(p);
   const needs = [
-    `ciência ≥ ${mission.needs.science}`,
-    `comunicação ≥ ${mission.needs.comms}`,
+    hidden ? `ciência ${needLevel('science', mission.needs.science)}` : `ciência ≥ ${mission.needs.science}`,
+    hidden ? `comunicação ${needLevel('comms', mission.needs.comms)}` : `comunicação ≥ ${mission.needs.comms}`,
     `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
@@ -3879,8 +4019,15 @@ function workshopScreen(state, actions) {
         el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
         design.ok ? riskPanel(p) : null,
         blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
+        hidden && design.ok ? el('p', { class: 'hint with-icon' }, [icon('eye', { size: 16 }), 'Você ainda não sabe se a nave atende aos mínimos da missão. Faça um ensaio em solo ou lance e descubra: errar também ensina.']) : null,
+        outcomeCard(state, p),
         el('div', { class: 'row', style: 'margin:0' }, [
-          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+            disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
+            class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
+            title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
+          }) : null,
           back,
         ]),
         glossary(),
@@ -4033,6 +4180,7 @@ function reportScreen(state, actions) {
       el('div', {}, [
         el('h2', {}, 'Por quê'),
         el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
+        r.learning ? el('div', { class: 'panel lesson' }, [panelTitle('eye', 'Requisito descoberto'), el('p', {}, r.learning)]) : null,
         r.consolation ? el('div', { class: 'panel lesson' }, [panelTitle('medal', 'Missão de consolação'), el('p', {}, r.consolation)]) : null,
         r.failureLesson ? el('div', { class: 'panel lesson' }, [panelTitle('testTube', 'Dados de falha'), el('p', {}, r.failureLesson)]) : null,
         r.stepBonus ? el('div', { class: 'panel lesson' }, [
@@ -4224,6 +4372,7 @@ const actions = {
   skipTile: wrap(game.skipTile),
   upgradeBuilding: wrap(game.upgradeBuilding),
   requestBailout: wrap(game.requestBailout),
+  rehearse: wrap(game.rehearse),
   launch: wrap(game.launch, showLaunchOverlay),
   advanceFlight: wrap(game.advanceFlight),
   // Atalho de depuração no console: rola e anda com o primeiro dado.

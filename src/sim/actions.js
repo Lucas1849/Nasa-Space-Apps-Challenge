@@ -16,8 +16,9 @@
 import {
   createPlayer, currentPlayer, pushLog, emptySpacecraft, humans,
   SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR,
-  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST,
+  BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST,
 } from './state.js';
+import { isHidden, learnNeeds, assessNeeds, HIDDEN_CHECK_IDS } from './needs.js';
 import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
 import {
   CATALOG, priceFor, isLocked, requiredTech,
@@ -72,7 +73,10 @@ export function startGame(state, setup, options = {}) {
 
   pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
   state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
-  state.players.filter((p) => !p.bot).forEach((p) => setMission(state, p, p.missionId)); // kit do 1º degrau
+  state.players.filter((p) => !p.bot).forEach((p) => {
+    p.hideNeeds = true; // os mínimos de ciência e comunicação da missão começam escondidos (sim/needs.js)
+    setMission(state, p, p.missionId); // kit do 1º degrau
+  });
   startTurn(state);
   state.screen = humans(state).length > 1 ? 'handoff' : 'board';
   return null;
@@ -153,6 +157,7 @@ function startTurn(state) {
   p.rolled = false;
   p.flightAdvanced = false;
   p.launchedThisTurn = false;
+  p.rehearsedThisTurn = false;
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
@@ -411,7 +416,7 @@ function spyReport(state, rival) {
   if (rival.flight) {
     return { ...report, mission: MISSIONS[rival.flight.missionId].name, inFlight: true, stage: rival.flight.stageIndex, stages: rival.flight.plan.length };
   }
-  const checks = checkDesign(rival).checks.filter((c) => c.hard);
+  const checks = checkDesign(rival, { evaluate: true }).checks.filter((c) => c.hard); // o espião vê a verdade
   return { ...report, ready: checks.length ? checks.filter((c) => c.ok).length / checks.length : 0 };
 }
 
@@ -586,6 +591,33 @@ function checkMilestones(state, player) {
 
 // ---------------------------------------------------------------- voo em etapas
 
+// Ensaio em solo: por um custo pequeno (sem gastar foguete), diz em palavras se a nave atende aos mínimos
+// escondidos da missão. Não dá o número: para isso é preciso lançar e errar (sim/needs.js).
+export function rehearse(state) {
+  const p = currentPlayer(state);
+  if (state.sandbox) return 'No sandbox os requisitos da missão já aparecem na checagem.';
+  if (!p.missionId) return 'Sua escada já está completa.';
+  if (!isHidden(p)) return 'Os requisitos desta missão já são conhecidos: veja a checagem do projeto.';
+  if (p.rehearsedThisTurn) return 'Só um ensaio por turno.';
+  if (p.funds < REHEARSAL_COST) return `Verba insuficiente: o ensaio custa ${REHEARSAL_COST}.`;
+  p.funds -= REHEARSAL_COST;
+  p.rehearsedThisTurn = true;
+  const results = assessNeeds(p);
+  const short = results.filter((r) => !r.ok);
+  pushLog(state, `${p.name} fez um ensaio em solo da missão "${MISSIONS[p.missionId].name}".`, p.id);
+  setOutcome(state, p, {
+    title: 'Ensaio em solo',
+    changes: [{ label: 'Verba', value: -REHEARSAL_COST }],
+    notes: [
+      ...results.map((r) => `${r.label[0].toUpperCase()}${r.label.slice(1)}: ${r.status}.`),
+      short.length
+        ? 'Ajuste a nave e ensaie de novo no próximo turno, ou lance para descobrir os números.'
+        : 'Nada indica falta de requisito. Ainda há o risco do voo.',
+    ],
+  });
+  return null;
+}
+
 // Lança: paga o lançador, a nave sai da oficina e a SUBIDA é sorteada na hora (encerra o turno).
 export function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
@@ -749,6 +781,19 @@ function completeMission(state, p) {
   result.craft = flight.craft;
   const year = yearOf(state.round);
   result.year = year;
+  // Mínimos escondidos: depois da avaliação final eles passam a aparecer. Falhar por causa deles ensina:
+  // +1 de tecnologia, só na primeira vez (não dá para abusar), e o relatório explica o que faltou.
+  const wasHidden = isHidden(p, missionId);
+  const shortfalls = result.checks.filter((c) => !c.ok && c.hard && HIDDEN_CHECK_IDS.includes(c.id));
+  if (wasHidden) {
+    learnNeeds(p, missionId);
+    if (shortfalls.length) {
+      p.tech += 1;
+      const n = MISSIONS[missionId].needs;
+      result.learning = `Requisito descoberto: esta missão pede ciência ≥ ${n.science} e comunicação ≥ ${n.comms}. Os números passam a aparecer na oficina e a travar o lançamento. Errar ensinou: +1 de tecnologia.`;
+      pushLog(state, `${p.name} descobriu os requisitos de "${MISSIONS[missionId].name}" ao errar.`, p.id);
+    }
+  }
   if (result.success) {
     p.completed.push({ missionId, year, science: result.scienceDelivered });
     grant(state, p, 'mission_complete', missionId);

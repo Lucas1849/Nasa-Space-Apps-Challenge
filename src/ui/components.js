@@ -1,6 +1,7 @@
 // Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
 import { effectiveTotals } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
+import { isHidden, needLevel } from '../sim/needs.js';
 import { flightPlan, pct } from '../sim/flight.js';
 import { ladderProgress } from '../sim/progress.js';
 import { upgradeCostFor } from '../sim/actions.js';
@@ -209,10 +210,27 @@ export function stageTrack(plan, stages, currentIndex) {
   }));
 }
 
+// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
+// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
+export function outcomeCard(state, p) {
+  const o = state.outcome;
+  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
+  return el('div', { class: 'outcome' }, [
+    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
+    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
+    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
+      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
+    ]))) : null,
+    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
+    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
+  ]);
+}
+
 // Medidores: cada recurso contra o limite ou o mínimo, com barra e cor de alerta.
 export function gauges(player) {
   const t = effectiveTotals(player);
   const m = MISSIONS[player.missionId];
+  const hidden = isHidden(player);
   const g = ([iconName, label], value, limit, status, fill, hint) =>
     el('div', { class: `gauge ${status}`, title: hint }, [
       el('span', { class: 'g-label' }, [icon(iconName, { size: 15 }), label]),
@@ -231,18 +249,25 @@ export function gauges(player) {
       ratio(t.powerUse, t.powerGen), 'Energia consumida contra a gerada. Precisa sobrar.'),
     g(['dish', 'Dados e transmissão'], t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
       ratio(t.data, t.commsEffective), 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.'),
-    g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
-      ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
-    g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
-      ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
+    // Mínimos escondidos (sim/needs.js): mostra o que a nave entrega e "?" no lugar do mínimo, em cinza.
+    hidden
+      ? g(['atom', 'Ciência'], t.scienceEffective, '?', 'unknown', 0, `O mínimo de ciência desta missão é desconhecido (pista: ${needLevel('science', m.needs.science)}). Faça um ensaio em solo ou lance para descobrir.`)
+      : g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
+        ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
+    hidden
+      ? g(['signal', 'Comunicação'], t.commsEffective, '?', 'unknown', 0, `O mínimo de comunicação desta missão é desconhecido (pista: ${needLevel('comms', m.needs.comms)}). Faça um ensaio em solo ou lance para descobrir.`)
+      : g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
+        ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
     g(['hourglass', 'Vida útil (anos)'], t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
       ratio(t.lifetime, m.needs.lifetime), 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.'),
   ]);
 }
 
 export function checklist(checks) {
-  return el('ul', { class: 'checklist' }, checks.map((c) =>
-    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
+  // `hidden`: mínimo da missão ainda desconhecido (sim/needs.js): cinza, nem verde nem vermelho.
+  return el('ul', { class: 'checklist' }, checks.map((c) => c.hidden
+    ? el('li', { class: 'unknown' }, [icon('eye', { size: 15, label: 'desconhecido' }), el('span', {}, c.text)])
+    : el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
 }
 export const designChecklist = (player) => checklist(checkDesign(player).checks);
 

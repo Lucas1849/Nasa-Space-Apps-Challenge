@@ -91,6 +91,19 @@ Checagens têm `hard: true|false`. As duras impedem o sucesso; as leves (hoje s�
 comunicação") deixam voar e reduzem a ciência pela metade. Isso segue a ideia de que a maior
 parte dos problemas de projeto não explode o foguete, só piora a missão.
 
+**Requisitos escondidos** (`src/sim/needs.js`, só no jogo normal; o sandbox mostra tudo): o jogador
+não vê o mínimo de **ciência** e de **comunicação** da missão, só o objetivo e uma pista ("ciência
+moderada"). Esses dois checks (`science`, `mission_comms`) saem com `hidden: true`, em cinza, sem o
+número e **sem travar o lançamento**. Vida útil, suporte de vida, massa, energia, alcance e verba
+continuam visíveis e travando. Como o jogador descobre:
+- **Ensaio em solo** (`rehearse`, 5 de verba, 1 por turno, sem gastar foguete): diz em palavras se
+  cada requisito atende, está um pouco ou bem abaixo.
+- **Lançar e errar**: a avaliação final (`completeMission`, `checkDesign` com `evaluate: true`, que
+  sempre vale) explica o que faltou, revela os números (`learnNeeds`) e dá **+1 de tecnologia, só na
+  primeira descoberta**. Depois disso os números aparecem e o checklist volta a travar.
+O marco "Projeto pronto" usa só os checks visíveis, para o +20 não revelar se a nave atende.
+Para esconder outro requisito: inclua o id do check em `HIDDEN_CHECK_IDS` e trate-o em `checkDesign`.
+
 ## Regras da simulação (`src/sim/simulate.js`)
 
 Todas devolvem um texto explicativo que aparece na oficina (preview) e no relatório:

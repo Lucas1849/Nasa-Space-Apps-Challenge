@@ -12,6 +12,7 @@ export const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação
 export const BAILOUT_TECH_COST = 2;
 export const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
 export const SPY_COST = 12;          // espionagem: uma vez por ano
+export const REHEARSAL_COST = 5;     // ensaio em solo: diz em palavras se a nave atende aos mínimos escondidos
 
 export const emptySpacecraft = () => ({
   instruments: [],     // ids de data/instruments.js (pode repetir)
@@ -32,6 +33,9 @@ export function createPlayer(id, name, missionId = null) {
     funds: STARTING_FUNDS, // verba disponível
     tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
     unlocked: [],          // ids de peças e lançadores já descobertos (sim/resources.js); o kit do degrau entra ao começar o degrau
+    hideNeeds: false,      // jogo normal: mínimos de ciência e comunicação da missão escondidos (sim/needs.js)
+    knownNeeds: {},        // { missionId: true } missões cujos mínimos já foram descobertos
+    rehearsedThisTurn: false, // 1 ensaio em solo por turno
     launcherTech: 0,       // ajuste do lado no nível exigido pelos lançadores
     discount: 0,           // % de desconto na próxima compra (evento ou degrau)
     shields: 0,            // proteções contra falha no voo

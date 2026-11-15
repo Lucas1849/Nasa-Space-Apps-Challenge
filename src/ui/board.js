@@ -2,7 +2,7 @@
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
 import {
-  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi,
+  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
 } from './components.js';
 import { icon, dieFace } from './icons.js';
 import { guideCard, hl } from './guide.js';
@@ -114,22 +114,6 @@ function tileDecision(state, p, actions) {
       button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
       button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
     ]),
-  ]);
-}
-
-// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
-// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
-function outcomeCard(state, p) {
-  const o = state.outcome;
-  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
-  return el('div', { class: 'outcome' }, [
-    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
-    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
-    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
-      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
-    ]))) : null,
-    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
-    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
   ]);
 }
 

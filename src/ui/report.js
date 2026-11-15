@@ -46,6 +46,7 @@ export function reportScreen(state, actions) {
       el('div', {}, [
         el('h2', {}, 'Por quê'),
         el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
+        r.learning ? el('div', { class: 'panel lesson' }, [panelTitle('eye', 'Requisito descoberto'), el('p', {}, r.learning)]) : null,
         r.consolation ? el('div', { class: 'panel lesson' }, [panelTitle('medal', 'Missão de consolação'), el('p', {}, r.consolation)]) : null,
         r.failureLesson ? el('div', { class: 'panel lesson' }, [panelTitle('testTube', 'Dados de falha'), el('p', {}, r.failureLesson)]) : null,
         r.stepBonus ? el('div', { class: 'panel lesson' }, [

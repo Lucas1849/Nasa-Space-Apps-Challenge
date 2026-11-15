@@ -1,7 +1,7 @@
 // Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
 // e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
-import { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle } from './components.js';
+import { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle, outcomeCard } from './components.js';
 import { icon } from './icons.js';
 import { guideCard, hl } from './guide.js';
 import { spacecraftSvg } from './spacecraft.js';
@@ -10,7 +10,8 @@ import { PARTS } from '../data/parts.js';
 import { LAUNCHERS } from '../data/launchers.js';
 import { ORBITS } from '../data/orbits.js';
 import { MISSIONS } from '../data/missions.js';
-import { currentPlayer } from '../sim/state.js';
+import { currentPlayer, REHEARSAL_COST } from '../sim/state.js';
+import { isHidden, needLevel } from '../sim/needs.js';
 import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
@@ -91,9 +92,11 @@ export function workshopScreen(state, actions) {
 
   const mission = MISSIONS[p.missionId];
   const design = checkDesign(p);
+  // Mínimos de ciência e comunicação escondidos (sim/needs.js): só a pista, sem o número.
+  const hidden = isHidden(p);
   const needs = [
-    `ciência ≥ ${mission.needs.science}`,
-    `comunicação ≥ ${mission.needs.comms}`,
+    hidden ? `ciência ${needLevel('science', mission.needs.science)}` : `ciência ≥ ${mission.needs.science}`,
+    hidden ? `comunicação ${needLevel('comms', mission.needs.comms)}` : `comunicação ≥ ${mission.needs.comms}`,
     `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
@@ -136,8 +139,15 @@ export function workshopScreen(state, actions) {
         el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
         design.ok ? riskPanel(p) : null,
         blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
+        hidden && design.ok ? el('p', { class: 'hint with-icon' }, [icon('eye', { size: 16 }), 'Você ainda não sabe se a nave atende aos mínimos da missão. Faça um ensaio em solo ou lance e descubra: errar também ensina.']) : null,
+        outcomeCard(state, p),
         el('div', { class: 'row', style: 'margin:0' }, [
-          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+            disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
+            class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
+            title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
+          }) : null,
           back,
         ]),
         glossary(),

@@ -7,6 +7,8 @@ import { icon } from './icons.js';
 import { guideOn } from './prefs.js';
 import { currentPlayer, SPY_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
+import { isHidden } from '../sim/needs.js';
+import { REHEARSAL_COST } from '../sim/state.js';
 import { isLocked, requiredTech, isDiscovered } from '../sim/resources.js';
 import { LAUNCHERS } from '../data/launchers.js';
 import { MISSIONS } from '../data/missions.js';
@@ -108,6 +110,10 @@ export function nextStep(state, screen) {
     }
     const fail = firstHardFailure(p);
     if (fail) return { title: 'Resolva os itens em vermelho', text: fail.text, target: 'checks', tips };
+    // Projeto fecha nas contas físicas, mas os mínimos de ciência e comunicação ainda são desconhecidos.
+    if (isHidden(p) && !p.flight && !p.launchedThisTurn && !p.rehearsedThisTurn) {
+      return { title: 'Nave montada, requisitos desconhecidos', text: `A missão pede ciência e comunicação que você ainda não conhece. Faça um ensaio em solo (${REHEARSAL_COST}) para ter uma pista, ou lance e descubra no relatório. Errar ensina: os números aparecem depois.`, target: 'rehearse', tips };
+    }
     if (p.flight || p.launchedThisTurn) {
       return { title: 'Nave montada', text: 'O projeto fecha. Você poderá lançar quando a nave atual terminar o voo, ou no próximo turno.', target: 'back', tips };
     }

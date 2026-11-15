@@ -54,6 +54,7 @@ const actions = {
   skipTile: wrap(game.skipTile),
   upgradeBuilding: wrap(game.upgradeBuilding),
   requestBailout: wrap(game.requestBailout),
+  rehearse: wrap(game.rehearse),
   launch: wrap(game.launch, showLaunchOverlay),
   advanceFlight: wrap(game.advanceFlight),
   // Atalho de depuração no console: rola e anda com o primeiro dado.

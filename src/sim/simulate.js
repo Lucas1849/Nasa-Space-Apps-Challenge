@@ -3,6 +3,7 @@
 // Função pura. `rng` injetável para testes.
 // ATENÇÃO: regras e números FICTÍCIOS para balanceamento, não modelam física real.
 import { effectiveTotals } from './resources.js';
+import { isHidden, needLevel } from './needs.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
 import { LAUNCHERS } from '../data/launchers.js';
@@ -11,8 +12,11 @@ export const FAILURE_CHANCE = 0.15; // chance base de falha aleatória de compon
 
 // Checagens de projeto, sem aleatoriedade. Usadas na oficina (preview) e na simulação.
 // `modifiers` vem das decisões em voo (ex.: lifetimeDelta) e só é usado pela simulação.
-// Devolve { ok, designOk, checks: [{ id, ok, hard, text }], totals }.
+// Devolve { ok, designOk, checks: [{ id, ok, hard, hidden, text }], totals }.
 //   hard = true: impede o sucesso. hard = false ("leve"): só reduz a ciência entregue.
+//   hidden = true: o mínimo da missão (ciência e comunicação) ainda é desconhecido para o jogador. O check
+//   não trava o lançamento nem mostra o número (sim/needs.js). Com `modifiers.evaluate` (avaliação final
+//   da missão, espião) todos os checks valem de verdade, e a falha pós-voo continua igual.
 export function checkDesign(player, modifiers = {}) {
   const mission = MISSIONS[player.missionId];
   const t = effectiveTotals(player);
@@ -49,12 +53,22 @@ export function checkDesign(player, modifiers = {}) {
     false);
 
   if (mission) {
-    add('science', t.scienceEffective >= mission.needs.science,
-      `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
-      `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
-    add('mission_comms', t.commsEffective >= mission.needs.comms,
-      `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
-      `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+    if (isHidden(player, player.missionId) && !modifiers.evaluate) {
+      // Mínimo desconhecido: mostra só o que a nave entrega e a pista, sem o número, e não trava.
+      const unknown = (id, label, value, kind) => checks.push({
+        id, ok: true, hard: false, hidden: true,
+        text: `${label} ${value}: o mínimo desta missão ainda não é conhecido (pista: ${label.toLowerCase()} ${needLevel(kind, mission.needs[kind])}). Faça um ensaio em solo ou lance para descobrir.`,
+      });
+      unknown('science', 'Ciência', t.scienceEffective, 'science');
+      unknown('mission_comms', 'Comunicação', t.commsEffective, 'comms');
+    } else {
+      add('science', t.scienceEffective >= mission.needs.science,
+        `Ciência ${t.scienceEffective}/${mission.needs.science}: atende à missão.`,
+        `Ciência ${t.scienceEffective} abaixo do mínimo ${mission.needs.science} da missão. Adicione instrumentos.`);
+      add('mission_comms', t.commsEffective >= mission.needs.comms,
+        `Comunicação ${t.commsEffective}/${mission.needs.comms}: atende à missão.`,
+        `Comunicação ${t.commsEffective} abaixo do mínimo ${mission.needs.comms} da missão.`);
+    }
     if (mission.needs.lifeSupport) {
       add('life', t.lifeSupport, 'Suporte de vida a bordo.', 'A missão exige cápsula com suporte de vida.');
     }
@@ -83,7 +97,7 @@ export function checkDesign(player, modifiers = {}) {
 // já foi sorteado etapa por etapa (sim/flight.js) e aqui só sobra a avaliação final da operação.
 // Devolve { success, score, reasons, checks, totals, usedShield, scienceDelivered }.
 export function simulate(player, { rng = Math.random, modifiers = {}, randomFailure: allowRandom = true } = {}) {
-  const { ok, checks, totals } = checkDesign(player, modifiers);
+  const { ok, checks, totals } = checkDesign(player, { ...modifiers, evaluate: true });
   const reasons = checks.filter((c) => !c.ok && c.hard).map((c) => c.text);
   let usedShield = false;
 
