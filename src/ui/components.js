@@ -16,6 +16,8 @@ import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
 import { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } from './prefs.js';
 import { t, getLang } from '../i18n/index.js';
+// Alias do tradutor para funções que usam `t` como variável local (ex.: gauges = totais da nave).
+const tr = t;
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -71,13 +73,13 @@ export function hud(state, player, step, actions = null) {
   const mission = MISSIONS[player.flight?.missionId || player.missionId];
   const prog = ladderProgress(player);
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
-  const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
+  const names = { board: t('step.board'), workshop: t('step.workshop'), flight: t('step.flight'), report: t('step.report') };
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   // Recursos sempre à vista, em números grandes, com a previsão do próximo Ano novo (de onde vem o recurso).
   // Na interface enxuta a previsão fica só no balão, para não somar texto no começo.
   const roundsLeft = ROUNDS_PER_YEAR - ((state.round - 1) % ROUNDS_PER_YEAR);
   const income = state.sandbox || !player.side ? null : yearlyIncome(player, yearOf(state.round + roundsLeft)); // o próximo Ano novo
-  const when = `em ${roundsLeft} ${roundsLeft === 1 ? 'rodada' : 'rodadas'}`;
+  const when = t(roundsLeft === 1 ? 'hud.inRounds.one' : 'hud.inRounds.other', { n: roundsLeft });
   const stat = (cls, iconName, label, value, title, next = null) => el('div', { class: `stat ${cls}`, title }, [
     icon(iconName, { size: 22, label }),
     el('div', { class: 'stat-body' }, [
@@ -87,20 +89,20 @@ export function hud(state, player, step, actions = null) {
     ]),
   ]);
   return el('div', { class: 'hud' }, [
-    state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), 'sandbox'])
-      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), simple ? null : el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
+    state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), t('hud.sandbox')])
+      : el('span', { class: 'chip year', title: t('hud.roundOfYear', { n: roundInYear, total: ROUNDS_PER_YEAR }) }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), simple ? null : el('small', {}, t('hud.roundShort', { n: roundInYear, total: ROUNDS_PER_YEAR }))]),
     el('div', { class: 'who' }, [avatar(player), player.name]),
     player.side ? el('span', { class: 'chip' }, sideBadge(player)) : null,
     el('span', { class: 'chip' }, mission
-      ? [missionIcon(mission.id, { size: 15 }), state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ', em voo' : '']
-      : state.sandbox ? [icon('target', { size: 15 }), 'escolhendo missão'] : [icon('flag', { size: 15 }), 'escada completa']),
-    stat('funds', 'coins', 'Verba', player.funds,
-      income ? `Verba. No próximo Ano novo entram +${income.funds} (${Object.entries({ orçamento: income.parts.base, lado: income.parts.side, Patrocinador: income.parts.sponsor }).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ')}).` : 'Verba',
+      ? [missionIcon(mission.id, { size: 15 }), state.sandbox ? mission.name : t('hud.step', { n: Math.min(prog.steps + 1, prog.total), total: prog.total, mission: mission.name }), player.flight ? t('hud.inFlightSuffix') : '']
+      : state.sandbox ? [icon('target', { size: 15 }), t('hud.choosingMission')] : [icon('flag', { size: 15 }), t('hud.ladderComplete')]),
+    stat('funds', 'coins', t('res.funds'), player.funds,
+      income ? t('hud.fundsNext', { n: income.funds, parts: Object.entries({ [t('hud.part.budget')]: income.parts.base, [t('hud.part.side')]: income.parts.side, [t('hud.part.sponsor')]: income.parts.sponsor }).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ') }) : t('res.funds'),
       income ? `+${income.funds} ${when}` : null),
-    state.sandbox ? null : stat('tech', 'chip', 'Tecnologia', player.tech,
-      income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}${income.techParts.base ? '' : ' (a pesquisa básica vem de 2 em 2 anos: só o Laboratório rende)'}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
+    state.sandbox ? null : stat('tech', 'chip', t('res.tech'), player.tech,
+      income ? t('hud.techNext', { n: income.tech, slow: income.techParts.base ? '' : t('hud.techSlow') }) : t('res.techTitle'),
       income ? `+${income.tech} ${when}` : null),
-    player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
+    player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', t('res.shields'), player.shields, t('res.shieldsTitle')) : null,
     el('span', { class: 'spacer' }),
     // Sem `actions` (tela só de leitura) a trilha de etapas fica no topo; com `actions` ela vira a navegação
     // da barra lateral.
@@ -125,7 +127,7 @@ function sideRail(state, player, step, actions, steps, names, simple) {
     else if (!canNavigate || s === 'flight' || s === 'report') b.disabled = true;
     return b;
   });
-  const guide = item('compass', 'Dicas', guideOn() ? 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Clique para desligar.' : 'Ligar as orientações e a interface enxuta no começo', () => actions.toggleGuide(), `guide-toggle ${guideOn() ? 'on-soft' : ''}`);
+  const guide = item('compass', t('rail.guide'), guideOn() ? t('rail.guideOnTitle') : t('rail.guideOffTitle'), () => actions.toggleGuide(), `guide-toggle ${guideOn() ? 'on-soft' : ''}`);
   guide.setAttribute('aria-pressed', String(guideOn()));
   const theme = themeToggle();
   theme.className = 'rail-item theme-toggle';
@@ -137,11 +139,11 @@ function sideRail(state, player, step, actions, steps, names, simple) {
     // a classe `steps` (trilha de etapas) só entra fora da interface enxuta (test/ui-simple.test.mjs)
     el('div', { class: simple ? 'rail-nav' : 'rail-nav steps' }, nav),
     el('span', { class: 'rail-spacer' }),
-    item('bulb', 'Regras', 'Como funciona: regras, lados e glossário', () => openRulesModal()),
+    item('bulb', t('rail.rules'), t('rail.rulesTitle'), () => openRulesModal()),
     guide,
     langItem,
     theme,
-    item('arrowLeft', 'Sair', 'Sair da partida e voltar à tela inicial', () => openExitDialog(actions), 'rail-exit'),
+    item('arrowLeft', t('rail.exit'), t('rail.exitTitle'), () => openExitDialog(actions), 'rail-exit'),
   ]);
 }
 
@@ -157,14 +159,12 @@ export function openExitDialog(actions) {
     actions.newGame();
   };
   const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
-    el('div', { class: 'modal exit-dialog', role: 'dialog', 'aria-label': 'Sair da partida', onclick: (e) => e.stopPropagation() }, [
-      el('h2', { class: 'modal-title' }, 'Sair da partida?'),
-      el('p', {}, online
-        ? 'Você sai da sala online e volta à tela inicial. Se for o anfitrião, a partida termina para todos.'
-        : 'Você volta à tela inicial e o progresso desta partida é perdido.'),
+    el('div', { class: 'modal exit-dialog', role: 'dialog', 'aria-label': t('exit.title'), onclick: (e) => e.stopPropagation() }, [
+      el('h2', { class: 'modal-title' }, t('exit.question')),
+      el('p', {}, online ? t('exit.online') : t('exit.local')),
       el('div', { class: 'row modal-actions' }, [
-        button('Sair da partida', leave, { class: 'danger' }),
-        button('Continuar jogando', close, { class: 'primary' }),
+        button(t('exit.leave'), leave, { class: 'danger' }),
+        button(t('exit.stay'), close, { class: 'primary' }),
       ]),
     ]),
   ]);
@@ -178,15 +178,15 @@ export function openRulesModal() {
   const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
     el('div', { class: 'modal rules-modal', onclick: (e) => e.stopPropagation() }, [
       el('div', { class: 'modal-head', style: 'justify-content:space-between' }, [
-        el('h2', { class: 'modal-title' }, 'Como funciona a partida'),
-        button(icon('x', { size: 16 }), close, { class: 'small ghost', title: 'Fechar' }),
+        el('h2', { class: 'modal-title' }, t('rules.title')),
+        button(icon('x', { size: 16 }), close, { class: 'small ghost', title: t('common.close') }),
       ]),
       el('div', { class: 'steps-grid', style: 'margin-top:12px' }, [
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 16 }), 'Tabuleiro']), el('p', {}, `Role 2 dados e escolha 1. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 16 }), 'Oficina']), el('p', {}, 'Monte a nave do próximo degrau respeitando massa, energia, dados e verba.')]),
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 16 }), 'Voo']), el('p', {}, 'Avance uma etapa por turno. Se falhar, ainda resta uma missão de consolação.')]),
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 16 }), t('step.board')]), el('p', {}, t('rules.step1', { rounds: ROUNDS_PER_YEAR }))]),
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 16 }), t('step.workshop')]), el('p', {}, t('rules.step2'))]),
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 16 }), t('step.flight')]), el('p', {}, t('rules.step3'))]),
       ]),
-      el('h3', { style: 'margin:18px 0 8px' }, 'Lados e escadas (sorteados no início)'),
+      el('h3', { style: 'margin:18px 0 8px' }, t('rules.sidesTitle')),
       el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
         el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, icon(s.icon, { size: 20 })), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
         el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', { class: 'with-icon' }, [missionIcon(m, { size: 15 }), MISSIONS[m].name]))),
@@ -194,7 +194,7 @@ export function openRulesModal() {
         el('small', { class: 'lose-text' }, `− ${s.weakness}`),
       ]))),
       glossary(),
-      el('p', { class: 'hint', style: 'margin-top:14px' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
+      el('p', { class: 'hint', style: 'margin-top:14px' }, t('rules.footer')),
     ]),
   ]);
   document.body.appendChild(backdrop);
@@ -207,9 +207,9 @@ export function themeToggle() {
     const dark = themeOf() === 'escuro';
     b.innerHTML = '';
     b.appendChild(icon(dark ? 'sun' : 'moon', { size: 15 }));
-    b.appendChild(document.createTextNode(dark ? 'Claro' : 'Escuro'));
+    b.appendChild(document.createTextNode(dark ? t('theme.light') : t('theme.dark')));
     b.setAttribute('aria-pressed', String(dark));
-    b.title = dark ? 'Mudar para o tema claro (papel técnico)' : 'Mudar para o tema escuro (grafite)';
+    b.title = dark ? t('theme.toLight') : t('theme.toDark');
   };
   const b = el('button', {
     class: 'small ghost theme-toggle',
@@ -234,9 +234,9 @@ export function langToggle(actions) {
 // Botão que liga e desliga as orientações (preferência salva no navegador).
 export function guideToggle(actions) {
   const on = guideOn();
-  const b = button([icon('compass', { size: 16 }), on ? 'Dicas: ligadas' : 'Dicas: desligadas'], () => actions.toggleGuide(), {
+  const b = button([icon('compass', { size: 16 }), on ? t('guide.on') : t('guide.off')], () => actions.toggleGuide(), {
     class: `small ghost guide-toggle ${on ? 'on' : ''}`,
-    title: on ? 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Desligue para ver tudo.' : 'Ligar as orientações e a interface enxuta no começo',
+    title: on ? t('guide.onTitle') : t('guide.offTitle'),
   });
   b.setAttribute('aria-pressed', String(on));
   return b;
@@ -270,45 +270,45 @@ export function progressBar(fraction, status = 'ok') {
 export function ladderPanel(state, player) {
   const ladder = ladderOf(player);
   const prog = ladderProgress(player);
-  return sidePanel('ladder', SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`, [
+  return sidePanel('ladder', SIDES[player.side]?.icon || 'ladder', t('ladder.title', { side: sideLabel(player) }), [
     progressBar(prog.pct, prog.done ? 'done' : 'ok'),
     el('ol', { class: 'ladder' }, ladder.map((m, i) => {
       const done = player.completed.find((c) => c.missionId === m);
       const real = REAL_HISTORY[m].sides[player.side];
       const flying = player.flight?.missionId === m;
       const cls = i < player.step ? 'done' : i === player.step ? 'now' : '';
-      const status = done ? `cumprida em ${done.year}` : flying ? `em voo, etapa ${player.flight.stageIndex + 1}/${player.flight.plan.length}` : i === player.step ? 'degrau atual' : '';
+      const status = done ? t('ladder.doneYear', { year: done.year }) : flying ? t('ladder.flyingStage', { n: player.flight.stageIndex + 1, total: player.flight.plan.length }) : i === player.step ? t('ladder.current') : '';
       return el('li', { class: cls }, [
         el('span', { class: 'ladder-name' }, [done ? icon('check', { size: 16 }) : missionIcon(m, { size: 16 }), MISSIONS[m].name]),
-        el('small', { class: 'hint' }, [status, status ? '. ' : '', `História real: ${real ?? 'nunca'}`]),
+        el('small', { class: 'hint' }, [status, status ? '. ' : '', t('ladder.realHistory', { year: real ?? t('ladder.never') })]),
       ]);
     })),
-    el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
-  ], { hint: `${prog.steps}/${prog.total} degraus cumpridos` });
+    el('p', { class: 'hint' }, t('ladder.note')),
+  ], { hint: t('ladder.hint', { steps: prog.steps, total: prog.total }) });
 }
 
 // Rival escondido (IDEIA.md v3 seção 8): só aparece o que o espião ou os boatos revelaram.
 export function rivalsPanel(state, player) {
   const rivals = state.players.filter((r) => r.id !== player.id);
   if (!rivals.length) return null;
-  return sidePanel('rivals', 'eye', 'Rivais', [
+  return sidePanel('rivals', 'eye', t('rivals.title'), [
     ...rivals.map((r) => {
       const info = player.intel[r.id];
-      let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
-      if (info?.rumor) text = `Boato de ${info.year}: ${info.steps}/${info.total} degraus. Pode estar errado.`;
+      let text = t('rivals.unknown');
+      if (info?.rumor) text = t('rivals.rumor', { year: info.year, steps: info.steps, total: info.total });
       else if (info) {
-        const ship = info.inFlight ? `nave em voo (etapa ${info.stage + 1}/${info.stages})`
-          : info.ready != null ? `nave ${pct(info.ready)} pronta` : info.note || '';
-        text = `Espião em ${info.year}: ${info.steps}/${info.total} degraus${info.mission ? `, mirando "${info.mission}"` : ''}; ${ship}.`;
+        const ship = info.inFlight ? t('rivals.shipFlying', { n: info.stage + 1, total: info.stages })
+          : info.ready != null ? t('rivals.shipReady', { pct: pct(info.ready) }) : info.note || '';
+        text = t('rivals.spy', { year: info.year, steps: info.steps, total: info.total, mission: info.mission ? t('rivals.aiming', { mission: info.mission }) : '', ship });
       }
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideBadge(r))]),
         el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
         // Público: o lançamento foi anunciado a todos. O resultado do voo e a nave por dentro continuam secretos.
-        r.flight ? el('small', { class: 'hint flight-public' }, [icon('rocket', { size: 12 }), 'Nave em voo (anúncio público).']) : null,
+        r.flight ? el('small', { class: 'hint flight-public' }, [icon('rocket', { size: 12 }), t('rivals.flightPublic')]) : null,
       ]);
     }),
-  ], { defaultOpen: rivals.some((r) => r.flight), hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida${rivals.some((r) => r.flight) ? ', com nave em voo' : ''}` });
+  ], { defaultOpen: rivals.some((r) => r.flight), hint: t(rivals.length === 1 ? 'rivals.hint.one' : 'rivals.hint.other', { n: rivals.length }) + (rivals.some((r) => r.flight) ? t('rivals.hintFlying') : '') });
 }
 
 // Faixa da agência, sempre visível sob o tabuleiro e os botões de ação: os 4 prédios em cartões (nível,
@@ -323,23 +323,23 @@ export function agencyStrip(state, player, actions) {
     return el('div', { class: `building-card${built ? '' : ' not-built'}${maxed ? ' maxed' : ''}` }, [
       el('div', { class: 'bc-head' }, [el('span', { class: 'b-icon' }, icon(b.icon, { size: 22 })), el('strong', {}, b.name)]),
       el('div', { class: 'bc-level' }, built
-        ? [el('span', { class: 'pips' }, Array.from({ length: MAX_LEVEL }, (_, i) => el('span', { class: `pip${i < level ? ' on' : ''}` }))), el('span', {}, `nível ${level}/${MAX_LEVEL}`)]
-        : el('span', { class: 'hint' }, 'não construído')),
-      el('small', { class: 'hint' }, built ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
+        ? [el('span', { class: 'pips' }, Array.from({ length: MAX_LEVEL }, (_, i) => el('span', { class: `pip${i < level ? ' on' : ''}` }))), el('span', {}, t('agency.level', { level, max: MAX_LEVEL }))]
+        : el('span', { class: 'hint' }, t('agency.notBuilt'))),
+      el('small', { class: 'hint' }, built ? b.effect : t('agency.buildHint', { cost: upgradeCost(0), effect: b.effect })),
       built && !maxed
-        ? button([icon('arrowUp', { size: 14 }), 'Subir ', el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), {
+        ? button([icon('arrowUp', { size: 14 }), t('agency.upgrade'), el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), {
           class: 'small upgrade', disabled: player.funds < cost,
-          title: player.funds < cost ? `Faltam ${cost - player.funds} de verba para subir ao nível ${level + 1}` : `Subir para o nível ${level + 1} por ${cost}`,
+          title: player.funds < cost ? t('agency.upgradeNeed', { n: cost - player.funds, level: level + 1 }) : t('agency.upgradeTitle', { level: level + 1, cost }),
         })
         : null,
-      maxed ? el('span', { class: 'badge max' }, 'nível máximo') : null,
+      maxed ? el('span', { class: 'badge max' }, t('agency.maxed')) : null,
     ]);
   });
   return el('section', { class: 'panel agency-strip' }, [
     el('div', { class: 'strip-head' }, [
-      panelTitle('building', 'Sua agência'),
+      panelTitle('building', t('agency.title')),
       player.funds < BAILOUT_LIMIT
-        ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
+        ? button([icon('lifebuoy', { size: 16 }), t('agency.bailout', { funds: BAILOUT_FUNDS, tech: BAILOUT_TECH_COST })], () => actions.requestBailout(), { class: 'small ghost' })
         : null,
     ]),
     el('div', { class: 'building-grid' }, cards),
@@ -351,7 +351,7 @@ export function missionPicker(state, player, actions) {
   return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => button([
     el('span', { class: 'icon' }, missionIcon(m.id, { size: 26 })),
     el('strong', {}, m.name),
-    el('span', { class: 'diff' }, `${m.difficulty} · ${flightPlan(m.id).length} etapas de voo`),
+    el('span', { class: 'diff' }, t('mission.picker.diff', { difficulty: m.difficulty, n: flightPlan(m.id).length })),
     el('span', { class: 'goal' }, m.goal),
   ], () => actions.chooseMission(m.id), { class: `mission-card ${player.missionId === m.id ? 'selected' : ''}`, disabled: Boolean(player.flight) })));
 }
@@ -373,7 +373,7 @@ export function outcomeCard(state, p) {
   if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
   return el('div', { class: 'outcome' }, [
     el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
-    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
+    o.choice ? el('small', { class: 'hint' }, t('outcome.youChose', { choice: o.choice })) : null,
     o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
       `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
     ]))) : null,
@@ -408,33 +408,33 @@ export function gauges(player) {
   const hasLauncher = t.maxMass != null;
 
   return el('div', { class: 'gauges' }, [
-    g(['coins', 'Verba para lançar'], player.funds, hasLauncher ? t.launchCost : '—', hasLauncher && player.funds < t.launchCost ? 'bad' : 'ok',
-      hasLauncher ? ratio(player.funds, t.launchCost) : 1, 'Verba disponível contra o custo do lançador escolhido.'),
-    g(['weight', 'Massa'], t.mass, hasLauncher ? t.maxMass : '—', hasLauncher && t.mass > t.maxMass ? 'bad' : 'ok',
-      hasLauncher ? ratio(t.mass, t.maxMass) : 0, 'Massa total contra a capacidade do lançador. Barra cheia = no limite.'),
-    g(['bolt', 'Energia usada'], t.powerUse, t.powerGen, t.powerUse > t.powerGen ? 'bad' : 'ok',
-      ratio(t.powerUse, t.powerGen), 'Energia consumida contra a gerada. Precisa sobrar.'),
-    g(['dish', 'Dados e transmissão'], t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
-      ratio(t.data, t.commsEffective), 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.'),
+    g(['coins', tr('gauge.launchFunds')], player.funds, hasLauncher ? t.launchCost : '—', hasLauncher && player.funds < t.launchCost ? 'bad' : 'ok',
+      hasLauncher ? ratio(player.funds, t.launchCost) : 1, tr('gauge.launchFunds.title')),
+    g(['weight', tr('gauge.mass')], t.mass, hasLauncher ? t.maxMass : '—', hasLauncher && t.mass > t.maxMass ? 'bad' : 'ok',
+      hasLauncher ? ratio(t.mass, t.maxMass) : 0, tr('gauge.mass.title')),
+    g(['bolt', tr('gauge.power')], t.powerUse, t.powerGen, t.powerUse > t.powerGen ? 'bad' : 'ok',
+      ratio(t.powerUse, t.powerGen), tr('gauge.power.title')),
+    g(['dish', tr('gauge.data')], t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
+      ratio(t.data, t.commsEffective), tr('gauge.data.title')),
     // Mínimos escondidos (sim/needs.js): mostra o que a nave entrega e "?" no lugar do mínimo, em cinza.
     hidden
-      ? g(['atom', 'Ciência'], t.scienceEffective, '?', 'unknown', 0, `O mínimo de ciência desta missão é desconhecido (pista: ${needLevel('science', m.needs.science)}). Faça um ensaio em solo ou lance para descobrir.`)
-      : g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
-        ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
+      ? g(['atom', tr('gauge.science')], t.scienceEffective, '?', 'unknown', 0, tr('gauge.science.hidden', { hint: needLevel('science', m.needs.science) }))
+      : g(['atom', tr('gauge.science')], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
+        ratio(t.scienceEffective, m.needs.science), tr('gauge.science.title')),
     hidden
-      ? g(['signal', 'Comunicação'], t.commsEffective, '?', 'unknown', 0, `O mínimo de comunicação desta missão é desconhecido (pista: ${needLevel('comms', m.needs.comms)}). Faça um ensaio em solo ou lance para descobrir.`)
-      : g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
-        ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
-    g(['hourglass', 'Vida útil (anos)'], t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
-      ratio(t.lifetime, m.needs.lifetime), 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.'),
+      ? g(['signal', tr('gauge.comms')], t.commsEffective, '?', 'unknown', 0, tr('gauge.comms.hidden', { hint: needLevel('comms', m.needs.comms) }))
+      : g(['signal', tr('gauge.comms')], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
+        ratio(t.commsEffective, m.needs.comms), tr('gauge.comms.title')),
+    g(['hourglass', tr('gauge.lifetime')], t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
+      ratio(t.lifetime, m.needs.lifetime), tr('gauge.lifetime.title')),
   ]);
 }
 
 export function checklist(checks) {
   // `hidden`: mínimo da missão ainda desconhecido (sim/needs.js): cinza, nem verde nem vermelho.
   return el('ul', { class: 'checklist' }, checks.map((c) => c.hidden
-    ? el('li', { class: 'unknown' }, [icon('eye', { size: 15, label: 'desconhecido' }), el('span', {}, c.text)])
-    : el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
+    ? el('li', { class: 'unknown' }, [icon('eye', { size: 15, label: t('check.unknown') }), el('span', {}, c.text)])
+    : el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? t('check.ok') : c.hard ? t('check.blocks') : t('check.warn') }), el('span', {}, c.text)])));
 }
 export const designChecklist = (player) => checklist(checkDesign(player).checks);
 
@@ -450,14 +450,14 @@ export function milestoneTrack(player, missionId = player.missionId) {
 // Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
 export function logPanel(state, viewer) {
   const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
-  return sidePanel('log', 'book', 'Diário da agência', [el('ul', {}, entries.map((l) => el('li', {}, l.text)))], {
-    defaultOpen: false, extraClass: 'log', hint: entries[0] ? entries[0].text : 'Sem registros ainda',
+  return sidePanel('log', 'book', t('log.title'), [el('ul', {}, entries.map((l) => el('li', {}, l.text)))], {
+    defaultOpen: false, extraClass: 'log', hint: entries[0] ? entries[0].text : t('log.empty'),
   });
 }
 
 export function glossary(open = false) {
   const d = el('details', { class: 'panel glossary' }, [
-    el('summary', {}, [icon('bookOpen', { size: 16 }), 'O que significam os recursos?']),
+    el('summary', {}, [icon('bookOpen', { size: 16 }), t('glossary.title')]),
     el('dl', {}, GLOSSARY.flatMap((g) => [el('dt', {}, g.term), el('dd', {}, g.text)])),
   ]);
   if (open) d.open = true;

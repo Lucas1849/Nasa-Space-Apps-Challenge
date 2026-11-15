@@ -9,6 +9,133 @@ export const en = {
 
   // ---- game navigation (side-rail)
   'rail.nav': 'Match navigation',
+  'rail.guide': 'Tips',
+  'rail.guideOnTitle': 'Tips on: step-by-step guidance and a lean interface early on. Click to turn off.',
+  'rail.guideOffTitle': 'Turn on guidance and the lean interface at the start',
+  'rail.rules': 'Rules',
+  'rail.rulesTitle': 'How it works: rules, sides and glossary',
+  'rail.exit': 'Exit',
+  'rail.exitTitle': 'Leave the match and return to the home screen',
+
+  // ---- cycle stages/screens
+  'step.board': 'Board',
+  'step.workshop': 'Workshop',
+  'step.flight': 'Flight',
+  'step.report': 'Report',
+
+  // ---- HUD (top bar)
+  'hud.sandbox': 'sandbox',
+  'hud.roundOfYear': 'Round {n} of {total} this year',
+  'hud.roundShort': 'round {n}/{total}',
+  'hud.step': 'Step {n}/{total}: {mission}',
+  'hud.inFlightSuffix': ', in flight',
+  'hud.choosingMission': 'choosing mission',
+  'hud.ladderComplete': 'ladder complete',
+  'hud.inRounds.one': 'in {n} round',
+  'hud.inRounds.other': 'in {n} rounds',
+  'hud.fundsNext': 'Funds. Next New Year brings +{n} ({parts}).',
+  'hud.part.budget': 'budget',
+  'hud.part.side': 'side',
+  'hud.part.sponsor': 'Sponsor',
+  'hud.techNext': 'Technology: unlocks better parts and rockets. Next New Year brings +{n}{slow}.',
+  'hud.techSlow': ' (basic research comes every 2 years: only the Laboratory pays off)',
+
+  // ---- resources
+  'res.funds': 'Funds',
+  'res.tech': 'Technology',
+  'res.techTitle': 'Technology: unlocks better parts and rockets',
+  'res.shields': 'Shields',
+  'res.shieldsTitle': 'Failure shields: each one saves a flight stage that would have failed.',
+
+  // ---- exit / rules / theme / tips
+  'common.close': 'Close',
+  'exit.title': 'Leave the match',
+  'exit.question': 'Leave the match?',
+  'exit.online': 'You leave the online room and return to the home screen. If you are the host, the match ends for everyone.',
+  'exit.local': 'You return to the home screen and this match\'s progress is lost.',
+  'exit.leave': 'Leave the match',
+  'exit.stay': 'Keep playing',
+  'rules.title': 'How the match works',
+  'rules.step1': 'Roll 2 dice and choose 1. Every {rounds} rounds, a new year brings funds and technology.',
+  'rules.step2': 'Build the next step\'s ship within mass, power, data and funds.',
+  'rules.step3': 'Advance one stage per turn. If it fails, a consolation mission still remains.',
+  'rules.sidesTitle': 'Sides and ladders (drawn at the start)',
+  'rules.footer': 'Based on NASA\'s mission design process (Need → Concept → Requirements → Design → Verify → Implement) and JPL\'s Marsbound activity. Historical dates: NASA History. The game\'s numbers are fictional, made for learning.',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+  'theme.toLight': 'Switch to the light theme (technical paper)',
+  'theme.toDark': 'Switch to the dark theme (graphite)',
+  'guide.on': 'Tips: on',
+  'guide.off': 'Tips: off',
+  'guide.onTitle': 'Tips on: step-by-step guidance and a lean interface early on. Turn off to see everything.',
+  'guide.offTitle': 'Turn on guidance and the lean interface at the start',
+
+  // ---- ladder panel
+  'ladder.title': '{side} ladder',
+  'ladder.doneYear': 'completed in {year}',
+  'ladder.flyingStage': 'in flight, stage {n}/{total}',
+  'ladder.current': 'current step',
+  'ladder.realHistory': 'Real history: {year}',
+  'ladder.never': 'never',
+  'ladder.note': 'Each step is a new ship. Technology, buildings and funds carry over.',
+  'ladder.hint': '{steps}/{total} steps completed',
+
+  // ---- rivals panel
+  'rivals.title': 'Rivals',
+  'rivals.unknown': 'State unknown. Land on Espionage or invest in rumors.',
+  'rivals.rumor': 'Rumor from {year}: {steps}/{total} steps. Could be wrong.',
+  'rivals.shipFlying': 'ship in flight (stage {n}/{total})',
+  'rivals.shipReady': 'ship {pct} ready',
+  'rivals.spy': 'Spy in {year}: {steps}/{total} steps{mission}; {ship}.',
+  'rivals.aiming': ', aiming for "{mission}"',
+  'rivals.flightPublic': 'Ship in flight (public announcement).',
+  'rivals.hint.one': '{n} rival in the race',
+  'rivals.hint.other': '{n} rivals in the race',
+  'rivals.hintFlying': ', with a ship in flight',
+
+  // ---- agency strip (buildings)
+  'agency.level': 'level {level}/{max}',
+  'agency.notBuilt': 'not built',
+  'agency.buildHint': 'Build on a free lot for {cost}. {effect}',
+  'agency.upgrade': 'Upgrade ',
+  'agency.upgradeNeed': '{n} more funds needed to upgrade to level {level}',
+  'agency.upgradeTitle': 'Upgrade to level {level} for {cost}',
+  'agency.maxed': 'max level',
+  'agency.title': 'Your agency',
+  'agency.bailout': 'Emergency bailout (+{funds} funds, −{tech} tech)',
+
+  // ---- mission picker (sandbox)
+  'mission.picker.diff': '{difficulty} · {n} flight stages',
+
+  // ---- gauges (workshop)
+  'gauge.launchFunds': 'Funds to launch',
+  'gauge.launchFunds.title': 'Available funds against the cost of the chosen launcher.',
+  'gauge.mass': 'Mass',
+  'gauge.mass.title': 'Total mass against the launcher\'s capacity. Full bar = at the limit.',
+  'gauge.power': 'Power used',
+  'gauge.power.title': 'Power consumed against power generated. You need a surplus.',
+  'gauge.data': 'Data and transmission',
+  'gauge.data.title': 'Data generated against what the antenna transmits (already with the orbit penalty). If it exceeds, half the science is lost.',
+  'gauge.science': 'Science',
+  'gauge.science.title': 'Scientific value against the mission minimum.',
+  'gauge.science.hidden': 'This mission\'s science minimum is unknown (hint: {hint}). Run a ground rehearsal or launch to find out.',
+  'gauge.comms': 'Communication',
+  'gauge.comms.title': 'Effective communication against the mission minimum.',
+  'gauge.comms.hidden': 'This mission\'s communication minimum is unknown (hint: {hint}). Run a ground rehearsal or launch to find out.',
+  'gauge.lifetime': 'Lifetime (years)',
+  'gauge.lifetime.title': 'Years of operation (orbit + thruster/battery) against the mission minimum.',
+
+  // ---- design check (accessibility labels)
+  'check.unknown': 'unknown',
+  'check.ok': 'ok',
+  'check.blocks': 'blocks the launch',
+  'check.warn': 'warning',
+
+  // ---- outcome card and log
+  'outcome.youChose': 'You chose: {choice}',
+  'log.title': 'Agency log',
+  'log.empty': 'No entries yet',
+  'glossary.title': 'What do the resources mean?',
 
   // ================================ GAME DATA ================================
   // ---- missions (data/missions.js)

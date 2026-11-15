@@ -11,6 +11,133 @@ export const pt = {
 
   // ---- navegação (side-rail)
   'rail.nav': 'Navegação da partida',
+  'rail.guide': 'Dicas',
+  'rail.guideOnTitle': 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Clique para desligar.',
+  'rail.guideOffTitle': 'Ligar as orientações e a interface enxuta no começo',
+  'rail.rules': 'Regras',
+  'rail.rulesTitle': 'Como funciona: regras, lados e glossário',
+  'rail.exit': 'Sair',
+  'rail.exitTitle': 'Sair da partida e voltar à tela inicial',
+
+  // ---- etapas/telas do ciclo
+  'step.board': 'Tabuleiro',
+  'step.workshop': 'Oficina',
+  'step.flight': 'Voo',
+  'step.report': 'Relatório',
+
+  // ---- HUD (barra superior)
+  'hud.sandbox': 'sandbox',
+  'hud.roundOfYear': 'Rodada {n} de {total} deste ano',
+  'hud.roundShort': 'rodada {n}/{total}',
+  'hud.step': 'Degrau {n}/{total}: {mission}',
+  'hud.inFlightSuffix': ', em voo',
+  'hud.choosingMission': 'escolhendo missão',
+  'hud.ladderComplete': 'escada completa',
+  'hud.inRounds.one': 'em {n} rodada',
+  'hud.inRounds.other': 'em {n} rodadas',
+  'hud.fundsNext': 'Verba. No próximo Ano novo entram +{n} ({parts}).',
+  'hud.part.budget': 'orçamento',
+  'hud.part.side': 'lado',
+  'hud.part.sponsor': 'Patrocinador',
+  'hud.techNext': 'Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +{n}{slow}.',
+  'hud.techSlow': ' (a pesquisa básica vem de 2 em 2 anos: só o Laboratório rende)',
+
+  // ---- recursos
+  'res.funds': 'Verba',
+  'res.tech': 'Tecnologia',
+  'res.techTitle': 'Tecnologia: desbloqueia peças e foguetes melhores',
+  'res.shields': 'Proteções',
+  'res.shieldsTitle': 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.',
+
+  // ---- sair / regras / tema / dicas
+  'common.close': 'Fechar',
+  'exit.title': 'Sair da partida',
+  'exit.question': 'Sair da partida?',
+  'exit.online': 'Você sai da sala online e volta à tela inicial. Se for o anfitrião, a partida termina para todos.',
+  'exit.local': 'Você volta à tela inicial e o progresso desta partida é perdido.',
+  'exit.leave': 'Sair da partida',
+  'exit.stay': 'Continuar jogando',
+  'rules.title': 'Como funciona a partida',
+  'rules.step1': 'Role 2 dados e escolha 1. A cada {rounds} rodadas, um ano novo traz verba e tecnologia.',
+  'rules.step2': 'Monte a nave do próximo degrau respeitando massa, energia, dados e verba.',
+  'rules.step3': 'Avance uma etapa por turno. Se falhar, ainda resta uma missão de consolação.',
+  'rules.sidesTitle': 'Lados e escadas (sorteados no início)',
+  'rules.footer': 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.',
+  'theme.light': 'Claro',
+  'theme.dark': 'Escuro',
+  'theme.toLight': 'Mudar para o tema claro (papel técnico)',
+  'theme.toDark': 'Mudar para o tema escuro (grafite)',
+  'guide.on': 'Dicas: ligadas',
+  'guide.off': 'Dicas: desligadas',
+  'guide.onTitle': 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Desligue para ver tudo.',
+  'guide.offTitle': 'Ligar as orientações e a interface enxuta no começo',
+
+  // ---- painel da escada
+  'ladder.title': 'Escada {side}',
+  'ladder.doneYear': 'cumprida em {year}',
+  'ladder.flyingStage': 'em voo, etapa {n}/{total}',
+  'ladder.current': 'degrau atual',
+  'ladder.realHistory': 'História real: {year}',
+  'ladder.never': 'nunca',
+  'ladder.note': 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.',
+  'ladder.hint': '{steps}/{total} degraus cumpridos',
+
+  // ---- painel de rivais
+  'rivals.title': 'Rivais',
+  'rivals.unknown': 'Estado desconhecido. Caia na Espionagem ou invista em boatos.',
+  'rivals.rumor': 'Boato de {year}: {steps}/{total} degraus. Pode estar errado.',
+  'rivals.shipFlying': 'nave em voo (etapa {n}/{total})',
+  'rivals.shipReady': 'nave {pct} pronta',
+  'rivals.spy': 'Espião em {year}: {steps}/{total} degraus{mission}; {ship}.',
+  'rivals.aiming': ', mirando "{mission}"',
+  'rivals.flightPublic': 'Nave em voo (anúncio público).',
+  'rivals.hint.one': '{n} rival na corrida',
+  'rivals.hint.other': '{n} rivais na corrida',
+  'rivals.hintFlying': ', com nave em voo',
+
+  // ---- faixa da agência (prédios)
+  'agency.level': 'nível {level}/{max}',
+  'agency.notBuilt': 'não construído',
+  'agency.buildHint': 'Construa num terreno livre por {cost}. {effect}',
+  'agency.upgrade': 'Subir ',
+  'agency.upgradeNeed': 'Faltam {n} de verba para subir ao nível {level}',
+  'agency.upgradeTitle': 'Subir para o nível {level} por {cost}',
+  'agency.maxed': 'nível máximo',
+  'agency.title': 'Sua agência',
+  'agency.bailout': 'Socorro de emergência (+{funds} verba, −{tech} tec)',
+
+  // ---- seletor de missão (sandbox)
+  'mission.picker.diff': '{difficulty} · {n} etapas de voo',
+
+  // ---- medidores (oficina)
+  'gauge.launchFunds': 'Verba para lançar',
+  'gauge.launchFunds.title': 'Verba disponível contra o custo do lançador escolhido.',
+  'gauge.mass': 'Massa',
+  'gauge.mass.title': 'Massa total contra a capacidade do lançador. Barra cheia = no limite.',
+  'gauge.power': 'Energia usada',
+  'gauge.power.title': 'Energia consumida contra a gerada. Precisa sobrar.',
+  'gauge.data': 'Dados e transmissão',
+  'gauge.data.title': 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.',
+  'gauge.science': 'Ciência',
+  'gauge.science.title': 'Valor científico contra o mínimo da missão.',
+  'gauge.science.hidden': 'O mínimo de ciência desta missão é desconhecido (pista: {hint}). Faça um ensaio em solo ou lance para descobrir.',
+  'gauge.comms': 'Comunicação',
+  'gauge.comms.title': 'Comunicação efetiva contra o mínimo da missão.',
+  'gauge.comms.hidden': 'O mínimo de comunicação desta missão é desconhecido (pista: {hint}). Faça um ensaio em solo ou lance para descobrir.',
+  'gauge.lifetime': 'Vida útil (anos)',
+  'gauge.lifetime.title': 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.',
+
+  // ---- checagem do projeto (rótulos de acessibilidade)
+  'check.unknown': 'desconhecido',
+  'check.ok': 'ok',
+  'check.blocks': 'impede o lançamento',
+  'check.warn': 'atenção',
+
+  // ---- cartão de resultado e diário
+  'outcome.youChose': 'Você escolheu: {choice}',
+  'log.title': 'Diário da agência',
+  'log.empty': 'Sem registros ainda',
+  'glossary.title': 'O que significam os recursos?',
 
   // ================================ DADOS DO JOGO ================================
   // ---- missões (data/missions.js)
