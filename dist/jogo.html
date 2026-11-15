@@ -3025,6 +3025,586 @@ function pushLog(state, text, who = null) {
 return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, TECH_EVERY_YEARS, SPONSOR_FUNDS_PER_LEVEL, BAILOUT_FUNDS, BAILOUT_TECH_COST, TECH_FLOOR, BAILOUT_LIMIT, SABOTAGE_COST, SPY_COST, REHEARSAL_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
 })();
 
+// ---- src/i18n/pt.js
+__mods["src/i18n/pt.js"] = (() => {
+// Dicionário português (pt-BR). Fonte do texto que o jogador lê; o inglês fica em en.js com as
+// MESMAS chaves. Chaves pontilhadas por área (lang.*, rail.*, data: mission/part/...).
+// Variáveis entram como {nome} e são preenchidas por t('chave', { nome: ... }) em i18n/index.js.
+const pt = {
+  // ---- botão de idioma
+  'lang.switchToEn': 'Mudar para o inglês',
+  'lang.switchToPt': 'Mudar para o português',
+  'lang.label': 'Idioma',
+  'lang.pt': 'Português',
+  'lang.en': 'English',
+
+  // ---- navegação (side-rail)
+  'rail.nav': 'Navegação da partida',
+
+  // ================================ DADOS DO JOGO ================================
+  // ---- missões (data/missions.js)
+  'mission.first_satellite.name': 'Primeiro satélite',
+  'mission.first_satellite.difficulty': 'fácil',
+  'mission.first_satellite.goal': 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
+  'mission.first_satellite.ms.design_ready': 'Montar um satélite que transmita sinal',
+  'mission.first_satellite.ms.launched': 'Lançar em órbita baixa',
+  'mission.first_satellite.ms.mission_complete': 'Receber o sinal na Terra',
+  'mission.living_being.name': 'Ser vivo em órbita',
+  'mission.living_being.difficulty': 'médio',
+  'mission.living_being.goal': 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
+  'mission.living_being.ms.design_ready': 'Montar cápsula com suporte de vida',
+  'mission.living_being.ms.launched': 'Lançar em órbita baixa',
+  'mission.living_being.ms.mission_complete': 'Manter o passageiro vivo e transmitir dados',
+  'mission.weather_watch.name': 'Satélite meteorológico',
+  'mission.weather_watch.difficulty': 'médio',
+  'mission.weather_watch.goal': 'Observar o clima do mesmo ponto do planeta durante anos.',
+  'mission.weather_watch.ms.design_ready': 'Montar satélite com câmera e boa antena',
+  'mission.weather_watch.ms.launched': 'Lançar em órbita geoestacionária',
+  'mission.weather_watch.ms.mission_complete': 'Operar por 5 anos enviando imagens',
+  'mission.lunar_probe.name': 'Sonda lunar',
+  'mission.lunar_probe.difficulty': 'difícil',
+  'mission.lunar_probe.goal': 'Chegar à Lua e enviar dados científicos de lá.',
+  'mission.lunar_probe.ms.design_ready': 'Montar sonda com instrumentos científicos',
+  'mission.lunar_probe.ms.launched': 'Lançar rumo à Lua',
+  'mission.lunar_probe.ms.mission_complete': 'Enviar dados científicos da Lua',
+  'mission.space_station.name': 'Estação espacial',
+  'mission.space_station.difficulty': 'difícil',
+  'mission.space_station.goal': 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
+  'mission.space_station.ms.design_ready': 'Montar estação com suporte de vida e energia de sobra',
+  'mission.space_station.ms.launched': 'Lançar em órbita baixa',
+  'mission.space_station.ms.mission_complete': 'Operar com tripulação por 5 anos',
+  'mission.crewed_moon.name': 'Tripulação na Lua',
+  'mission.crewed_moon.difficulty': 'muito difícil',
+  'mission.crewed_moon.goal': 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
+  'mission.crewed_moon.ms.design_ready': 'Montar nave tripulada com instrumentos',
+  'mission.crewed_moon.ms.launched': 'Lançar rumo à Lua com foguete pesado',
+  'mission.crewed_moon.ms.mission_complete': 'Operar na Lua e voltar com a tripulação',
+
+  // ---- marcos compartilhados (nome; o requisito é por missão, acima)
+  'milestone.design_ready': 'Projeto pronto',
+  'milestone.launched': 'Lançamento',
+  'milestone.mission_complete': 'Missão cumprida',
+
+  // ---- instrumentos (data/instruments.js)
+  'instrument.camera.name': 'Câmera óptica',
+  'instrument.hires_camera.name': 'Câmera de alta resolução',
+  'instrument.spectrometer.name': 'Espectrômetro',
+  'instrument.magnetometer.name': 'Magnetômetro',
+  'instrument.radio_beacon.name': 'Transmissor de rádio (bip)',
+
+  // ---- peças (data/parts.js)
+  'part.solar_small.name': 'Painel solar pequeno',
+  'part.solar_large.name': 'Painel solar grande',
+  'part.battery.name': 'Bateria',
+  'part.antenna_basic.name': 'Antena básica',
+  'part.antenna_dish.name': 'Antena parabólica',
+  'part.thruster.name': 'Propulsor de manutenção de órbita',
+  'part.life_support.name': 'Cápsula com suporte de vida',
+
+  // ---- lançadores (data/launchers.js)
+  'launcher.small.name': 'Lançador pequeno',
+  'launcher.medium.name': 'Lançador médio',
+  'launcher.heavy.name': 'Lançador pesado',
+
+  // ---- órbitas (data/orbits.js)
+  'orbit.leo.name': 'Órbita baixa (LEO)',
+  'orbit.leo.description': 'Perto da Terra: comunicação fácil, mas o atrito da atmosfera derruba o satélite em poucos anos.',
+  'orbit.geo.name': 'Órbita geoestacionária (GEO)',
+  'orbit.geo.description': 'Alta e fixa sobre um ponto: ótima cobertura e vida longa, lançamento mais caro.',
+  'orbit.moon.name': 'Órbita lunar',
+  'orbit.moon.description': 'Longe da Terra: comunicação difícil, ciência inédita.',
+
+  // ---- prédios (data/buildings.js)
+  'building.lab.name': 'Laboratório',
+  'building.lab.effect': '+1 de tecnologia a cada Ano novo, por nível.',
+  'building.lab.useText': '+1 de tecnologia',
+  'building.factory.name': 'Fábrica',
+  'building.factory.effect': '−10% no preço das peças, por nível.',
+  'building.factory.useText': '20% de desconto na próxima compra',
+  'building.control.name': 'Controle de missão',
+  'building.control.effect': '−3% de risco em cada etapa do voo, por nível.',
+  'building.control.useText': '1 proteção contra falha',
+  'building.sponsor.name': 'Patrocinador',
+  'building.sponsor.effect': '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
+  'building.sponsor.useText': '+8 de verba',
+
+  // ---- lados (data/sides.js)
+  'side.usa.name': 'EUA',
+  'side.usa.focus': 'Foguete pesado e suporte de vida',
+  'side.usa.advantage': 'Mais verba: +5 por ano (a URSS tem −5).',
+  'side.usa.weakness': 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
+  'side.ussr.name': 'URSS',
+  'side.ussr.focus': 'Vida no espaço e energia contínua',
+  'side.ussr.advantage': 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
+  'side.ussr.weakness': 'Orçamento mais apertado: −5 de verba por ano.',
+
+  // ---- etapas do voo (data/stages.js)
+  'stage.ascent.name': 'Subida',
+  'stage.ascent.text': 'O foguete atravessa a atmosfera com a carga no topo.',
+  'stage.orbit_insertion.name': 'Entrada em órbita',
+  'stage.orbit_insertion.text': 'A espaçonave abre os painéis e liga os sistemas.',
+  'stage.orbit_insertion.consolation': 'A nave ficou numa órbita baixa demais, mas transmitiu dados de engenharia por alguns dias antes de reentrar.',
+  'stage.transfer.name': 'Transferência',
+  'stage.transfer.text': 'Longa viagem até o destino, dependendo de energia o tempo todo.',
+  'stage.transfer.consolation': 'A nave ficou presa em órbita da Terra, mas testou os sistemas por semanas: dados preciosos para a próxima.',
+  'stage.geo_arrival.name': 'Chegada à GEO',
+  'stage.geo_arrival.text': 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.',
+  'stage.geo_arrival.consolation': 'A nave parou numa órbita alta errada, mas mediu a radiação dos cinturões de Van Allen.',
+  'stage.lunar_arrival.name': 'Chegada à Lua',
+  'stage.lunar_arrival.text': 'Entrar em órbita lunar e falar com a Terra a 384 mil km.',
+  'stage.lunar_arrival.consolation': 'A nave não entrou em órbita lunar, mas fez um sobrevoo e mandou fotos de perto da Lua.',
+  'stage.crew_return.name': 'Retorno da tripulação',
+  'stage.crew_return.text': 'Trazer a tripulação viva de volta à Terra.',
+  'stage.crew_return.consolation': 'A cápsula fez um pouso de emergência longe da área prevista. A tripulação foi resgatada, mas a missão não conta.',
+
+  // ---- subsistemas (data/stages.js SYSTEM_NAMES)
+  'system.launch': 'lançamento',
+  'system.power': 'energia',
+  'system.comms': 'comunicação',
+  'system.life': 'suporte de vida',
+
+  // ---- glossário (data/glossary.js)
+  'glossary.mass.term': 'Massa',
+  'glossary.mass.text': 'Tudo que vai a bordo pesa. O foguete só consegue levar até um limite; passou disso, não sai do chão.',
+  'glossary.energy.term': 'Energia',
+  'glossary.energy.text': 'Painéis solares e baterias geram energia; instrumentos e antenas consomem. Se consome mais do que gera, a espaçonave desliga.',
+  'glossary.data.term': 'Dados',
+  'glossary.data.text': 'Instrumentos produzem dados (fotos, medidas). Se a antena não dá conta de transmitir tudo, parte da ciência se perde.',
+  'glossary.comms.term': 'Comunicação',
+  'glossary.comms.text': 'Capacidade de enviar dados à Terra. Quanto mais longe a órbita, mais fraco o sinal e maior a antena necessária.',
+  'glossary.science.term': 'Ciência',
+  'glossary.science.text': 'O valor do que a missão descobre. É o objetivo final, mas cada ponto custa massa, energia, dados e dinheiro.',
+  'glossary.funds.term': 'Verba',
+  'glossary.funds.text': 'Dinheiro para comprar peças e pagar o lançamento. Missões reais também pagam operação todo ano.',
+  'glossary.lifetime.term': 'Vida útil',
+  'glossary.lifetime.text': 'Quanto tempo a missão opera. Órbitas baixas decaem com o atrito da atmosfera; propulsores e baterias estendem a vida.',
+  'glossary.tech.term': 'Tecnologia',
+  'glossary.tech.text': 'O que a agência já domina. Sobe a cada ano e com o Laboratório, e libera foguetes e instrumentos melhores. Esperar rende tecnologia, mas os rivais avançam.',
+  'glossary.risk.term': 'Risco',
+  'glossary.risk.text': 'Chance de uma etapa do voo falhar. Margem de massa e energia, peças reservas (redundância) e o Controle de missão reduzem o risco. Nada no espaço tem risco zero.',
+  'glossary.failure_data.term': 'Dados de falha',
+  'glossary.failure_data.text': 'Toda falha é estudada. A próxima tentativa tem menos risco no sistema que falhou: é o passo "Verify" do ciclo de projeto da NASA.',
+
+  // ---- eventos de voo (data/events.js)
+  'event.solar_storm.title': 'Tempestade solar',
+  'event.solar_storm.text': 'O Sol lançou uma rajada de partículas carregadas na direção da sua espaçonave. A eletrônica pode ser danificada.',
+  'event.solar_storm.opt.0.label': 'Desligar os instrumentos até passar (modo seguro)',
+  'event.solar_storm.opt.0.lesson': 'Entrar em "modo seguro" custa dias de ciência, mas protege a eletrônica. Missões reais fazem isso com frequência.',
+  'event.solar_storm.opt.1.label': 'Manter tudo ligado e torcer',
+  'event.solar_storm.opt.1.lesson': 'Partículas de alta energia podem travar computadores e queimar circuitos. Sem blindagem, o risco de perder a missão é alto.',
+  'event.debris.title': 'Alerta de detrito espacial',
+  'event.debris.text': 'O rastreamento em solo prevê uma passagem próxima de um fragmento de foguete antigo.',
+  'event.debris.opt.0.label': 'Fazer manobra de desvio (gasta propelente)',
+  'event.debris.opt.0.lesson': 'Cada manobra gasta propelente que faria a manutenção da órbita mais tarde, encurtando a vida útil. Por isso missões carregam margem de combustível.',
+  'event.debris.opt.1.label': 'Manter a órbita (a chance de colisão é pequena)',
+  'event.debris.opt.1.lesson': 'Mesmo pequena, uma colisão a milhares de km/h destrói a espaçonave. Operadores reais manobram quando o risco passa de 1 em 10.000.',
+  'event.budget_cut.title': 'Corte no orçamento de operações',
+  'event.budget_cut.text': 'O governo reduziu a verba de operações. Manter a equipe de solo trabalhando vai custar do seu caixa.',
+  'event.budget_cut.opt.0.label': 'Pagar 15 de verba para manter as operações',
+  'event.budget_cut.opt.0.lesson': 'Operar uma missão custa todo ano: estações de solo, equipe e análise de dados. Esse custo entra no orçamento desde o projeto.',
+  'event.budget_cut.opt.1.label': 'Reduzir a equipe e encerrar a missão mais cedo',
+  'event.budget_cut.opt.1.lesson': 'Encurtar a missão economiza dinheiro, mas pode deixar de cumprir o tempo mínimo que a ciência exigia.',
+  'event.antenna_stuck.title': 'Antena principal travou',
+  'event.antenna_stuck.text': 'A antena não abriu completamente após o lançamento. A comunicação ficou limitada.',
+  'event.antenna_stuck.opt.0.label': 'Usar a antena reserva, se houver',
+  'event.antenna_stuck.opt.0.lesson': 'Redundância (duas antenas) salva a missão. Sem reserva, metade dos dados científicos nunca chega à Terra. Foi o que aconteceu com a sonda Galileo.',
+  'event.antenna_stuck.opt.1.label': 'Tentar reabrir com ciclos de aquecimento e giro',
+  'event.antenna_stuck.opt.1.lesson': 'Tentativas de destravar mecanismos no espaço são arriscadas e consomem energia e tempo, sem garantia.',
+  'event.interference.title': 'Interferência na telemetria',
+  'event.interference.text': 'Na etapa final, o sinal da nave começa a falhar de um jeito que não parece natural: há suspeita de que uma agência rival interferiu na sua telemetria.',
+  'event.interference.opt.0.label': 'Reenviar os comandos em modo manual (sem custo)',
+  'event.interference.opt.0.lesson': 'Sem um canal limpo, o controle de missão precisa refazer comandos à mão e perde margem. Funciona, mas com mais chance de erro.',
+  'event.interference.opt.1.label': 'Trocar para a rede de estações de reserva (15 de verba)',
+  'event.interference.opt.1.lesson': 'Ter um canal alternativo custa caro, mas isola a interferência. Missões reais mantêm redes redundantes de estações de solo por isso.',
+
+  // ---- cartas de dilema (data/dilemmas.js)
+  'dilemma.congress.title': 'O Congresso quer resultados',
+  'dilemma.congress.text': 'Os políticos cobram um resultado visível. Cortar a pesquisa libera dinheiro agora.',
+  'dilemma.congress.opt.0.label': 'Cortar o laboratório e mostrar números',
+  'dilemma.congress.opt.0.lesson': 'Cortar pesquisa resolve o caixa hoje e atrasa as peças melhores de amanhã.',
+  'dilemma.congress.opt.1.label': 'Defender a ciência no Congresso',
+  'dilemma.congress.opt.1.lesson': 'Investir em pesquisa custa agora e rende tecnologia.',
+  'dilemma.scientists.title': 'Cientistas estrangeiros querem se juntar à agência',
+  'dilemma.scientists.text': 'Uma equipe experiente pede para trabalhar com vocês, mas exige laboratório e salários.',
+  'dilemma.scientists.opt.0.label': 'Contratar a equipe',
+  'dilemma.scientists.opt.0.lesson': 'Gente experiente encurta anos de pesquisa.',
+  'dilemma.scientists.opt.1.label': 'Agradecer e recusar',
+  'dilemma.scientists.opt.1.lesson': 'Economizar agora pode deixar a agência para trás depois.',
+  'dilemma.rumor.title': 'Boato na imprensa',
+  'dilemma.rumor.text': 'Um jornal diz saber o que a agência rival está fazendo. A fonte é duvidosa.',
+  'dilemma.rumor.opt.0.label': 'Pagar um analista para investigar (5)',
+  'dilemma.rumor.opt.0.lesson': 'Informação sobre o rival ajuda a decidir quando lançar, mas boatos podem estar errados.',
+  'dilemma.rumor.opt.1.label': 'Ignorar e seguir o plano',
+  'dilemma.rumor.opt.1.lesson': 'Sem informação, a dúvida sobre o tempo que resta continua.',
+  'dilemma.public_test.title': 'Teste público de motor',
+  'dilemma.public_test.text': 'A imprensa quer assistir ao teste de um motor novo. Se der certo, vira propaganda; se der errado, vexame.',
+  'dilemma.public_test.opt.0.label': 'Fazer o teste ao vivo',
+  'dilemma.public_test.opt.0.lesson': 'Testes em solo pegam defeitos antes do voo, mas custam caro quando falham.',
+  'dilemma.public_test.opt.1.label': 'Testar em segredo',
+  'dilemma.public_test.opt.1.lesson': 'Testes discretos dão confiança sem risco de imagem, mas não trazem verba.',
+  'dilemma.supplier_delay.title': 'O fornecedor atrasou uma peça',
+  'dilemma.supplier_delay.text': 'A peça que você precisa vai demorar. Dá para esperar ou trocar de fornecedor.',
+  'dilemma.supplier_delay.opt.0.label': 'Esperar o fornecedor (desconto pelo atraso)',
+  'dilemma.supplier_delay.opt.0.lesson': 'Paciência sai mais barato, mas o tempo também é um recurso.',
+  'dilemma.supplier_delay.opt.1.label': 'Trocar por um fornecedor testado (8)',
+  'dilemma.supplier_delay.opt.1.lesson': 'Peça já testada custa mais e reduz a chance de falha.',
+  'dilemma.design_flaw.title': 'Engenheiros acharam um defeito no projeto',
+  'dilemma.design_flaw.text': 'Uma revisão encontrou uma solda suspeita na estrutura. Refazer custa tempo e dinheiro.',
+  'dilemma.design_flaw.opt.0.label': 'Refazer a peça (10)',
+  'dilemma.design_flaw.opt.0.lesson': 'Revisões de projeto existem para pegar falhas antes do lançamento.',
+  'dilemma.design_flaw.opt.1.label': 'Lançar assim mesmo',
+  'dilemma.design_flaw.opt.1.lesson': 'Ignorar um defeito conhecido aumenta o risco da subida.',
+  'dilemma.budget_freeze.title': 'Orçamento congelado',
+  'dilemma.budget_freeze.text': 'Sem nave em construção, o governo ameaça congelar a verba da agência.',
+  'dilemma.budget_freeze.opt.0.label': 'Prometer um lançamento em breve',
+  'dilemma.budget_freeze.opt.0.lesson': 'Compromissos públicos trazem verba e pressão para lançar.',
+  'dilemma.budget_freeze.opt.1.label': 'Aceitar o corte e estudar mais',
+  'dilemma.budget_freeze.opt.1.lesson': 'Um ano mais magro pode virar um projeto mais maduro.',
+};
+
+return { pt };
+})();
+
+// ---- src/i18n/en.js
+__mods["src/i18n/en.js"] = (() => {
+// English dictionary. Same keys as pt.js. Missing keys fall back to Portuguese (see i18n/index.js).
+const en = {
+  // ---- language button
+  'lang.switchToEn': 'Switch to English',
+  'lang.switchToPt': 'Switch to Portuguese',
+  'lang.label': 'Language',
+  'lang.pt': 'Português',
+  'lang.en': 'English',
+
+  // ---- game navigation (side-rail)
+  'rail.nav': 'Match navigation',
+
+  // ================================ GAME DATA ================================
+  // ---- missions (data/missions.js)
+  'mission.first_satellite.name': 'First satellite',
+  'mission.first_satellite.difficulty': 'easy',
+  'mission.first_satellite.goal': 'Put an object in orbit and prove it is there: just transmit a signal.',
+  'mission.first_satellite.ms.design_ready': 'Build a satellite that transmits a signal',
+  'mission.first_satellite.ms.launched': 'Launch into low orbit',
+  'mission.first_satellite.ms.mission_complete': 'Receive the signal on Earth',
+  'mission.living_being.name': 'Living being in orbit',
+  'mission.living_being.difficulty': 'medium',
+  'mission.living_being.goal': 'Take a living being into orbit and monitor its vital signs.',
+  'mission.living_being.ms.design_ready': 'Build a capsule with life support',
+  'mission.living_being.ms.launched': 'Launch into low orbit',
+  'mission.living_being.ms.mission_complete': 'Keep the passenger alive and transmit data',
+  'mission.weather_watch.name': 'Weather satellite',
+  'mission.weather_watch.difficulty': 'medium',
+  'mission.weather_watch.goal': 'Watch the weather over the same spot on the planet for years.',
+  'mission.weather_watch.ms.design_ready': 'Build a satellite with a camera and a good antenna',
+  'mission.weather_watch.ms.launched': 'Launch into geostationary orbit',
+  'mission.weather_watch.ms.mission_complete': 'Operate for 5 years sending images',
+  'mission.lunar_probe.name': 'Lunar probe',
+  'mission.lunar_probe.difficulty': 'hard',
+  'mission.lunar_probe.goal': 'Reach the Moon and send scientific data from there.',
+  'mission.lunar_probe.ms.design_ready': 'Build a probe with scientific instruments',
+  'mission.lunar_probe.ms.launched': 'Launch toward the Moon',
+  'mission.lunar_probe.ms.mission_complete': 'Send scientific data from the Moon',
+  'mission.space_station.name': 'Space station',
+  'mission.space_station.difficulty': 'hard',
+  'mission.space_station.goal': 'Keep a crewed station in low orbit for years: continuous power and life support.',
+  'mission.space_station.ms.design_ready': 'Build a station with life support and power to spare',
+  'mission.space_station.ms.launched': 'Launch into low orbit',
+  'mission.space_station.ms.mission_complete': 'Operate with a crew for 5 years',
+  'mission.crewed_moon.name': 'Crew on the Moon',
+  'mission.crewed_moon.difficulty': 'very hard',
+  'mission.crewed_moon.goal': 'Take people to lunar orbit, with science on board, and bring them back.',
+  'mission.crewed_moon.ms.design_ready': 'Build a crewed ship with instruments',
+  'mission.crewed_moon.ms.launched': 'Launch toward the Moon with a heavy rocket',
+  'mission.crewed_moon.ms.mission_complete': 'Operate at the Moon and return with the crew',
+
+  // ---- shared milestones (name; the requirement is per mission, above)
+  'milestone.design_ready': 'Design ready',
+  'milestone.launched': 'Launch',
+  'milestone.mission_complete': 'Mission accomplished',
+
+  // ---- instruments (data/instruments.js)
+  'instrument.camera.name': 'Optical camera',
+  'instrument.hires_camera.name': 'High-resolution camera',
+  'instrument.spectrometer.name': 'Spectrometer',
+  'instrument.magnetometer.name': 'Magnetometer',
+  'instrument.radio_beacon.name': 'Radio transmitter (beep)',
+
+  // ---- parts (data/parts.js)
+  'part.solar_small.name': 'Small solar panel',
+  'part.solar_large.name': 'Large solar panel',
+  'part.battery.name': 'Battery',
+  'part.antenna_basic.name': 'Basic antenna',
+  'part.antenna_dish.name': 'Dish antenna',
+  'part.thruster.name': 'Station-keeping thruster',
+  'part.life_support.name': 'Life-support capsule',
+
+  // ---- launchers (data/launchers.js)
+  'launcher.small.name': 'Small launcher',
+  'launcher.medium.name': 'Medium launcher',
+  'launcher.heavy.name': 'Heavy launcher',
+
+  // ---- orbits (data/orbits.js)
+  'orbit.leo.name': 'Low Earth orbit (LEO)',
+  'orbit.leo.description': 'Close to Earth: easy communication, but atmospheric drag brings the satellite down within a few years.',
+  'orbit.geo.name': 'Geostationary orbit (GEO)',
+  'orbit.geo.description': 'High and fixed over one point: great coverage and long life, pricier launch.',
+  'orbit.moon.name': 'Lunar orbit',
+  'orbit.moon.description': 'Far from Earth: communication is hard, the science is unprecedented.',
+
+  // ---- buildings (data/buildings.js)
+  'building.lab.name': 'Laboratory',
+  'building.lab.effect': '+1 technology each New Year, per level.',
+  'building.lab.useText': '+1 technology',
+  'building.factory.name': 'Factory',
+  'building.factory.effect': '−10% off part prices, per level.',
+  'building.factory.useText': '20% off your next purchase',
+  'building.control.name': 'Mission control',
+  'building.control.effect': '−3% risk on each flight stage, per level.',
+  'building.control.useText': '1 failure shield',
+  'building.sponsor.name': 'Sponsor',
+  'building.sponsor.effect': '+10 funds each New Year, per level (weak on purpose).',
+  'building.sponsor.useText': '+8 funds',
+
+  // ---- sides (data/sides.js)
+  'side.usa.name': 'USA',
+  'side.usa.focus': 'Heavy rockets and life support',
+  'side.usa.advantage': 'More funds: +5 per year (the USSR gets −5).',
+  'side.usa.weakness': 'Big rockets arrive later: launchers require +1 technology.',
+  'side.ussr.name': 'USSR',
+  'side.ussr.focus': 'Life in space and continuous power',
+  'side.ussr.advantage': 'Strong rockets early: launchers require −1 technology.',
+  'side.ussr.weakness': 'Tighter budget: −5 funds per year.',
+
+  // ---- flight stages (data/stages.js)
+  'stage.ascent.name': 'Ascent',
+  'stage.ascent.text': 'The rocket climbs through the atmosphere with the payload on top.',
+  'stage.orbit_insertion.name': 'Orbit insertion',
+  'stage.orbit_insertion.text': 'The spacecraft deploys its panels and powers up its systems.',
+  'stage.orbit_insertion.consolation': 'The craft ended up in too low an orbit, but it transmitted engineering data for a few days before reentry.',
+  'stage.transfer.name': 'Transfer',
+  'stage.transfer.text': 'A long trip to the destination, relying on power the whole way.',
+  'stage.transfer.consolation': 'The craft got stuck in Earth orbit, but tested its systems for weeks: precious data for next time.',
+  'stage.geo_arrival.name': 'GEO arrival',
+  'stage.geo_arrival.text': 'At 36,000 km up, the signal has to reach Earth steadily.',
+  'stage.geo_arrival.consolation': 'The craft stopped in the wrong high orbit, but measured the radiation of the Van Allen belts.',
+  'stage.lunar_arrival.name': 'Lunar arrival',
+  'stage.lunar_arrival.text': 'Enter lunar orbit and talk to Earth from 384,000 km away.',
+  'stage.lunar_arrival.consolation': 'The craft did not enter lunar orbit, but made a flyby and sent back close-up photos of the Moon.',
+  'stage.crew_return.name': 'Crew return',
+  'stage.crew_return.text': 'Bring the crew back to Earth alive.',
+  'stage.crew_return.consolation': 'The capsule made an emergency landing far from the planned area. The crew was rescued, but the mission does not count.',
+
+  // ---- subsystems (data/stages.js SYSTEM_NAMES)
+  'system.launch': 'launch',
+  'system.power': 'power',
+  'system.comms': 'communication',
+  'system.life': 'life support',
+
+  // ---- glossary (data/glossary.js)
+  'glossary.mass.term': 'Mass',
+  'glossary.mass.text': 'Everything on board has weight. The rocket can only lift up to a limit; go past it and it never leaves the ground.',
+  'glossary.energy.term': 'Power',
+  'glossary.energy.text': 'Solar panels and batteries generate power; instruments and antennas consume it. If you use more than you make, the spacecraft shuts down.',
+  'glossary.data.term': 'Data',
+  'glossary.data.text': 'Instruments produce data (photos, measurements). If the antenna cannot transmit it all, part of the science is lost.',
+  'glossary.comms.term': 'Communication',
+  'glossary.comms.text': 'The ability to send data to Earth. The farther the orbit, the weaker the signal and the bigger the antenna needed.',
+  'glossary.science.term': 'Science',
+  'glossary.science.text': 'The value of what the mission discovers. It is the ultimate goal, but every point costs mass, power, data and money.',
+  'glossary.funds.term': 'Funds',
+  'glossary.funds.text': 'Money to buy parts and pay for the launch. Real missions also pay for operations every year.',
+  'glossary.lifetime.term': 'Lifetime',
+  'glossary.lifetime.text': 'How long the mission operates. Low orbits decay from atmospheric drag; thrusters and batteries extend the life.',
+  'glossary.tech.term': 'Technology',
+  'glossary.tech.text': 'What the agency already masters. It rises each year and with the Laboratory, and unlocks better rockets and instruments. Waiting earns technology, but rivals advance.',
+  'glossary.risk.term': 'Risk',
+  'glossary.risk.text': 'The chance a flight stage fails. Mass and power margins, backup parts (redundancy) and Mission control lower the risk. Nothing in space has zero risk.',
+  'glossary.failure_data.term': 'Failure data',
+  'glossary.failure_data.text': 'Every failure is studied. The next attempt carries less risk in the system that failed: it is the "Verify" step of NASA\'s design cycle.',
+
+  // ---- flight events (data/events.js)
+  'event.solar_storm.title': 'Solar storm',
+  'event.solar_storm.text': 'The Sun hurled a burst of charged particles toward your spacecraft. The electronics could be damaged.',
+  'event.solar_storm.opt.0.label': 'Shut the instruments down until it passes (safe mode)',
+  'event.solar_storm.opt.0.lesson': 'Going into "safe mode" costs days of science, but protects the electronics. Real missions do this often.',
+  'event.solar_storm.opt.1.label': 'Keep everything on and hope',
+  'event.solar_storm.opt.1.lesson': 'High-energy particles can crash computers and burn out circuits. Without shielding, the risk of losing the mission is high.',
+  'event.debris.title': 'Space debris alert',
+  'event.debris.text': 'Ground tracking predicts a close pass by a fragment of an old rocket.',
+  'event.debris.opt.0.label': 'Make an avoidance maneuver (burns propellant)',
+  'event.debris.opt.0.lesson': 'Each maneuver burns propellant that would keep the orbit up later, shortening the lifetime. That is why missions carry a fuel margin.',
+  'event.debris.opt.1.label': 'Hold the orbit (the collision chance is small)',
+  'event.debris.opt.1.lesson': 'Even small, a collision at thousands of km/h destroys the spacecraft. Real operators maneuver when the risk passes 1 in 10,000.',
+  'event.budget_cut.title': 'Operations budget cut',
+  'event.budget_cut.text': 'The government cut the operations budget. Keeping the ground team working will come out of your pocket.',
+  'event.budget_cut.opt.0.label': 'Pay 15 funds to keep operations running',
+  'event.budget_cut.opt.0.lesson': 'Operating a mission costs every year: ground stations, staff and data analysis. That cost is part of the budget from the design stage on.',
+  'event.budget_cut.opt.1.label': 'Cut the team and end the mission sooner',
+  'event.budget_cut.opt.1.lesson': 'Shortening the mission saves money, but may fall short of the minimum time the science required.',
+  'event.antenna_stuck.title': 'Main antenna stuck',
+  'event.antenna_stuck.text': 'The antenna did not fully open after launch. Communication is now limited.',
+  'event.antenna_stuck.opt.0.label': 'Use the backup antenna, if there is one',
+  'event.antenna_stuck.opt.0.lesson': 'Redundancy (two antennas) saves the mission. Without a backup, half the scientific data never reaches Earth. That is what happened to the Galileo probe.',
+  'event.antenna_stuck.opt.1.label': 'Try to reopen it with heating and spin cycles',
+  'event.antenna_stuck.opt.1.lesson': 'Trying to free stuck mechanisms in space is risky and burns power and time, with no guarantee.',
+  'event.interference.title': 'Telemetry interference',
+  'event.interference.text': 'In the final stage, the craft\'s signal starts failing in a way that does not look natural: a rival agency is suspected of interfering with your telemetry.',
+  'event.interference.opt.0.label': 'Resend the commands in manual mode (no cost)',
+  'event.interference.opt.0.lesson': 'Without a clean channel, mission control has to redo commands by hand and loses margin. It works, but with more chance of error.',
+  'event.interference.opt.1.label': 'Switch to the backup station network (15 funds)',
+  'event.interference.opt.1.lesson': 'Having an alternate channel is expensive, but it isolates the interference. Real missions keep redundant ground-station networks for this.',
+
+  // ---- dilemma cards (data/dilemmas.js)
+  'dilemma.congress.title': 'Congress wants results',
+  'dilemma.congress.text': 'Politicians demand a visible result. Cutting research frees up money now.',
+  'dilemma.congress.opt.0.label': 'Cut the lab and show numbers',
+  'dilemma.congress.opt.0.lesson': 'Cutting research fixes the cash today and delays tomorrow\'s better parts.',
+  'dilemma.congress.opt.1.label': 'Defend the science before Congress',
+  'dilemma.congress.opt.1.lesson': 'Investing in research costs now and pays off in technology.',
+  'dilemma.scientists.title': 'Foreign scientists want to join the agency',
+  'dilemma.scientists.text': 'An experienced team asks to work with you, but demands a lab and salaries.',
+  'dilemma.scientists.opt.0.label': 'Hire the team',
+  'dilemma.scientists.opt.0.lesson': 'Experienced people shorten years of research.',
+  'dilemma.scientists.opt.1.label': 'Thank them and decline',
+  'dilemma.scientists.opt.1.lesson': 'Saving now may leave the agency behind later.',
+  'dilemma.rumor.title': 'Rumor in the press',
+  'dilemma.rumor.text': 'A newspaper claims to know what the rival agency is doing. The source is dubious.',
+  'dilemma.rumor.opt.0.label': 'Pay an analyst to investigate (5)',
+  'dilemma.rumor.opt.0.lesson': 'Information about the rival helps you decide when to launch, but rumors can be wrong.',
+  'dilemma.rumor.opt.1.label': 'Ignore it and stick to the plan',
+  'dilemma.rumor.opt.1.lesson': 'Without information, the doubt about how much time is left remains.',
+  'dilemma.public_test.title': 'Public engine test',
+  'dilemma.public_test.text': 'The press wants to watch a new engine test. If it works, it is great publicity; if it fails, it is embarrassing.',
+  'dilemma.public_test.opt.0.label': 'Run the test live',
+  'dilemma.public_test.opt.0.lesson': 'Ground tests catch defects before flight, but they cost dearly when they fail.',
+  'dilemma.public_test.opt.1.label': 'Test in secret',
+  'dilemma.public_test.opt.1.lesson': 'Quiet tests build confidence without image risk, but bring no funds.',
+  'dilemma.supplier_delay.title': 'The supplier delayed a part',
+  'dilemma.supplier_delay.text': 'The part you need will take a while. You can wait or switch suppliers.',
+  'dilemma.supplier_delay.opt.0.label': 'Wait for the supplier (discount for the delay)',
+  'dilemma.supplier_delay.opt.0.lesson': 'Patience is cheaper, but time is a resource too.',
+  'dilemma.supplier_delay.opt.1.label': 'Switch to a proven supplier (8)',
+  'dilemma.supplier_delay.opt.1.lesson': 'An already-tested part costs more and lowers the chance of failure.',
+  'dilemma.design_flaw.title': 'Engineers found a design flaw',
+  'dilemma.design_flaw.text': 'A review found a suspicious weld in the structure. Redoing it costs time and money.',
+  'dilemma.design_flaw.opt.0.label': 'Remake the part (10)',
+  'dilemma.design_flaw.opt.0.lesson': 'Design reviews exist to catch flaws before launch.',
+  'dilemma.design_flaw.opt.1.label': 'Launch anyway',
+  'dilemma.design_flaw.opt.1.lesson': 'Ignoring a known flaw raises the risk of the ascent.',
+  'dilemma.budget_freeze.title': 'Budget frozen',
+  'dilemma.budget_freeze.text': 'With no ship under construction, the government threatens to freeze the agency\'s funds.',
+  'dilemma.budget_freeze.opt.0.label': 'Promise a launch soon',
+  'dilemma.budget_freeze.opt.0.lesson': 'Public commitments bring funds and pressure to launch.',
+  'dilemma.budget_freeze.opt.1.label': 'Accept the cut and study more',
+  'dilemma.budget_freeze.opt.1.lesson': 'A leaner year can turn into a more mature project.',
+};
+
+return { en };
+})();
+
+// ---- src/i18n/index.js
+__mods["src/i18n/index.js"] = (() => {
+// Internacionalização (i18n). Fonte única de texto: tudo que o jogador lê passa por t('chave').
+// Dois dicionários planos por chave pontilhada (ui/pt.js e en.js). Padrão pt-BR; o idioma
+// escolhido fica salvo no navegador (como o tema e as dicas em ui/prefs.js). Se o armazenamento
+// estiver bloqueado, vale o padrão e o jogo segue. Sem dependências: qualquer módulo pode importar.
+//
+// Uso: t('board.roll') ou com variáveis t('report.walked', { name: p.name, n: 5 }).
+// As variáveis entram como {nome} no texto do dicionário.
+const { pt } = __mods["src/i18n/pt.js"];
+const { en } = __mods["src/i18n/en.js"];
+
+const DICTS = { pt, en };
+const LANG_KEY = 'smdg.lang';
+
+let lang = 'pt';
+try {
+  const saved = localStorage.getItem(LANG_KEY);
+  if (saved === 'pt' || saved === 'en') lang = saved;
+} catch { /* sem armazenamento: português por padrão */ }
+
+// Reflete o idioma no <html lang> (acessibilidade e leitores de tela).
+function syncLangDom() {
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : 'pt-BR');
+  }
+}
+syncLangDom();
+
+const getLang = () => lang;
+
+function setLang(next) {
+  lang = next === 'en' ? 'en' : 'pt';
+  syncLangDom();
+  try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignora */ }
+  return lang;
+}
+
+function toggleLang() {
+  return setLang(lang === 'pt' ? 'en' : 'pt');
+}
+
+// Interpola {var} com os valores passados. Deixa o marcador se faltar a variável (ajuda a achar erro).
+function interpolate(str, vars) {
+  if (!vars) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
+}
+
+// Traduz uma chave. Cai no português e, por fim, na própria chave (nunca quebra a tela).
+function t(key, vars) {
+  const dict = DICTS[lang] || pt;
+  let str = dict[key];
+  if (str == null) str = pt[key];
+  if (str == null) str = key;
+  return interpolate(str, vars);
+}
+
+return { getLang, setLang, toggleLang, t };
+})();
+
+// ---- src/i18n/localize.js
+__mods["src/i18n/localize.js"] = (() => {
+// Liga os dados (data/*.js) ao i18n sem mudar os call sites: define getters nos campos de texto
+// que resolvem t('<ns>.<id>.<campo>') no idioma atual. Assim MISSIONS[id].name continua funcionando
+// e troca de idioma junto com o resto da tela. O texto em si mora em i18n/pt.js e en.js.
+const { t } = __mods["src/i18n/index.js"];
+
+function defineText(obj, field, key) {
+  Object.defineProperty(obj, field, { enumerable: true, configurable: true, get() { return t(key); } });
+}
+
+// Mapa { id: obj }: define getters em `fields` para cada item, chaveando por ${ns}.${id}.${field}.
+function localize(ns, map, fields = ['name']) {
+  for (const [id, obj] of Object.entries(map)) {
+    for (const f of fields) defineText(obj, f, `${ns}.${id}.${f}`);
+  }
+  return map;
+}
+
+// Lista [{ id, ... }]: igual a localize, mas para arrays (ex.: dilemas).
+function localizeList(ns, list, fields = ['name'], idOf = (o) => o.id) {
+  for (const obj of list) {
+    const id = idOf(obj);
+    for (const f of fields) defineText(obj, f, `${ns}.${id}.${f}`);
+  }
+  return list;
+}
+
+// Opções aninhadas ({ options: [{ label, lesson }] }) de eventos e dilemas, chaveadas por índice.
+function localizeOptions(ns, items, fields = ['label', 'lesson'], idOf = (o) => o.id) {
+  for (const item of items) {
+    const id = idOf(item);
+    (item.options || []).forEach((o, i) => {
+      for (const f of fields) defineText(o, f, `${ns}.${id}.opt.${i}.${f}`);
+    });
+  }
+  return items;
+}
+
+return { localize, localizeList, localizeOptions };
+})();
+
 // ---- src/data/missions.js
 __mods["src/data/missions.js"] = (() => {
 // Missões da corrida espacial (ver IDEIA.md). Adicionar missão nova = preencher dados, sem código novo.
@@ -3048,75 +3628,69 @@ __mods["src/data/missions.js"] = (() => {
 // Balanceamento (15/11): "Projeto pronto" dava +20 de verba ANTES de lançar e, na prática, devolvia o preço
 // das peças (dava para lançar no turno 1). A verba agora vem só depois de lançar (prestígio), quando já não
 // paga o foguete desta nave.
-const milestones = (ready, launch, done) => [
-  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'discount', value: 10 } },
-  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'funds', value: 10 } },
-  { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
-];
+const { t } = __mods["src/i18n/index.js"];
+const { localize } = __mods["src/i18n/localize.js"];
 
-const MISSIONS = {
+// Milestones: o NOME é compartilhado por todas as missões (milestone.<id>); o REQUISITO é por missão
+// (mission.<missionId>.ms.<id>). Getters para trocar com o idioma. Efeitos continuam fixos.
+const MILESTONE_EFFECTS = {
+  design_ready: { type: 'discount', value: 10 },
+  launched: { type: 'funds', value: 10 },
+  mission_complete: { type: 'shield', value: 1 },
+};
+const milestones = (missionId) => Object.keys(MILESTONE_EFFECTS).map((id) => {
+  const ms = { id, effect: MILESTONE_EFFECTS[id] };
+  Object.defineProperty(ms, 'name', { enumerable: true, get() { return t(`milestone.${id}`); } });
+  Object.defineProperty(ms, 'requirement', { enumerable: true, get() { return t(`mission.${missionId}.ms.${id}`); } });
+  return ms;
+});
+
+// Nome, dificuldade e objetivo em i18n (mission.<id>.name/difficulty/goal). Aqui ficam ids e números.
+const MISSIONS = localize('mission', {
   first_satellite: {
     id: 'first_satellite',
-    name: 'Primeiro satélite',
-    difficulty: 'fácil',
     orbit: 'leo',
-    goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
     needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
     kit: ['radio_beacon', 'solar_small', 'antenna_basic', 'small'],
-    milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
+    milestones: milestones('first_satellite'),
   },
   living_being: {
     id: 'living_being',
-    name: 'Ser vivo em órbita',
-    difficulty: 'médio',
     orbit: 'leo',
-    goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
     needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
     kit: ['life_support', 'solar_large', 'radio_beacon', 'antenna_basic', 'small'],
-    milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
+    milestones: milestones('living_being'),
   },
   weather_watch: {
     id: 'weather_watch',
-    name: 'Satélite meteorológico',
-    difficulty: 'médio',
     orbit: 'geo',
-    goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
     needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
     kit: ['camera', 'radio_beacon', 'antenna_dish', 'solar_large', 'medium'],
-    milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
+    milestones: milestones('weather_watch'),
   },
   lunar_probe: {
     id: 'lunar_probe',
-    name: 'Sonda lunar',
-    difficulty: 'difícil',
     orbit: 'moon',
-    goal: 'Chegar à Lua e enviar dados científicos de lá.',
     needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
     kit: ['spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
-    milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
+    milestones: milestones('lunar_probe'),
   },
   space_station: {
     id: 'space_station',
-    name: 'Estação espacial',
-    difficulty: 'difícil',
     orbit: 'leo',
-    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
     needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
     kit: ['life_support', 'camera', 'thruster', 'antenna_basic', 'solar_large', 'medium'],
-    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+    milestones: milestones('space_station'),
   },
   crewed_moon: {
     id: 'crewed_moon',
-    name: 'Tripulação na Lua',
-    difficulty: 'muito difícil',
     orbit: 'moon',
-    goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
     needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
     kit: ['life_support', 'spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
     extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
-    milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
+    milestones: milestones('crewed_moon'),
   },
-};
+}, ['name', 'difficulty', 'goal']);
 
 return { MISSIONS };
 })();
@@ -3129,13 +3703,16 @@ __mods["src/data/instruments.js"] = (() => {
 // Campos iguais aos de parts.js para a soma de recursos ser uniforme.
 // minTech = nível de tecnologia da agência para poder comprar (esperar desbloqueia peças melhores).
 
-const INSTRUMENTS = {
-  camera: { id: 'camera', name: 'Câmera óptica', mass: 5, power: 8, powerGen: 0, cost: 10, commsRate: 0, dataRate: 6, science: 4, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'camera' },
-  hires_camera: { id: 'hires_camera', name: 'Câmera de alta resolução', mass: 12, power: 18, powerGen: 0, cost: 28, commsRate: 0, dataRate: 14, science: 9, lifeSupport: false, lifetimeBonus: 0, minTech: 4, visual: 'camera_large' },
-  spectrometer: { id: 'spectrometer', name: 'Espectrômetro', mass: 12, power: 20, powerGen: 0, cost: 25, commsRate: 0, dataRate: 4, science: 8, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'spectro' },
-  magnetometer: { id: 'magnetometer', name: 'Magnetômetro', mass: 3, power: 4, powerGen: 0, cost: 8, commsRate: 0, dataRate: 1, science: 3, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'boom' },
-  radio_beacon: { id: 'radio_beacon', name: 'Transmissor de rádio (bip)', mass: 2, power: 2, powerGen: 0, cost: 4, commsRate: 0, dataRate: 1, science: 2, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'beacon' },
-};
+const { localize } = __mods["src/i18n/localize.js"];
+
+// Nomes em i18n (instrument.<id>.name). Aqui ficam só ids e números.
+const INSTRUMENTS = localize('instrument', {
+  camera: { id: 'camera', mass: 5, power: 8, powerGen: 0, cost: 10, commsRate: 0, dataRate: 6, science: 4, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'camera' },
+  hires_camera: { id: 'hires_camera', mass: 12, power: 18, powerGen: 0, cost: 28, commsRate: 0, dataRate: 14, science: 9, lifeSupport: false, lifetimeBonus: 0, minTech: 4, visual: 'camera_large' },
+  spectrometer: { id: 'spectrometer', mass: 12, power: 20, powerGen: 0, cost: 25, commsRate: 0, dataRate: 4, science: 8, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'spectro' },
+  magnetometer: { id: 'magnetometer', mass: 3, power: 4, powerGen: 0, cost: 8, commsRate: 0, dataRate: 1, science: 3, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'boom' },
+  radio_beacon: { id: 'radio_beacon', mass: 2, power: 2, powerGen: 0, cost: 4, commsRate: 0, dataRate: 1, science: 2, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'beacon' },
+});
 
 return { INSTRUMENTS };
 })();
@@ -3153,15 +3730,18 @@ __mods["src/data/parts.js"] = (() => {
 // minTech       = nível de tecnologia da agência para poder comprar (IDEIA.md seção 5)
 // visual        = como aparece no desenho da espaçonave (ui/spacecraft.js)
 
-const PARTS = {
-  solar_small: { id: 'solar_small', name: 'Painel solar pequeno', mass: 4, power: 0, powerGen: 15, cost: 8, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'panel' },
-  solar_large: { id: 'solar_large', name: 'Painel solar grande', mass: 10, power: 0, powerGen: 40, cost: 20, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 2, visual: 'panel_large' },
-  battery: { id: 'battery', name: 'Bateria', mass: 6, power: 0, powerGen: 8, cost: 10, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 1, minTech: 1, visual: 'battery' },
-  antenna_basic: { id: 'antenna_basic', name: 'Antena básica', mass: 2, power: 3, powerGen: 0, cost: 6, commsRate: 4, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'antenna' },
-  antenna_dish: { id: 'antenna_dish', name: 'Antena parabólica', mass: 8, power: 10, powerGen: 0, cost: 22, commsRate: 12, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'dish' },
-  thruster: { id: 'thruster', name: 'Propulsor de manutenção de órbita', mass: 6, power: 4, powerGen: 0, cost: 14, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 3, minTech: 2, visual: 'thruster' },
-  life_support: { id: 'life_support', name: 'Cápsula com suporte de vida', mass: 25, power: 15, powerGen: 0, cost: 40, commsRate: 0, dataRate: 1, science: 2, lifeSupport: true, lifetimeBonus: 0, minTech: 2, visual: 'capsule' },
-};
+const { localize } = __mods["src/i18n/localize.js"];
+
+// Nomes em i18n (part.<id>.name). Aqui ficam só ids e números.
+const PARTS = localize('part', {
+  solar_small: { id: 'solar_small', mass: 4, power: 0, powerGen: 15, cost: 8, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'panel' },
+  solar_large: { id: 'solar_large', mass: 10, power: 0, powerGen: 40, cost: 20, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 2, visual: 'panel_large' },
+  battery: { id: 'battery', mass: 6, power: 0, powerGen: 8, cost: 10, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 1, minTech: 1, visual: 'battery' },
+  antenna_basic: { id: 'antenna_basic', mass: 2, power: 3, powerGen: 0, cost: 6, commsRate: 4, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 1, visual: 'antenna' },
+  antenna_dish: { id: 'antenna_dish', mass: 8, power: 10, powerGen: 0, cost: 22, commsRate: 12, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 0, minTech: 3, visual: 'dish' },
+  thruster: { id: 'thruster', mass: 6, power: 4, powerGen: 0, cost: 14, commsRate: 0, dataRate: 0, science: 0, lifeSupport: false, lifetimeBonus: 3, minTech: 2, visual: 'thruster' },
+  life_support: { id: 'life_support', mass: 25, power: 15, powerGen: 0, cost: 40, commsRate: 0, dataRate: 1, science: 2, lifeSupport: true, lifetimeBonus: 0, minTech: 2, visual: 'capsule' },
+});
 
 return { PARTS };
 })();
@@ -3172,12 +3752,15 @@ __mods["src/data/orbits.js"] = (() => {
 // commsPenalty = quanto a distância reduz a capacidade de comunicação (0 = nada, 0.5 = metade).
 // baseLifetime = anos de vida útil sem manutenção (órbita baixa decai pelo atrito da atmosfera).
 // Trade-off: órbita mais distante rende mais ciência em certas missões, mas comunica pior.
+// Nome e descrição em i18n (orbit.<id>.name/description).
+const { localize } = __mods["src/i18n/localize.js"];
 
 const ORBITS = {
-  leo: { id: 'leo', name: 'Órbita baixa (LEO)', description: 'Perto da Terra: comunicação fácil, mas o atrito da atmosfera derruba o satélite em poucos anos.', commsPenalty: 0, scienceBonus: 0, baseLifetime: 2 },
-  geo: { id: 'geo', name: 'Órbita geoestacionária (GEO)', description: 'Alta e fixa sobre um ponto: ótima cobertura e vida longa, lançamento mais caro.', commsPenalty: 0.2, scienceBonus: 1, baseLifetime: 8 },
-  moon: { id: 'moon', name: 'Órbita lunar', description: 'Longe da Terra: comunicação difícil, ciência inédita.', commsPenalty: 0.5, scienceBonus: 3, baseLifetime: 4 },
+  leo: { id: 'leo', commsPenalty: 0, scienceBonus: 0, baseLifetime: 2 },
+  geo: { id: 'geo', commsPenalty: 0.2, scienceBonus: 1, baseLifetime: 8 },
+  moon: { id: 'moon', commsPenalty: 0.5, scienceBonus: 3, baseLifetime: 4 },
 };
+localize('orbit', ORBITS, ['name', 'description']);
 
 return { ORBITS };
 })();
@@ -3189,11 +3772,14 @@ __mods["src/data/launchers.js"] = (() => {
 // minTech = nível de tecnologia da agência para poder usar.
 // Trade-off: foguete maior cabe mais carga, mas custa muito mais e exige mais tecnologia.
 
-const LAUNCHERS = {
-  small: { id: 'small', name: 'Lançador pequeno', maxMass: 40, cost: 25, reach: ['leo'], minTech: 1 },
-  medium: { id: 'medium', name: 'Lançador médio', maxMass: 120, cost: 50, reach: ['leo', 'geo'], minTech: 3 },
-  heavy: { id: 'heavy', name: 'Lançador pesado', maxMass: 300, cost: 110, reach: ['leo', 'geo', 'moon'], minTech: 5 },
-};
+const { localize } = __mods["src/i18n/localize.js"];
+
+// Nomes em i18n (launcher.<id>.name). Aqui ficam só ids e números.
+const LAUNCHERS = localize('launcher', {
+  small: { id: 'small', maxMass: 40, cost: 25, reach: ['leo'], minTech: 1 },
+  medium: { id: 'medium', maxMass: 120, cost: 50, reach: ['leo', 'geo'], minTech: 3 },
+  heavy: { id: 'heavy', maxMass: 300, cost: 110, reach: ['leo', 'geo', 'moon'], minTech: 5 },
+});
 
 return { LAUNCHERS };
 })();
@@ -3365,33 +3951,27 @@ __mods["src/data/sides.js"] = (() => {
 // launcherTech = ajuste no nível de tecnologia exigido pelos lançadores (−1 = foguetes fortes cedo).
 // A ordem e o degrau final da URSS estão "a definir" na v3; aqui o final é a Lua para os dois lados
 // (a corrida à Lua). Mudar a escada é só trocar a lista.
+// Nome, foco, vantagem e fraqueza em i18n (side.<id>.name/focus/advantage/weakness).
+const { localize } = __mods["src/i18n/localize.js"];
 
-const SIDES = {
+const SIDES = localize('side', {
   usa: {
     id: 'usa',
-    name: 'EUA',
     icon: 'wings',
     ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
-    focus: 'Foguete pesado e suporte de vida',
-    advantage: 'Mais verba: +5 por ano (a URSS tem −5).',
-    weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
     startFunds: 0,
     yearlyBonus: 5,
     launcherTech: 1,
   },
   ussr: {
     id: 'ussr',
-    name: 'URSS',
     icon: 'star',
     ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
-    focus: 'Vida no espaço e energia contínua',
-    advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
-    weakness: 'Orçamento mais apertado: −5 de verba por ano.',
     startFunds: 0,
     yearlyBonus: -5,
     launcherTech: -1,
   },
-};
+}, ['name', 'focus', 'advantage', 'weakness']);
 
 const STEP_BONUS_FIRST = 20; // primeiro do lado a cumprir o degrau
 const STEP_BONUS_LATER = 8;  // quem cumpre depois, no mesmo lado, leva menos
@@ -3774,76 +4354,42 @@ __mods["src/data/events.js"] = (() => {
 //   lifetimeDelta   anos a mais/menos de vida útil
 //   needsPart       se o jogador tiver essa peça, o efeito vira `effectWithPart`
 
+const { localize, localizeOptions } = __mods["src/i18n/localize.js"];
+
+// Título e texto em i18n (event.<id>.title/text); as opções em event.<id>.opt.<i>.label/lesson.
+// Aqui ficam só ids, efeitos e peças exigidas.
 const FLIGHT_EVENTS = {
   solar_storm: {
     id: 'solar_storm',
-    title: 'Tempestade solar',
-    text: 'O Sol lançou uma rajada de partículas carregadas na direção da sua espaçonave. A eletrônica pode ser danificada.',
     options: [
-      {
-        label: 'Desligar os instrumentos até passar (modo seguro)',
-        effect: { sciencePenalty: 0.25 },
-        lesson: 'Entrar em "modo seguro" custa dias de ciência, mas protege a eletrônica. Missões reais fazem isso com frequência.',
-      },
-      {
-        label: 'Manter tudo ligado e torcer',
-        effect: { failChance: 0.35 },
-        lesson: 'Partículas de alta energia podem travar computadores e queimar circuitos. Sem blindagem, o risco de perder a missão é alto.',
-      },
+      { effect: { sciencePenalty: 0.25 } },
+      { effect: { failChance: 0.35 } },
     ],
   },
   debris: {
     id: 'debris',
-    title: 'Alerta de detrito espacial',
-    text: 'O rastreamento em solo prevê uma passagem próxima de um fragmento de foguete antigo.',
     options: [
-      {
-        label: 'Fazer manobra de desvio (gasta propelente)',
-        effect: { lifetimeDelta: -1 },
-        lesson: 'Cada manobra gasta propelente que faria a manutenção da órbita mais tarde, encurtando a vida útil. Por isso missões carregam margem de combustível.',
-      },
-      {
-        label: 'Manter a órbita (a chance de colisão é pequena)',
-        effect: { failChance: 0.3 },
-        lesson: 'Mesmo pequena, uma colisão a milhares de km/h destrói a espaçonave. Operadores reais manobram quando o risco passa de 1 em 10.000.',
-      },
+      { effect: { lifetimeDelta: -1 } },
+      { effect: { failChance: 0.3 } },
     ],
   },
   budget_cut: {
     id: 'budget_cut',
-    title: 'Corte no orçamento de operações',
-    text: 'O governo reduziu a verba de operações. Manter a equipe de solo trabalhando vai custar do seu caixa.',
     options: [
-      {
-        label: 'Pagar 15 de verba para manter as operações',
-        effect: { funds: -15 },
-        lesson: 'Operar uma missão custa todo ano: estações de solo, equipe e análise de dados. Esse custo entra no orçamento desde o projeto.',
-      },
-      {
-        label: 'Reduzir a equipe e encerrar a missão mais cedo',
-        effect: { lifetimeDelta: -2 },
-        lesson: 'Encurtar a missão economiza dinheiro, mas pode deixar de cumprir o tempo mínimo que a ciência exigia.',
-      },
+      { effect: { funds: -15 } },
+      { effect: { lifetimeDelta: -2 } },
     ],
   },
   antenna_stuck: {
     id: 'antenna_stuck',
-    title: 'Antena principal travou',
-    text: 'A antena não abriu completamente após o lançamento. A comunicação ficou limitada.',
     options: [
       {
-        label: 'Usar a antena reserva, se houver',
         needsPart: ['antenna_basic', 'antenna_dish'],
         needsCount: 2,
         effectWithPart: { sciencePenalty: 0 },
         effect: { sciencePenalty: 0.5 },
-        lesson: 'Redundância (duas antenas) salva a missão. Sem reserva, metade dos dados científicos nunca chega à Terra. Foi o que aconteceu com a sonda Galileo.',
       },
-      {
-        label: 'Tentar reabrir com ciclos de aquecimento e giro',
-        effect: { failChance: 0.2 },
-        lesson: 'Tentativas de destravar mecanismos no espaço são arriscadas e consomem energia e tempo, sem garantia.',
-      },
+      { effect: { failChance: 0.2 } },
     ],
   },
 };
@@ -3852,22 +4398,15 @@ const FLIGHT_EVENTS = {
 // Entregue na etapa final do voo. ATENÇÃO: números FICTÍCIOS para balanceamento.
 FLIGHT_EVENTS.interference = {
   id: 'interference',
-  title: 'Interferência na telemetria',
-  text: 'Na etapa final, o sinal da nave começa a falhar de um jeito que não parece natural: há suspeita de que uma agência rival interferiu na sua telemetria.',
   armed: true, // fora do sorteio comum
   options: [
-    {
-      label: 'Reenviar os comandos em modo manual (sem custo)',
-      effect: { failChance: 0.15 },
-      lesson: 'Sem um canal limpo, o controle de missão precisa refazer comandos à mão e perde margem. Funciona, mas com mais chance de erro.',
-    },
-    {
-      label: 'Trocar para a rede de estações de reserva (15 de verba)',
-      effect: { funds: -15, failChance: 0.03 },
-      lesson: 'Ter um canal alternativo custa caro, mas isola a interferência. Missões reais mantêm redes redundantes de estações de solo por isso.',
-    },
+    { effect: { failChance: 0.15 } },
+    { effect: { funds: -15, failChance: 0.03 } },
   ],
 };
+
+localize('event', FLIGHT_EVENTS, ['title', 'text']);
+localizeOptions('event', Object.values(FLIGHT_EVENTS));
 
 // Escolhe um evento aleatório. `rng` injetável para testes.
 function pickEvent(rng = Math.random) {
@@ -3900,20 +4439,21 @@ __mods["src/data/stages.js"] = (() => {
 // guaranteedEvent = sempre tem imprevisto nessa etapa (pontos-chave do voo nunca ficam vazios).
 // consolation = missão de consolação (IDEIA.md v3 seção 7): se a etapa falha, a nave ainda cumpre um
 //               objetivo menor e dá crédito parcial. Não existe "abortar".
+const { t } = __mods["src/i18n/index.js"];
+const { localize } = __mods["src/i18n/localize.js"];
 
 const STAGES = {
-  ascent: { id: 'ascent', name: 'Subida', system: 'launch', baseRisk: 0.08, icon: 'rocket', text: 'O foguete atravessa a atmosfera com a carga no topo.' },
-  orbit_insertion: { id: 'orbit_insertion', name: 'Entrada em órbita', system: 'power', baseRisk: 0.05, icon: 'satellite', text: 'A espaçonave abre os painéis e liga os sistemas.',
-    consolation: 'A nave ficou numa órbita baixa demais, mas transmitiu dados de engenharia por alguns dias antes de reentrar.' },
-  transfer: { id: 'transfer', name: 'Transferência', system: 'power', baseRisk: 0.07, icon: 'orbit', text: 'Longa viagem até o destino, dependendo de energia o tempo todo.',
-    consolation: 'A nave ficou presa em órbita da Terra, mas testou os sistemas por semanas: dados preciosos para a próxima.' },
-  geo_arrival: { id: 'geo_arrival', name: 'Chegada à GEO', system: 'comms', baseRisk: 0.06, icon: 'dish', text: 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.', guaranteedEvent: true,
-    consolation: 'A nave parou numa órbita alta errada, mas mediu a radiação dos cinturões de Van Allen.' },
-  lunar_arrival: { id: 'lunar_arrival', name: 'Chegada à Lua', system: 'comms', baseRisk: 0.10, icon: 'moon', text: 'Entrar em órbita lunar e falar com a Terra a 384 mil km.', guaranteedEvent: true,
-    consolation: 'A nave não entrou em órbita lunar, mas fez um sobrevoo e mandou fotos de perto da Lua.' },
-  crew_return: { id: 'crew_return', name: 'Retorno da tripulação', system: 'life', baseRisk: 0.10, icon: 'parachute', text: 'Trazer a tripulação viva de volta à Terra.', guaranteedEvent: true,
-    consolation: 'A cápsula fez um pouso de emergência longe da área prevista. A tripulação foi resgatada, mas a missão não conta.' },
+  ascent: { id: 'ascent', system: 'launch', baseRisk: 0.08, icon: 'rocket' },
+  orbit_insertion: { id: 'orbit_insertion', system: 'power', baseRisk: 0.05, icon: 'satellite', consolation: true },
+  transfer: { id: 'transfer', system: 'power', baseRisk: 0.07, icon: 'orbit', consolation: true },
+  geo_arrival: { id: 'geo_arrival', system: 'comms', baseRisk: 0.06, icon: 'dish', guaranteedEvent: true, consolation: true },
+  lunar_arrival: { id: 'lunar_arrival', system: 'comms', baseRisk: 0.10, icon: 'moon', guaranteedEvent: true, consolation: true },
+  crew_return: { id: 'crew_return', system: 'life', baseRisk: 0.10, icon: 'parachute', guaranteedEvent: true, consolation: true },
 };
+// Nome, texto e consolação (onde existe) em i18n (stage.<id>.name/text/consolation).
+for (const s of Object.values(STAGES)) {
+  localize('stage', { [s.id]: s }, s.consolation ? ['name', 'text', 'consolation'] : ['name', 'text']);
+}
 
 const CONSOLATION_FUNDS = 8; // crédito parcial em verba (+1 de tecnologia, como toda falha)
 
@@ -3924,7 +4464,11 @@ const FLIGHT_PLANS = {
   moon: ['ascent', 'transfer', 'lunar_arrival'],
 };
 
-const SYSTEM_NAMES = { launch: 'lançamento', power: 'energia', comms: 'comunicação', life: 'suporte de vida' };
+// Nomes dos subsistemas em i18n (system.launch/power/comms/life). Getters para trocar com o idioma.
+const SYSTEM_NAMES = {};
+for (const k of ['launch', 'power', 'comms', 'life']) {
+  Object.defineProperty(SYSTEM_NAMES, k, { enumerable: true, get() { return t(`system.${k}`); } });
+}
 
 const FAILURE_DATA_BONUS = 0.05; // cada falha anterior no mesmo sistema tira 5% de risco
 const MAX_FAILURE_DATA = 3;      // no máximo −15%
@@ -4097,78 +4641,71 @@ __mods["src/data/dilemmas.js"] = (() => {
 // effect: funds, tech, discount (%), shield, launchRisk (risco extra na próxima subida),
 //         rumor (boato sobre um rival), gamble ({ chance, win: effect, lose: effect }).
 
+const { localizeList, localizeOptions } = __mods["src/i18n/localize.js"];
+
+// Título e texto em i18n (dilemma.<id>.title/text); as opções em dilemma.<id>.opt.<i>.label/lesson.
+// Aqui ficam só ids, a condição `when` e os efeitos.
 const DILEMMAS = [
   {
     id: 'congress',
     when: 'any',
-    title: 'O Congresso quer resultados',
-    text: 'Os políticos cobram um resultado visível. Cortar a pesquisa libera dinheiro agora.',
     options: [
-      { label: 'Cortar o laboratório e mostrar números', effect: { funds: 20, tech: -1 }, lesson: 'Cortar pesquisa resolve o caixa hoje e atrasa as peças melhores de amanhã.' },
-      { label: 'Defender a ciência no Congresso', effect: { funds: -8, tech: 1 }, lesson: 'Investir em pesquisa custa agora e rende tecnologia.' },
+      { effect: { funds: 20, tech: -1 } },
+      { effect: { funds: -8, tech: 1 } },
     ],
   },
   {
     id: 'scientists',
     when: 'any',
-    title: 'Cientistas estrangeiros querem se juntar à agência',
-    text: 'Uma equipe experiente pede para trabalhar com vocês, mas exige laboratório e salários.',
     options: [
-      { label: 'Contratar a equipe', effect: { funds: -12, tech: 2 }, lesson: 'Gente experiente encurta anos de pesquisa.' },
-      { label: 'Agradecer e recusar', effect: { funds: 5 }, lesson: 'Economizar agora pode deixar a agência para trás depois.' },
+      { effect: { funds: -12, tech: 2 } },
+      { effect: { funds: 5 } },
     ],
   },
   {
     id: 'rumor',
     when: 'any',
-    title: 'Boato na imprensa',
-    text: 'Um jornal diz saber o que a agência rival está fazendo. A fonte é duvidosa.',
     options: [
-      { label: 'Pagar um analista para investigar (5)', effect: { funds: -5, rumor: true }, lesson: 'Informação sobre o rival ajuda a decidir quando lançar, mas boatos podem estar errados.' },
-      { label: 'Ignorar e seguir o plano', effect: { funds: 3 }, lesson: 'Sem informação, a dúvida sobre o tempo que resta continua.' },
+      { effect: { funds: -5, rumor: true } },
+      { effect: { funds: 3 } },
     ],
   },
   {
     id: 'public_test',
     when: 'any',
-    title: 'Teste público de motor',
-    text: 'A imprensa quer assistir ao teste de um motor novo. Se der certo, vira propaganda; se der errado, vexame.',
     options: [
-      { label: 'Fazer o teste ao vivo', effect: { gamble: { chance: 0.6, win: { funds: 15, shield: 1 }, lose: { funds: -10 } } }, lesson: 'Testes em solo pegam defeitos antes do voo, mas custam caro quando falham.' },
-      { label: 'Testar em segredo', effect: { shield: 1, funds: -6 }, lesson: 'Testes discretos dão confiança sem risco de imagem, mas não trazem verba.' },
+      { effect: { gamble: { chance: 0.6, win: { funds: 15, shield: 1 }, lose: { funds: -10 } } } },
+      { effect: { shield: 1, funds: -6 } },
     ],
   },
   {
     id: 'supplier_delay',
     when: 'building',
-    title: 'O fornecedor atrasou uma peça',
-    text: 'A peça que você precisa vai demorar. Dá para esperar ou trocar de fornecedor.',
     options: [
-      { label: 'Esperar o fornecedor (desconto pelo atraso)', effect: { discount: 20 }, lesson: 'Paciência sai mais barato, mas o tempo também é um recurso.' },
-      { label: 'Trocar por um fornecedor testado (8)', effect: { funds: -8, shield: 1 }, lesson: 'Peça já testada custa mais e reduz a chance de falha.' },
+      { effect: { discount: 20 } },
+      { effect: { funds: -8, shield: 1 } },
     ],
   },
   {
     id: 'design_flaw',
     when: 'building',
-    title: 'Engenheiros acharam um defeito no projeto',
-    text: 'Uma revisão encontrou uma solda suspeita na estrutura. Refazer custa tempo e dinheiro.',
     options: [
-      { label: 'Refazer a peça (10)', effect: { funds: -10, shield: 1 }, lesson: 'Revisões de projeto existem para pegar falhas antes do lançamento.' },
-      { label: 'Lançar assim mesmo', effect: { launchRisk: 0.12 }, lesson: 'Ignorar um defeito conhecido aumenta o risco da subida.' },
+      { effect: { funds: -10, shield: 1 } },
+      { effect: { launchRisk: 0.12 } },
     ],
   },
   {
     id: 'budget_freeze',
     when: 'idle',
-    title: 'Orçamento congelado',
-    text: 'Sem nave em construção, o governo ameaça congelar a verba da agência.',
     options: [
-      { label: 'Prometer um lançamento em breve', effect: { funds: 12, discount: 10 }, lesson: 'Compromissos públicos trazem verba e pressão para lançar.' },
-      { label: 'Aceitar o corte e estudar mais', effect: { funds: -5, tech: 1 }, lesson: 'Um ano mais magro pode virar um projeto mais maduro.' },
+      { effect: { funds: 12, discount: 10 } },
+      { effect: { funds: -5, tech: 1 } },
     ],
   },
 ];
+
+localizeList('dilemma', DILEMMAS, ['title', 'text']);
+localizeOptions('dilemma', DILEMMAS);
 
 // Cartas válidas para a situação do jogador (sempre existe pelo menos uma 'any').
 function dilemmasFor(player) {
@@ -4191,6 +4728,7 @@ __mods["src/data/buildings.js"] = (() => {
 // ATENÇÃO: custos e efeitos FICTÍCIOS para balanceamento.
 //
 // perLevel = efeito por nível. useEffect = o que o rival ganha ao pagar a taxa de uso (uma vez).
+const { localize } = __mods["src/i18n/localize.js"];
 
 const MAX_LEVEL = 3;
 const BUILD_COST = 15;          // nível 1
@@ -4198,28 +4736,13 @@ const UPGRADE_COST_STEP = 15;   // nível 2 custa 30, nível 3 custa 45 (custo s
 const CATCHUP_UPGRADE_DISCOUNT = 0.5; // quem está em último paga metade no upgrade
 const USE_FEE = 6;              // taxa paga ao dono para usar o prédio dele
 
-const BUILDINGS = {
-  lab: {
-    id: 'lab', name: 'Laboratório', icon: 'flask',
-    effect: '+1 de tecnologia a cada Ano novo, por nível.',
-    useEffect: { tech: 1 }, useText: '+1 de tecnologia',
-  },
-  factory: {
-    id: 'factory', name: 'Fábrica', icon: 'factory',
-    effect: '−10% no preço das peças, por nível.',
-    useEffect: { discount: 20 }, useText: '20% de desconto na próxima compra',
-  },
-  control: {
-    id: 'control', name: 'Controle de missão', icon: 'console',
-    effect: '−3% de risco em cada etapa do voo, por nível.',
-    useEffect: { shield: 1 }, useText: '1 proteção contra falha',
-  },
-  sponsor: {
-    id: 'sponsor', name: 'Patrocinador', icon: 'briefcase',
-    effect: '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
-    useEffect: { funds: 8 }, useText: '+8 de verba',
-  },
-};
+// Nome, efeito e texto de uso em i18n (building.<id>.name/effect/useText). Aqui ficam ids, ícones e números.
+const BUILDINGS = localize('building', {
+  lab: { id: 'lab', icon: 'flask', useEffect: { tech: 1 } },
+  factory: { id: 'factory', icon: 'factory', useEffect: { discount: 20 } },
+  control: { id: 'control', icon: 'console', useEffect: { shield: 1 } },
+  sponsor: { id: 'sponsor', icon: 'briefcase', useEffect: { funds: 8 } },
+}, ['name', 'effect', 'useText']);
 
 const upgradeCost = (level) => (level === 0 ? BUILD_COST : UPGRADE_COST_STEP * (level + 1));
 
@@ -5151,18 +5674,21 @@ __mods["src/data/glossary.js"] = (() => {
 // Glossário dos recursos do jogo, em linguagem simples (valor educacional pedido pelo desafio).
 // Usado na tela inicial e no painel da oficina.
 
-const GLOSSARY = [
-  { term: 'Massa', text: 'Tudo que vai a bordo pesa. O foguete só consegue levar até um limite; passou disso, não sai do chão.' },
-  { term: 'Energia', text: 'Painéis solares e baterias geram energia; instrumentos e antenas consomem. Se consome mais do que gera, a espaçonave desliga.' },
-  { term: 'Dados', text: 'Instrumentos produzem dados (fotos, medidas). Se a antena não dá conta de transmitir tudo, parte da ciência se perde.' },
-  { term: 'Comunicação', text: 'Capacidade de enviar dados à Terra. Quanto mais longe a órbita, mais fraco o sinal e maior a antena necessária.' },
-  { term: 'Ciência', text: 'O valor do que a missão descobre. É o objetivo final, mas cada ponto custa massa, energia, dados e dinheiro.' },
-  { term: 'Verba', text: 'Dinheiro para comprar peças e pagar o lançamento. Missões reais também pagam operação todo ano.' },
-  { term: 'Vida útil', text: 'Quanto tempo a missão opera. Órbitas baixas decaem com o atrito da atmosfera; propulsores e baterias estendem a vida.' },
-  { term: 'Tecnologia', text: 'O que a agência já domina. Sobe a cada ano e com o Laboratório, e libera foguetes e instrumentos melhores. Esperar rende tecnologia, mas os rivais avançam.' },
-  { term: 'Risco', text: 'Chance de uma etapa do voo falhar. Margem de massa e energia, peças reservas (redundância) e o Controle de missão reduzem o risco. Nada no espaço tem risco zero.' },
-  { term: 'Dados de falha', text: 'Toda falha é estudada. A próxima tentativa tem menos risco no sistema que falhou: é o passo "Verify" do ciclo de projeto da NASA.' },
-];
+const { localizeList } = __mods["src/i18n/localize.js"];
+
+// Termo e texto em i18n (glossary.<id>.term/text). Aqui ficam só os ids, na ordem de exibição.
+const GLOSSARY = localizeList('glossary', [
+  { id: 'mass' },
+  { id: 'energy' },
+  { id: 'data' },
+  { id: 'comms' },
+  { id: 'science' },
+  { id: 'funds' },
+  { id: 'lifetime' },
+  { id: 'tech' },
+  { id: 'risk' },
+  { id: 'failure_data' },
+], ['term', 'text']);
 
 return { GLOSSARY };
 })();
@@ -5192,6 +5718,7 @@ const ICONS = {
   lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',
   scissors: '<circle cx="6" cy="7" r="2.8"/><circle cx="6" cy="17" r="2.8"/><path d="M8.3 8.6L20 19M8.3 15.4L20 5"/>',
   wifi: '<path d="M4.5 10.5a11 11 0 0 1 15 0"/><path d="M7.5 13.8a6.8 6.8 0 0 1 9 0"/><path d="M10.4 17a2.9 2.9 0 0 1 3.2 0"/><circle cx="12" cy="19.5" r="1" ' + F + '/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3v18"/><path d="M12 3c2.6 2.4 4 5.6 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.6-4-9s1.4-6.6 4-9z"/>',
 
   // ---- prédios
   factory: '<path d="M3 21V11l5 3v-3l5 3v-3l5 3V4h3v17z"/><path d="M7 18h2M12 18h2"/>',
@@ -5403,6 +5930,7 @@ const { BUILDINGS, MAX_LEVEL, upgradeCost } = __mods["src/data/buildings.js"];
 const { STAGES } = __mods["src/data/stages.js"];
 const { icon } = __mods["src/ui/icons.js"];
 const { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } = __mods["src/ui/prefs.js"];
+const { t, getLang } = __mods["src/i18n/index.js"];
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -5516,13 +6044,17 @@ function sideRail(state, player, step, actions, steps, names, simple) {
   guide.setAttribute('aria-pressed', String(guideOn()));
   const theme = themeToggle();
   theme.className = 'rail-item theme-toggle';
-  return el('nav', { class: 'side-rail', 'aria-label': 'Navegação da partida' }, [
+  const en = getLang() === 'en';
+  const langItem = item('globe', en ? 'EN' : 'PT', en ? t('lang.switchToPt') : t('lang.switchToEn'), () => actions.toggleLang(), 'lang-toggle');
+  langItem.setAttribute('aria-label', en ? t('lang.switchToPt') : t('lang.switchToEn'));
+  return el('nav', { class: 'side-rail', 'aria-label': t('rail.nav') }, [
     el('span', { class: 'rail-brand', 'aria-hidden': 'true' }, icon('rocket', { size: 20 })),
     // a classe `steps` (trilha de etapas) só entra fora da interface enxuta (test/ui-simple.test.mjs)
     el('div', { class: simple ? 'rail-nav' : 'rail-nav steps' }, nav),
     el('span', { class: 'rail-spacer' }),
     item('bulb', 'Regras', 'Como funciona: regras, lados e glossário', () => openRulesModal()),
     guide,
+    langItem,
     theme,
     item('arrowLeft', 'Sair', 'Sair da partida e voltar à tela inicial', () => openExitDialog(actions), 'rail-exit'),
   ]);
@@ -5599,6 +6131,18 @@ function themeToggle() {
     onclick: () => { toggleTheme(); renderContent(b); },
   });
   renderContent(b);
+  return b;
+}
+
+// Botão de idioma: alterna entre português e inglês. Precisa de `actions.toggleLang` (em main.js),
+// porque trocar o idioma redesenha a tela inteira (todo texto muda), não só o botão.
+function langToggle(actions) {
+  const en = getLang() === 'en';
+  const b = button([icon('globe', { size: 16 }), en ? 'EN' : 'PT'], () => actions.toggleLang(), {
+    class: `small ghost lang-toggle ${en ? 'en' : ''}`,
+    title: en ? t('lang.switchToPt') : t('lang.switchToEn'),
+  });
+  b.setAttribute('aria-label', en ? t('lang.switchToPt') : t('lang.switchToEn'));
   return b;
 }
 
@@ -5835,7 +6379,7 @@ function glossary(open = false) {
   return d;
 }
 
-return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, openExitDialog, openRulesModal, themeToggle, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyStrip, missionPicker, stageTrack, outcomeCard, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, openExitDialog, openRulesModal, themeToggle, langToggle, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyStrip, missionPicker, stageTrack, outcomeCard, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
 })();
 
 // ---- src/ui/art.js
@@ -6499,9 +7043,10 @@ __mods["src/ui/setup.js"] = (() => {
 //    queira ler as regras. O cartão escolhe COMO jogar (docs/PLANO-SALAS.md, Fase 2): sozinho contra o bot,
 //    no mesmo aparelho (hot-seat) ou online com link; o online cria a sala na hora e segue para o lobby.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
-const { el, button, themeToggle, openRulesModal } = __mods["src/ui/components.js"];
+const { el, button, themeToggle, langToggle, openRulesModal } = __mods["src/ui/components.js"];
 const { icon } = __mods["src/ui/icons.js"];
 const { guideOn, themeOf, toggleTheme } = __mods["src/ui/prefs.js"];
+const { getLang, setLang } = __mods["src/i18n/index.js"];
 const { createAsciiCanvas } = __mods["src/ui/art.js"];
 const { START_YEAR, END_YEAR } = __mods["src/data/history.js"];
 
@@ -6863,6 +7408,7 @@ function renderConfigView(actions, backToSplash) {
       button([icon('arrowLeft', { size: 15 }), 'Menu'], backToSplash, { class: 'small ghost' }),
       el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
         button([icon('bulb', { size: 15 }), 'Como funciona'], openRulesModal, { class: 'small ghost' }),
+        langToggle(actions),
         themeToggle(),
       ]),
     ]),
@@ -6873,7 +7419,7 @@ function renderConfigView(actions, backToSplash) {
 }
 
 // Menu principal (entre a capa e a Nova Partida), como nos jogos: jogar, regras, configurações, créditos.
-function renderMainMenu(go) {
+function renderMainMenu(actions, go) {
   // Lista secundária: ícone, nome e uma seta que aparece no foco/hover (o que é clicável fica evidente).
   const item = (iconName, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
     icon(iconName, { size: 18 }),
@@ -6884,7 +7430,7 @@ function renderMainMenu(go) {
     createSplashStarfield(),
     el('header', { class: 'setup-clean-bar main-menu-bar' }, [
       button([icon('arrowLeft', { size: 15 }), 'Voltar à capa'], () => go('splash'), { class: 'small ghost' }),
-      themeToggle(),
+      el('div', { class: 'row', style: 'margin:0;gap:8px' }, [langToggle(actions), themeToggle()]),
     ]),
     el('div', { class: 'main-menu-box' }, [
       el('div', { class: 'main-menu-head' }, [
@@ -6916,12 +7462,15 @@ function renderSettings(actions, go) {
   const themeSeg = el('div', {});
   const drawTheme = () => themeSeg.replaceChildren(segmented('Tema', [{ value: 'claro', label: 'Claro' }, { value: 'escuro', label: 'Escuro' }], themeOf(), (v) => { if (v !== themeOf()) toggleTheme(); drawTheme(); }));
   drawTheme();
+  // Idioma: ao trocar, re-monta a tela de configurações já no novo idioma (go re-renderiza a view atual).
+  const langSeg = segmented('Idioma', [{ value: 'pt', label: 'Português' }, { value: 'en', label: 'English' }], getLang(), (v) => { if (v !== getLang()) { setLang(v); go('settings'); } });
   const sw = el('button', {
     type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': 'Dicas passo a passo',
     onclick: () => { const on = !guideOn(); actions.setGuide(on); sw.setAttribute('aria-checked', String(on)); },
   });
   return menuSheet('Configurações', [
     el('div', { class: 'setup-group' }, [
+      el('div', { class: 'setup-row' }, [rowLabel('Idioma', 'Português do Brasil ou inglês'), langSeg]),
       el('div', { class: 'setup-row' }, [rowLabel('Tema', 'Papel claro ou grafite escuro'), themeSeg]),
       el('div', { class: 'setup-row' }, [rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'), sw]),
     ]),
@@ -6958,7 +7507,7 @@ function setupScreen(state, actions) {
     else if (view === 'config') host.appendChild(renderConfigView(actions, () => go('menu')));
     else if (view === 'settings') host.appendChild(renderSettings(actions, go));
     else if (view === 'credits') host.appendChild(renderCredits(go));
-    else host.appendChild(renderMainMenu(go));
+    else host.appendChild(renderMainMenu(actions, go));
   };
   mount();
   return host;
@@ -9589,6 +10138,7 @@ const { workshopScreen } = __mods["src/ui/workshop.js"];
 const { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } = __mods["src/ui/yearOverlay.js"];
 const { floatDelta, countUp } = __mods["src/ui/motion.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
+const { toggleLang } = __mods["src/i18n/index.js"];
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -9772,6 +10322,8 @@ const actions = {
   endTurn: netWrap('endTurn'),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
+  // Troca o idioma (pt/en) e redesenha tudo. Puramente local, nunca viaja pela rede.
+  toggleLang: () => { toggleLang(); render(); },
   newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
   // Sala online (ver docs/PLANO-SALAS.md). A tela só chama estas ações; erros viram
   // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
@@ -9820,6 +10372,7 @@ const spectatorActions = {
   openWorkshop: () => { spectateView = 'workshop'; render(); },
   go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
   toggleGuide: () => { setGuide(!guideOn()); render(); },
+  toggleLang: () => { toggleLang(); render(); },
   buyItem: blockedInSpectate,
   sellItem: blockedInSpectate,
   chooseLauncher: blockedInSpectate,
