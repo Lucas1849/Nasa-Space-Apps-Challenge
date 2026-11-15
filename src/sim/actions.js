@@ -54,6 +54,7 @@ export function startGame(state, setup, options = {}) {
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
+  state.outcome = null;
   state.winners = [];
   state.gameOver = false;
   state.lastRoll = null;
@@ -96,14 +97,41 @@ function setMission(state, p, missionId) {
   if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
 }
 
-// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas).
+// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas). Devolve as descobertas.
 function revealRandom(state, p, count, rng, accept = () => true) {
   const pool = undiscoveredItems(p).filter(accept);
   const picked = [];
   while (picked.length < count && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  if (!picked.length) return;
+  if (!picked.length) return [];
   discover(p, picked.map((item) => item.id));
   pushLog(state, `${p.name} descobriu: ${picked.map((item) => item.name).join(', ')}.`, p.id);
+  return picked;
+}
+
+// ---------------------------------------------------------------- retorno imediato ao jogador
+// Depois de uma escolha ou de parar numa casa, o jogador vê na hora o que aconteceu (a UI mostra no
+// centro do tabuleiro, sem pedir confirmação; some no próximo turno). Só o diário guardava isso antes.
+//   changes = variações numéricas (verba, tecnologia, proteção); notes = o que mais aconteceu;
+//   choice = a opção escolhida; lesson = o porquê.
+
+const statsOf = (p) => ({ funds: p.funds, tech: p.tech, shields: p.shields, discount: p.discount || 0, launchRisk: p.launchRisk || 0 });
+
+function changesBetween(before, after) {
+  return [['funds', 'Verba'], ['tech', 'Tecnologia'], ['shields', 'Proteção']]
+    .filter(([key]) => after[key] !== before[key])
+    .map(([key, label]) => ({ label, value: after[key] - before[key] }));
+}
+
+// Efeitos que não são um número simples viram frases.
+function extrasBetween(before, after) {
+  const extras = [];
+  if (after.discount > before.discount) extras.push(`${after.discount}% de desconto na próxima compra.`);
+  if (after.launchRisk > before.launchRisk) extras.push(`A próxima subida terá ${Math.round((after.launchRisk - before.launchRisk) * 100)}% a mais de risco.`);
+  return extras;
+}
+
+function setOutcome(state, p, outcome) {
+  state.outcome = { playerId: p.id, choice: null, changes: [], notes: [], lesson: null, ...outcome };
 }
 
 // Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
@@ -128,6 +156,7 @@ function startTurn(state) {
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
+  state.outcome = null;
   if (p.bot) return;
   if (isNewYear(state.round)) {
     const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
@@ -254,8 +283,14 @@ export function moveBy(state, index, rng = Math.random) {
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
 
   // Descoberta de peças: a Feira mostra novidades dos fornecedores; a cooperação científica libera o que o nível alcança.
-  if (tile.type === 'shop') revealRandom(state, p, 3, rng);
-  if (tile.type === 'tech') revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
+  let found = [];
+  if (tile.type === 'shop') found = revealRandom(state, p, 3, rng);
+  if (tile.type === 'tech') found = revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
+
+  // Retorno imediato: o que a casa deu (casas de decisão e de evento mostram a própria carta).
+  const notes = [...messages, ...(found.length ? [`Descobriu: ${found.map((item) => item.name).join(', ')}.`] : [])];
+  if (notes.length) setOutcome(state, p, { title: `Parou em "${tile.label}"`, notes });
+  else state.outcome = null;
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
@@ -288,11 +323,13 @@ export function rollAndMove(state, rng = Math.random) {
   return rollDice(state, rng) || moveBy(state, 0, rng);
 }
 
-function applyEffect(state, p, e, rng) {
+// `notes` (opcional) recebe frases para o retorno imediato ao jogador (aposta, boato).
+function applyEffect(state, p, e, rng, notes = []) {
   if (e.gamble) {
     const won = rng() < e.gamble.chance;
     pushLog(state, `${p.name}: ${won ? 'deu certo!' : 'deu errado.'}`, p.id);
-    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng);
+    notes.push(won ? 'Deu certo!' : 'Deu errado.');
+    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng, notes);
     return;
   }
   if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
@@ -300,7 +337,7 @@ function applyEffect(state, p, e, rng) {
   if (e.discount) p.discount = Math.max(p.discount, e.discount);
   if (e.shield) p.shields += e.shield;
   if (e.launchRisk) p.launchRisk = (p.launchRisk || 0) + e.launchRisk;
-  if (e.rumor) spreadRumor(state, p, rng);
+  if (e.rumor) spreadRumor(state, p, rng, notes);
 }
 
 export function chooseDilemma(state, index, rng = Math.random) {
@@ -311,12 +348,22 @@ export function chooseDilemma(state, index, rng = Math.random) {
   if (!option) return 'Opção inválida.';
   state.pendingDilemma = null;
   pushLog(state, `${p.name} — ${card.title}: "${option.label}". ${option.lesson}`, p.id);
-  applyEffect(state, p, option.effect, rng);
+  const before = statsOf(p);
+  const notes = [];
+  applyEffect(state, p, option.effect, rng, notes);
+  const after = statsOf(p);
+  setOutcome(state, p, {
+    title: card.title,
+    choice: option.label,
+    changes: changesBetween(before, after),
+    notes: [...notes, ...extrasBetween(before, after)],
+    lesson: option.lesson,
+  });
   return null;
 }
 
 // Boato: informação vaga sobre um rival, às vezes errada.
-function spreadRumor(state, p, rng) {
+function spreadRumor(state, p, rng, notes = []) {
   const rivals = state.players.filter((r) => r.id !== p.id);
   if (!rivals.length) return;
   const rival = rivals[Math.floor(rng() * rivals.length)];
@@ -324,7 +371,9 @@ function spreadRumor(state, p, rng) {
   const truth = rng() < RUMOR_TRUTH;
   const shown = truth ? rival.step : Math.max(0, Math.min(total, rival.step + (rng() < 0.5 ? -1 : 1)));
   p.intel[rival.id] = { year: yearOf(state.round), rumor: true, steps: shown, total };
-  pushLog(state, `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`, p.id);
+  const text = `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`;
+  pushLog(state, text, p.id);
+  notes.push(text);
 }
 
 // Espionagem: paga e vê o estado real de um rival (degrau atual e quanto a nave está pronta).
@@ -339,6 +388,13 @@ export function spyOn(state, rivalId) {
   p.intel[rival.id] = spyReport(state, rival);
   state.pendingTile = null;
   pushLog(state, `${p.name} pagou ${SPY_COST} ao espião para observar ${rival.name}.`, p.id);
+  const r = p.intel[rival.id];
+  const ship = r.inFlight ? `nave em voo (etapa ${r.stage + 1} de ${r.stages})` : r.ready != null ? `nave ${Math.round(r.ready * 100)}% pronta` : r.note || '';
+  setOutcome(state, p, {
+    title: `Espião: ${rival.name}`,
+    changes: [{ label: 'Verba', value: -SPY_COST }],
+    notes: [`${r.steps} de ${r.total} degraus cumpridos${r.mission ? `, mirando "${r.mission}"` : ''}${ship ? `; ${ship}` : ''}.`, 'O relatório fica guardado na aba Rivais.'],
+  });
   return null;
 }
 
@@ -373,6 +429,11 @@ export function buildOnLot(state, buildingId) {
   state.lots[pending.tileId] = { ownerId: p.id, buildingId };
   state.pendingTile = null;
   pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} num terreno.`);
+  setOutcome(state, p, {
+    title: `Construiu ${BUILDINGS[buildingId].name}`,
+    changes: [{ label: 'Verba', value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, 'Suba o nível na aba Sua agência.'],
+  });
   return null;
 }
 
@@ -388,11 +449,18 @@ export function useRivalBuilding(state) {
   const building = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
   if (p.funds < fee) return `Verba insuficiente: a taxa é ${fee}.`;
+  const before = statsOf(p);
   p.funds -= fee;
   owner.funds += fee;
   applyEffect(state, p, building.useEffect, Math.random);
   state.pendingTile = null;
   pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
+  const after = statsOf(p);
+  setOutcome(state, p, {
+    title: `Usou ${building.name} de ${owner.name}`,
+    changes: changesBetween(before, after),
+    notes: [...extrasBetween(before, after), `${owner.name} recebeu ${fee}: os dois saem ganhando.`],
+  });
   return null;
 }
 

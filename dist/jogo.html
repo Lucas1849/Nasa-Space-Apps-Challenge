@@ -365,6 +365,11 @@ select option { background: #0f1736; }
 .dice-choice { display: grid; gap: 8px; justify-items: center; }
 .die.small { font-size: 1.6rem; vertical-align: middle; }
 .tile-decision.dilemma { border-color: rgba(251,191,36,.45); }
+/* Retorno imediato (o que acabou de acontecer): destaca por um instante e fica até o próximo turno. */
+.outcome { display: grid; gap: 6px; justify-items: center; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(52,211,153,.07); border: 1px solid rgba(52,211,153,.35); max-width: 420px; animation: fadeIn .25s ease; }
+.outcome .delta-row { justify-content: center; margin: 2px 0; }
+.outcome-lesson { display: inline-flex; align-items: flex-start; gap: 6px; color: #c9d3f5; text-align: left; }
+.outcome-lesson .ic { color: var(--accent); margin-top: 2px; flex: none; }
 .intel { color: var(--accent) !important; }
 .gain-text { display: block; color: var(--ok); margin-top: 6px; }
 .lose-text { display: block; color: var(--amber); }
@@ -648,6 +653,7 @@ function createInitialState() {
     dice: null,            // [a, b] dados rolados aguardando escolha
     pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
     pendingDilemma: null,  // { id } carta de dilema aguardando escolha
+    outcome: null,         // retorno imediato ao jogador: { playerId, title, choice, changes, notes, lesson }
     winners: [],
     gameOver: false,
   };
@@ -1715,6 +1721,7 @@ function startGame(state, setup, options = {}) {
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
+  state.outcome = null;
   state.winners = [];
   state.gameOver = false;
   state.lastRoll = null;
@@ -1757,14 +1764,41 @@ function setMission(state, p, missionId) {
   if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
 }
 
-// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas).
+// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas). Devolve as descobertas.
 function revealRandom(state, p, count, rng, accept = () => true) {
   const pool = undiscoveredItems(p).filter(accept);
   const picked = [];
   while (picked.length < count && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  if (!picked.length) return;
+  if (!picked.length) return [];
   discover(p, picked.map((item) => item.id));
   pushLog(state, `${p.name} descobriu: ${picked.map((item) => item.name).join(', ')}.`, p.id);
+  return picked;
+}
+
+// ---------------------------------------------------------------- retorno imediato ao jogador
+// Depois de uma escolha ou de parar numa casa, o jogador vê na hora o que aconteceu (a UI mostra no
+// centro do tabuleiro, sem pedir confirmação; some no próximo turno). Só o diário guardava isso antes.
+//   changes = variações numéricas (verba, tecnologia, proteção); notes = o que mais aconteceu;
+//   choice = a opção escolhida; lesson = o porquê.
+
+const statsOf = (p) => ({ funds: p.funds, tech: p.tech, shields: p.shields, discount: p.discount || 0, launchRisk: p.launchRisk || 0 });
+
+function changesBetween(before, after) {
+  return [['funds', 'Verba'], ['tech', 'Tecnologia'], ['shields', 'Proteção']]
+    .filter(([key]) => after[key] !== before[key])
+    .map(([key, label]) => ({ label, value: after[key] - before[key] }));
+}
+
+// Efeitos que não são um número simples viram frases.
+function extrasBetween(before, after) {
+  const extras = [];
+  if (after.discount > before.discount) extras.push(`${after.discount}% de desconto na próxima compra.`);
+  if (after.launchRisk > before.launchRisk) extras.push(`A próxima subida terá ${Math.round((after.launchRisk - before.launchRisk) * 100)}% a mais de risco.`);
+  return extras;
+}
+
+function setOutcome(state, p, outcome) {
+  state.outcome = { playerId: p.id, choice: null, changes: [], notes: [], lesson: null, ...outcome };
 }
 
 // Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
@@ -1789,6 +1823,7 @@ function startTurn(state) {
   state.dice = null;
   state.pendingTile = null;
   state.pendingDilemma = null;
+  state.outcome = null;
   if (p.bot) return;
   if (isNewYear(state.round)) {
     const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
@@ -1915,8 +1950,14 @@ function moveBy(state, index, rng = Math.random) {
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
 
   // Descoberta de peças: a Feira mostra novidades dos fornecedores; a cooperação científica libera o que o nível alcança.
-  if (tile.type === 'shop') revealRandom(state, p, 3, rng);
-  if (tile.type === 'tech') revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
+  let found = [];
+  if (tile.type === 'shop') found = revealRandom(state, p, 3, rng);
+  if (tile.type === 'tech') found = revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
+
+  // Retorno imediato: o que a casa deu (casas de decisão e de evento mostram a própria carta).
+  const notes = [...messages, ...(found.length ? [`Descobriu: ${found.map((item) => item.name).join(', ')}.`] : [])];
+  if (notes.length) setOutcome(state, p, { title: `Parou em "${tile.label}"`, notes });
+  else state.outcome = null;
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
@@ -1949,11 +1990,13 @@ function rollAndMove(state, rng = Math.random) {
   return rollDice(state, rng) || moveBy(state, 0, rng);
 }
 
-function applyEffect(state, p, e, rng) {
+// `notes` (opcional) recebe frases para o retorno imediato ao jogador (aposta, boato).
+function applyEffect(state, p, e, rng, notes = []) {
   if (e.gamble) {
     const won = rng() < e.gamble.chance;
     pushLog(state, `${p.name}: ${won ? 'deu certo!' : 'deu errado.'}`, p.id);
-    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng);
+    notes.push(won ? 'Deu certo!' : 'Deu errado.');
+    applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng, notes);
     return;
   }
   if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
@@ -1961,7 +2004,7 @@ function applyEffect(state, p, e, rng) {
   if (e.discount) p.discount = Math.max(p.discount, e.discount);
   if (e.shield) p.shields += e.shield;
   if (e.launchRisk) p.launchRisk = (p.launchRisk || 0) + e.launchRisk;
-  if (e.rumor) spreadRumor(state, p, rng);
+  if (e.rumor) spreadRumor(state, p, rng, notes);
 }
 
 function chooseDilemma(state, index, rng = Math.random) {
@@ -1972,12 +2015,22 @@ function chooseDilemma(state, index, rng = Math.random) {
   if (!option) return 'Opção inválida.';
   state.pendingDilemma = null;
   pushLog(state, `${p.name} — ${card.title}: "${option.label}". ${option.lesson}`, p.id);
-  applyEffect(state, p, option.effect, rng);
+  const before = statsOf(p);
+  const notes = [];
+  applyEffect(state, p, option.effect, rng, notes);
+  const after = statsOf(p);
+  setOutcome(state, p, {
+    title: card.title,
+    choice: option.label,
+    changes: changesBetween(before, after),
+    notes: [...notes, ...extrasBetween(before, after)],
+    lesson: option.lesson,
+  });
   return null;
 }
 
 // Boato: informação vaga sobre um rival, às vezes errada.
-function spreadRumor(state, p, rng) {
+function spreadRumor(state, p, rng, notes = []) {
   const rivals = state.players.filter((r) => r.id !== p.id);
   if (!rivals.length) return;
   const rival = rivals[Math.floor(rng() * rivals.length)];
@@ -1985,7 +2038,9 @@ function spreadRumor(state, p, rng) {
   const truth = rng() < RUMOR_TRUTH;
   const shown = truth ? rival.step : Math.max(0, Math.min(total, rival.step + (rng() < 0.5 ? -1 : 1)));
   p.intel[rival.id] = { year: yearOf(state.round), rumor: true, steps: shown, total };
-  pushLog(state, `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`, p.id);
+  const text = `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`;
+  pushLog(state, text, p.id);
+  notes.push(text);
 }
 
 // Espionagem: paga e vê o estado real de um rival (degrau atual e quanto a nave está pronta).
@@ -2000,6 +2055,13 @@ function spyOn(state, rivalId) {
   p.intel[rival.id] = spyReport(state, rival);
   state.pendingTile = null;
   pushLog(state, `${p.name} pagou ${SPY_COST} ao espião para observar ${rival.name}.`, p.id);
+  const r = p.intel[rival.id];
+  const ship = r.inFlight ? `nave em voo (etapa ${r.stage + 1} de ${r.stages})` : r.ready != null ? `nave ${Math.round(r.ready * 100)}% pronta` : r.note || '';
+  setOutcome(state, p, {
+    title: `Espião: ${rival.name}`,
+    changes: [{ label: 'Verba', value: -SPY_COST }],
+    notes: [`${r.steps} de ${r.total} degraus cumpridos${r.mission ? `, mirando "${r.mission}"` : ''}${ship ? `; ${ship}` : ''}.`, 'O relatório fica guardado na aba Rivais.'],
+  });
   return null;
 }
 
@@ -2034,6 +2096,11 @@ function buildOnLot(state, buildingId) {
   state.lots[pending.tileId] = { ownerId: p.id, buildingId };
   state.pendingTile = null;
   pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} num terreno.`);
+  setOutcome(state, p, {
+    title: `Construiu ${BUILDINGS[buildingId].name}`,
+    changes: [{ label: 'Verba', value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, 'Suba o nível na aba Sua agência.'],
+  });
   return null;
 }
 
@@ -2049,11 +2116,18 @@ function useRivalBuilding(state) {
   const building = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
   if (p.funds < fee) return `Verba insuficiente: a taxa é ${fee}.`;
+  const before = statsOf(p);
   p.funds -= fee;
   owner.funds += fee;
   applyEffect(state, p, building.useEffect, Math.random);
   state.pendingTile = null;
   pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
+  const after = statsOf(p);
+  setOutcome(state, p, {
+    title: `Usou ${building.name} de ${owner.name}`,
+    changes: changesBetween(before, after),
+    notes: [...extrasBetween(before, after), `${owner.name} recebeu ${fee}: os dois saem ganhando.`],
+  });
   return null;
 }
 
@@ -3087,6 +3161,146 @@ function setupScreen(state, actions) {
 return { setupScreen };
 })();
 
+// ---- src/ui/summary.js
+__mods["src/ui/summary.js"] = (() => {
+// Resumo para o jogador: "Desde o seu último turno" (no começo da vez seguinte). O que acabou de
+// acontecer aparece na hora, no cartão de resultado do tabuleiro (ui/board.js), e passar a vez não
+// pede confirmação. Só observa o estado: tira uma foto da agência no início e no fim de cada turno
+// e compara. Respeita o rival escondido: só mostra entradas públicas do diário ou do próprio jogador.
+const { el } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { ladderProgress } = __mods["src/sim/progress.js"];
+const { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } = __mods["src/data/history.js"];
+
+let tracker = freshTracker();
+function freshTracker() {
+  return { key: null, starts: {}, ends: {}, since: {} };
+}
+
+function resetSummaries() {
+  tracker = freshTracker();
+}
+
+function snapshot(state, p) {
+  return {
+    funds: p.funds,
+    tech: p.tech,
+    shields: p.shields,
+    steps: ladderProgress(p).steps,
+    logHead: state.log[0] || null,
+    year: yearOf(state.round),
+  };
+}
+
+// Entradas do diário desde `head` (em ordem cronológica), visíveis para `viewerId`.
+function logSince(state, head, viewerId) {
+  let idx = head ? state.log.indexOf(head) : state.log.length;
+  if (idx === -1) idx = Math.min(state.log.length, 10); // o diário é limitado: mostra as mais recentes
+  return state.log.slice(0, idx).filter((l) => l.who == null || l.who === viewerId).map((l) => l.text).reverse();
+}
+
+function deltas(from, to) {
+  return [
+    { key: 'funds', label: 'Verba', icon: 'coins', value: to.funds - from.funds },
+    { key: 'tech', label: 'Tecnologia', icon: 'chip', value: to.tech - from.tech },
+    { key: 'shields', label: 'Proteções', icon: 'shield', value: to.shields - from.shields },
+    { key: 'steps', label: 'Degraus', icon: 'ladder', value: to.steps - from.steps },
+  ].filter((d) => d.value !== 0);
+}
+
+// Chamado a cada render: detecta o começo de um turno de jogador humano e tira a foto inicial.
+function trackTurn(state) {
+  if (state.sandbox || !state.players.length || state.gameOver) return;
+  const p = currentPlayer(state);
+  if (!p || p.bot) return;
+  const key = `${state.round}:${state.turn}`;
+  if (tracker.key === key) return;
+  tracker.key = key;
+  const now = snapshot(state, p);
+  const end = tracker.ends[p.id];
+  tracker.since[p.id] = end
+    ? { changes: deltas(end, now), entries: logSince(state, end.logHead, p.id) }
+    : { changes: [], entries: logSince(state, null, p.id), first: true };
+  tracker.starts[p.id] = now;
+}
+
+// Chamado logo antes de passar a vez: guarda a foto final para o próximo "desde o seu último turno".
+function markTurnEnd(state) {
+  const p = currentPlayer(state);
+  if (p && !p.bot) tracker.ends[p.id] = snapshot(state, p);
+}
+
+function changeChips(changes) {
+  if (!changes.length) return el('p', { class: 'hint' }, 'Nenhuma mudança na verba, na tecnologia ou nos degraus.');
+  return el('div', { class: 'delta-row' }, changes.map((d) => el('span', { class: `delta ${d.value > 0 ? 'up' : 'down'}` }, [
+    icon(d.icon, { size: 16 }), `${d.label} `, el('strong', { class: 'num' }, `${d.value > 0 ? '+' : ''}${d.value}`),
+  ])));
+}
+
+function entriesList(entries, empty) {
+  if (!entries.length) return el('p', { class: 'hint' }, empty);
+  return el('ol', { class: 'summary-log' }, entries.map((t) => el('li', {}, t)));
+}
+
+// Texto da rodada: ano, rodada dentro do ano e tempo que resta até 1969.
+function roundLine(state) {
+  const year = yearOf(state.round);
+  const inYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  const yearsLeft = END_YEAR - year;
+  return `${year}, rodada ${inYear} de ${ROUNDS_PER_YEAR} · ${yearsLeft > 0 ? `faltam ${yearsLeft} ano(s) até ${END_YEAR}` : `último ano da corrida`}`;
+}
+
+// Cartão "Desde o seu último turno", no tabuleiro, até o jogador rolar os dados.
+function sinceCard(state) {
+  const p = currentPlayer(state);
+  const since = tracker.since[p.id];
+  if (!since || p.rolled) return null;
+  const newYear = isNewYear(state.round);
+  if (since.first) {
+    return el('div', { class: 'panel since-card' }, [
+      el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
+      el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
+    ]);
+  }
+  return el('div', { class: 'panel since-card' }, [
+    el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, 'Desde o seu último turno')]),
+    el('p', { class: 'hint' }, roundLine(state)),
+    newYear ? el('p', { class: 'new-year' }, [icon('calendar', { size: 16 }), `Ano novo: ${yearOf(state.round)}. Orçamento e tecnologia do ano entraram.`]) : null,
+    changeChips(since.changes),
+    since.entries.length ? entriesList(since.entries, '') : null,
+  ]);
+}
+
+return { resetSummaries, trackTurn, markTurnEnd, roundLine, sinceCard };
+})();
+
+// ---- src/ui/handoff.js
+__mods["src/ui/handoff.js"] = (() => {
+// Tela de troca (IDEIA.md v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
+const { el, button, avatar, sideBadge } = __mods["src/ui/components.js"];
+const { roundLine } = __mods["src/ui/summary.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { yearOf, isNewYear } = __mods["src/data/history.js"];
+
+function handoffScreen(state, actions) {
+  const p = currentPlayer(state);
+  return el('section', { class: 'screen handoff' }, [
+    el('div', { class: 'panel handoff-card' }, [
+      el('p', { class: 'eyebrow' }, `${yearOf(state.round)}${isNewYear(state.round) ? ' · Ano novo' : ''}`),
+      avatar(p, 64),
+      el('h1', {}, `Vez de ${p.name}`),
+      el('p', { class: 'chip' }, sideBadge(p)),
+      el('p', { class: 'hint' }, roundLine(state)),
+      el('p', { class: 'hint' }, 'Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto. Ao começar, você verá o que mudou desde o seu último turno.'),
+      button('Sou eu: começar meu turno', () => actions.go('board'), { class: 'primary' }),
+    ]),
+  ]);
+}
+
+return { handoffScreen };
+})();
+
 // ---- src/ui/guide.js
 __mods["src/ui/guide.js"] = (() => {
 // Orientações para o jogador: "o que fazer agora" em cada tela, com o botão recomendado destacado.
@@ -3252,208 +3466,6 @@ function hl(state, screen, key) {
 return { endTurnBlocker, nextStep, guideCard, hl };
 })();
 
-// ---- src/ui/summary.js
-__mods["src/ui/summary.js"] = (() => {
-// Resumos para o jogador: "Resumo do turno" (ao passar a vez) e "Desde o seu último turno"
-// (no começo da vez seguinte). Só observa o estado: tira uma foto da agência no início e no fim
-// de cada turno e compara. Respeita o rival escondido: só mostra entradas públicas do diário
-// ou do próprio jogador.
-const { el, button, avatar } = __mods["src/ui/components.js"];
-const { icon } = __mods["src/ui/icons.js"];
-const { nextStep } = __mods["src/ui/guide.js"];
-const { guideOn } = __mods["src/ui/prefs.js"];
-const { currentPlayer } = __mods["src/sim/state.js"];
-const { checkDesign } = __mods["src/sim/simulate.js"];
-const { ladderProgress } = __mods["src/sim/progress.js"];
-const { MISSIONS } = __mods["src/data/missions.js"];
-const { STAGES } = __mods["src/data/stages.js"];
-const { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } = __mods["src/data/history.js"];
-
-let tracker = freshTracker();
-function freshTracker() {
-  return { key: null, starts: {}, ends: {}, since: {} };
-}
-
-function resetSummaries() {
-  tracker = freshTracker();
-}
-
-function snapshot(state, p) {
-  return {
-    funds: p.funds,
-    tech: p.tech,
-    shields: p.shields,
-    steps: ladderProgress(p).steps,
-    logHead: state.log[0] || null,
-    year: yearOf(state.round),
-  };
-}
-
-// Entradas do diário desde `head` (em ordem cronológica), visíveis para `viewerId`.
-function logSince(state, head, viewerId) {
-  let idx = head ? state.log.indexOf(head) : state.log.length;
-  if (idx === -1) idx = Math.min(state.log.length, 10); // o diário é limitado: mostra as mais recentes
-  return state.log.slice(0, idx).filter((l) => l.who == null || l.who === viewerId).map((l) => l.text).reverse();
-}
-
-function deltas(from, to) {
-  return [
-    { key: 'funds', label: 'Verba', icon: 'coins', value: to.funds - from.funds },
-    { key: 'tech', label: 'Tecnologia', icon: 'chip', value: to.tech - from.tech },
-    { key: 'shields', label: 'Proteções', icon: 'shield', value: to.shields - from.shields },
-    { key: 'steps', label: 'Degraus', icon: 'ladder', value: to.steps - from.steps },
-  ].filter((d) => d.value !== 0);
-}
-
-// Chamado a cada render: detecta o começo de um turno de jogador humano e tira a foto inicial.
-function trackTurn(state) {
-  if (state.sandbox || !state.players.length || state.gameOver) return;
-  const p = currentPlayer(state);
-  if (!p || p.bot) return;
-  const key = `${state.round}:${state.turn}`;
-  if (tracker.key === key) return;
-  tracker.key = key;
-  const now = snapshot(state, p);
-  const end = tracker.ends[p.id];
-  tracker.since[p.id] = end
-    ? { changes: deltas(end, now), entries: logSince(state, end.logHead, p.id) }
-    : { changes: [], entries: logSince(state, null, p.id), first: true };
-  tracker.starts[p.id] = now;
-}
-
-// Chamado logo antes de passar a vez: guarda a foto final para o próximo "desde o seu último turno".
-function markTurnEnd(state) {
-  const p = currentPlayer(state);
-  if (p && !p.bot) tracker.ends[p.id] = snapshot(state, p);
-}
-
-function changeChips(changes) {
-  if (!changes.length) return el('p', { class: 'hint' }, 'Nenhuma mudança na verba, na tecnologia ou nos degraus.');
-  return el('div', { class: 'delta-row' }, changes.map((d) => el('span', { class: `delta ${d.value > 0 ? 'up' : 'down'}` }, [
-    icon(d.icon, { size: 16 }), `${d.label} `, el('strong', { class: 'num' }, `${d.value > 0 ? '+' : ''}${d.value}`),
-  ])));
-}
-
-// Onde a agência está agora: degrau, nave e o que falta.
-function statusLines(state, p) {
-  const prog = ladderProgress(p);
-  const lines = [];
-  lines.push({ icon: 'ladder', text: prog.done ? 'Escada completa.' : `Degrau ${prog.steps + 1} de ${prog.total}: ${MISSIONS[prog.current]?.name ?? ''}.` });
-  if (p.flight) {
-    const f = p.flight;
-    lines.push({ icon: 'satellite', text: `Nave em voo (${MISSIONS[f.missionId].name}). Próxima etapa: ${STAGES[f.plan[f.stageIndex]].name}, ${f.stageIndex + 1} de ${f.plan.length}.` });
-  }
-  if (p.missionId && !p.flight) {
-    const design = checkDesign(p);
-    const missing = design.checks.filter((c) => !c.ok && c.hard).length;
-    lines.push(design.ok
-      ? { icon: 'rocket', text: 'Nave pronta para lançar.' }
-      : { icon: 'wrench', text: `Nave em montagem: ${missing} pendência(s) na oficina.` });
-  }
-  return el('ul', { class: 'status-lines' }, lines.map((l) => el('li', {}, [icon(l.icon, { size: 16 }), l.text])));
-}
-
-function entriesList(entries, empty) {
-  if (!entries.length) return el('p', { class: 'hint' }, empty);
-  return el('ol', { class: 'summary-log' }, entries.map((t) => el('li', {}, t)));
-}
-
-// Texto da rodada: ano, rodada dentro do ano e tempo que resta até 1969.
-function roundLine(state) {
-  const year = yearOf(state.round);
-  const inYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
-  const yearsLeft = END_YEAR - year;
-  return `${year}, rodada ${inYear} de ${ROUNDS_PER_YEAR} · ${yearsLeft > 0 ? `faltam ${yearsLeft} ano(s) até ${END_YEAR}` : `último ano da corrida`}`;
-}
-
-// Modal "Resumo do turno", aberto pelo botão Passar a vez.
-function turnSummaryModal(state, actions) {
-  const p = currentPlayer(state);
-  const start = tracker.starts[p.id] || snapshot(state, p);
-  const now = snapshot(state, p);
-  const entries = logSince(state, start.logHead, p.id);
-  const humans = state.players.filter((x) => !x.bot).length;
-  const next = guideOn() ? nextStep(state, 'board') : null;
-  const tip = !p.flight && p.missionId && !checkDesign(p).ok
-    ? 'No próximo turno, continue montando a nave na oficina.'
-    : p.flight ? 'No próximo turno, avance o voo para a etapa seguinte.'
-      : next?.target === 'launch' ? 'Sua nave está pronta: no próximo turno você pode lançar.' : null;
-
-  return el('div', { class: 'modal-backdrop', onclick: (e) => { if (e.target === e.currentTarget) actions.closeModal(); } }, [
-    el('div', { class: 'modal panel', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'turn-summary-title' }, [
-      el('div', { class: 'modal-head' }, [
-        avatar(p, 40),
-        el('div', {}, [
-          el('h2', { id: 'turn-summary-title', class: 'modal-title' }, 'Resumo do seu turno'),
-          el('p', { class: 'hint' }, `${p.name} · ${roundLine(state)}`),
-        ]),
-      ]),
-      el('h3', {}, 'O que mudou'),
-      changeChips(deltas(start, now)),
-      el('h3', {}, 'O que aconteceu'),
-      entriesList(entries, 'Nada registrado neste turno.'),
-      el('h3', {}, 'Onde sua agência está'),
-      statusLines(state, p),
-      tip ? el('p', { class: 'tip-line' }, [icon('bulb', { size: 16 }), tip]) : null,
-      el('div', { class: 'row modal-actions' }, [
-        button([icon('arrowRight'), 'Passar a vez'], () => actions.confirmEndTurn(), { class: 'primary' }),
-        button('Continuar meu turno', () => actions.closeModal(), { class: 'ghost' }),
-      ]),
-      humans > 1 ? el('p', { class: 'hint' }, 'Depois, passe o dispositivo para a próxima agência. O resumo some antes que ela veja.') : null,
-    ]),
-  ]);
-}
-
-// Cartão "Desde o seu último turno", no tabuleiro, até o jogador rolar os dados.
-function sinceCard(state) {
-  const p = currentPlayer(state);
-  const since = tracker.since[p.id];
-  if (!since || p.rolled) return null;
-  const newYear = isNewYear(state.round);
-  if (since.first) {
-    return el('div', { class: 'panel since-card' }, [
-      el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
-      el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
-    ]);
-  }
-  return el('div', { class: 'panel since-card' }, [
-    el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, 'Desde o seu último turno')]),
-    el('p', { class: 'hint' }, roundLine(state)),
-    newYear ? el('p', { class: 'new-year' }, [icon('calendar', { size: 16 }), `Ano novo: ${yearOf(state.round)}. Orçamento e tecnologia do ano entraram.`]) : null,
-    changeChips(since.changes),
-    since.entries.length ? entriesList(since.entries, '') : null,
-  ]);
-}
-
-return { resetSummaries, trackTurn, markTurnEnd, roundLine, turnSummaryModal, sinceCard };
-})();
-
-// ---- src/ui/handoff.js
-__mods["src/ui/handoff.js"] = (() => {
-// Tela de troca (IDEIA.md v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
-const { el, button, avatar, sideBadge } = __mods["src/ui/components.js"];
-const { roundLine } = __mods["src/ui/summary.js"];
-const { currentPlayer } = __mods["src/sim/state.js"];
-const { yearOf, isNewYear } = __mods["src/data/history.js"];
-
-function handoffScreen(state, actions) {
-  const p = currentPlayer(state);
-  return el('section', { class: 'screen handoff' }, [
-    el('div', { class: 'panel handoff-card' }, [
-      el('p', { class: 'eyebrow' }, `${yearOf(state.round)}${isNewYear(state.round) ? ' · Ano novo' : ''}`),
-      avatar(p, 64),
-      el('h1', {}, `Vez de ${p.name}`),
-      el('p', { class: 'chip' }, sideBadge(p)),
-      el('p', { class: 'hint' }, roundLine(state)),
-      el('p', { class: 'hint' }, 'Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto. Ao começar, você verá o que mudou desde o seu último turno.'),
-      button('Sou eu: começar meu turno', () => actions.go('board'), { class: 'primary' }),
-    ]),
-  ]);
-}
-
-return { handoffScreen };
-})();
-
 // ---- src/ui/board.js
 __mods["src/ui/board.js"] = (() => {
 // Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
@@ -3573,6 +3585,22 @@ function tileDecision(state, p, actions) {
   ]);
 }
 
+// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
+// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
+function outcomeCard(state, p) {
+  const o = state.outcome;
+  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
+  return el('div', { class: 'outcome' }, [
+    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
+    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
+    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
+      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
+    ]))) : null,
+    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
+    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
+  ]);
+}
+
 // Centro do anel: dados (rolar 2, escolher 1) e as decisões da casa.
 function centerPanel(state, p, actions, rolling) {
   let dice;
@@ -3594,7 +3622,7 @@ function centerPanel(state, p, actions, rolling) {
       dieFace(state.lastRoll, { size: 54, className: rolling ? 'rolling' : '' }),
     ]);
   }
-  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions)]);
+  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions), outcomeCard(state, p)]);
 }
 
 // Bloco "o que fazer agora" (fase 2 do turno), conforme a situação da nave.
@@ -4147,15 +4175,13 @@ const { SCREENS } = __mods["src/ui/screens.js"];
 const { rocketSvg } = __mods["src/ui/icons.js"];
 const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
 const { endTurnBlocker } = __mods["src/ui/guide.js"];
-const { trackTurn, markTurnEnd, resetSummaries, turnSummaryModal } = __mods["src/ui/summary.js"];
+const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
-// Estado só da interface (não entra no jogo): qual janela está aberta por cima da tela.
-const ui = { modal: null };
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -4163,12 +4189,9 @@ function render() {
   const changed = state.screen !== lastScreen || state.turn !== lastTurn;
   const scrollY = window.scrollY;
   trackTurn(state);
-  if (state.screen !== 'board' && state.screen !== 'report' && state.screen !== 'flight') ui.modal = null;
   const node = SCREENS[state.screen](state, actions);
   if (changed) node.classList.add('enter');
-  if (ui.modal === 'turnSummary') node.appendChild(turnSummaryModal(state, actions));
   app.replaceChildren(node);
-  if (ui.modal) node.querySelector('.modal .primary')?.focus();
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
@@ -4186,7 +4209,7 @@ function wrap(fn, after) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); ui.modal = null; return game.startGame(s, ...args); }),
+  startGame: wrap((s, ...args) => { resetSummaries(); return game.startGame(s, ...args); }),
   rollDice: wrap(game.rollDice),
   moveBy: wrap(game.moveBy),
   chooseDilemma: wrap(game.chooseDilemma),
@@ -4206,23 +4229,18 @@ const actions = {
   // Atalho de depuração no console: rola e anda com o primeiro dado.
   rollAndMove: wrap(game.rollAndMove),
   chooseStageOption: wrap(game.chooseStageOption),
-  // Passar a vez abre primeiro o "Resumo do turno"; o turno só termina em confirmEndTurn.
+  // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
+  // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
   endTurn: wrap((s) => {
     if (s.sandbox) return game.endTurn(s);
     const blocker = endTurnBlocker(s);
     if (blocker) return blocker;
-    ui.modal = 'turnSummary';
-    return null;
-  }),
-  confirmEndTurn: wrap((s) => {
-    ui.modal = null;
     markTurnEnd(s);
     return game.endTurn(s);
   }),
-  closeModal: wrap(() => { ui.modal = null; }),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); ui.modal = null; }),
+  newGame: wrap(() => { state = createInitialState(); resetSummaries(); }),
 };
 
 function showToast(text) {
@@ -4250,11 +4268,6 @@ function showLaunchOverlay() {
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
-
-// Esc fecha o resumo do turno (volta ao turno, sem passar a vez).
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ui.modal) actions.closeModal();
-});
 
 // Exposto para depuração no console do navegador.
 window.__game = { get state() { return state; }, actions };

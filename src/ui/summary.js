@@ -1,16 +1,11 @@
-// Resumos para o jogador: "Resumo do turno" (ao passar a vez) e "Desde o seu último turno"
-// (no começo da vez seguinte). Só observa o estado: tira uma foto da agência no início e no fim
-// de cada turno e compara. Respeita o rival escondido: só mostra entradas públicas do diário
-// ou do próprio jogador.
-import { el, button, avatar } from './components.js';
+// Resumo para o jogador: "Desde o seu último turno" (no começo da vez seguinte). O que acabou de
+// acontecer aparece na hora, no cartão de resultado do tabuleiro (ui/board.js), e passar a vez não
+// pede confirmação. Só observa o estado: tira uma foto da agência no início e no fim de cada turno
+// e compara. Respeita o rival escondido: só mostra entradas públicas do diário ou do próprio jogador.
+import { el } from './components.js';
 import { icon } from './icons.js';
-import { nextStep } from './guide.js';
-import { guideOn } from './prefs.js';
 import { currentPlayer } from '../sim/state.js';
-import { checkDesign } from '../sim/simulate.js';
 import { ladderProgress } from '../sim/progress.js';
-import { MISSIONS } from '../data/missions.js';
-import { STAGES } from '../data/stages.js';
 import { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } from '../data/history.js';
 
 let tracker = freshTracker();
@@ -78,25 +73,6 @@ function changeChips(changes) {
   ])));
 }
 
-// Onde a agência está agora: degrau, nave e o que falta.
-function statusLines(state, p) {
-  const prog = ladderProgress(p);
-  const lines = [];
-  lines.push({ icon: 'ladder', text: prog.done ? 'Escada completa.' : `Degrau ${prog.steps + 1} de ${prog.total}: ${MISSIONS[prog.current]?.name ?? ''}.` });
-  if (p.flight) {
-    const f = p.flight;
-    lines.push({ icon: 'satellite', text: `Nave em voo (${MISSIONS[f.missionId].name}). Próxima etapa: ${STAGES[f.plan[f.stageIndex]].name}, ${f.stageIndex + 1} de ${f.plan.length}.` });
-  }
-  if (p.missionId && !p.flight) {
-    const design = checkDesign(p);
-    const missing = design.checks.filter((c) => !c.ok && c.hard).length;
-    lines.push(design.ok
-      ? { icon: 'rocket', text: 'Nave pronta para lançar.' }
-      : { icon: 'wrench', text: `Nave em montagem: ${missing} pendência(s) na oficina.` });
-  }
-  return el('ul', { class: 'status-lines' }, lines.map((l) => el('li', {}, [icon(l.icon, { size: 16 }), l.text])));
-}
-
 function entriesList(entries, empty) {
   if (!entries.length) return el('p', { class: 'hint' }, empty);
   return el('ol', { class: 'summary-log' }, entries.map((t) => el('li', {}, t)));
@@ -108,44 +84,6 @@ export function roundLine(state) {
   const inYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   const yearsLeft = END_YEAR - year;
   return `${year}, rodada ${inYear} de ${ROUNDS_PER_YEAR} · ${yearsLeft > 0 ? `faltam ${yearsLeft} ano(s) até ${END_YEAR}` : `último ano da corrida`}`;
-}
-
-// Modal "Resumo do turno", aberto pelo botão Passar a vez.
-export function turnSummaryModal(state, actions) {
-  const p = currentPlayer(state);
-  const start = tracker.starts[p.id] || snapshot(state, p);
-  const now = snapshot(state, p);
-  const entries = logSince(state, start.logHead, p.id);
-  const humans = state.players.filter((x) => !x.bot).length;
-  const next = guideOn() ? nextStep(state, 'board') : null;
-  const tip = !p.flight && p.missionId && !checkDesign(p).ok
-    ? 'No próximo turno, continue montando a nave na oficina.'
-    : p.flight ? 'No próximo turno, avance o voo para a etapa seguinte.'
-      : next?.target === 'launch' ? 'Sua nave está pronta: no próximo turno você pode lançar.' : null;
-
-  return el('div', { class: 'modal-backdrop', onclick: (e) => { if (e.target === e.currentTarget) actions.closeModal(); } }, [
-    el('div', { class: 'modal panel', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'turn-summary-title' }, [
-      el('div', { class: 'modal-head' }, [
-        avatar(p, 40),
-        el('div', {}, [
-          el('h2', { id: 'turn-summary-title', class: 'modal-title' }, 'Resumo do seu turno'),
-          el('p', { class: 'hint' }, `${p.name} · ${roundLine(state)}`),
-        ]),
-      ]),
-      el('h3', {}, 'O que mudou'),
-      changeChips(deltas(start, now)),
-      el('h3', {}, 'O que aconteceu'),
-      entriesList(entries, 'Nada registrado neste turno.'),
-      el('h3', {}, 'Onde sua agência está'),
-      statusLines(state, p),
-      tip ? el('p', { class: 'tip-line' }, [icon('bulb', { size: 16 }), tip]) : null,
-      el('div', { class: 'row modal-actions' }, [
-        button([icon('arrowRight'), 'Passar a vez'], () => actions.confirmEndTurn(), { class: 'primary' }),
-        button('Continuar meu turno', () => actions.closeModal(), { class: 'ghost' }),
-      ]),
-      humans > 1 ? el('p', { class: 'hint' }, 'Depois, passe o dispositivo para a próxima agência. O resumo some antes que ela veja.') : null,
-    ]),
-  ]);
 }
 
 // Cartão "Desde o seu último turno", no tabuleiro, até o jogador rolar os dados.

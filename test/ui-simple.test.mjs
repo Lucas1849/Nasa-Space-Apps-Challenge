@@ -3,28 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-class Node {
-  constructor(tag) { this.tag = tag; this.children = []; this.attrs = {}; this.className = ''; this.text = ''; this.disabled = false; this.innerHTML = ''; }
-  appendChild(c) { this.children.push(c); return c; }
-  addEventListener() {}
-  setAttribute(k, v) { this.attrs[k] = v; }
-  get textContent() { return this.text + this.children.map((c) => c.textContent).join(' '); }
-  set textContent(v) { this.text = v; this.children = []; }
-}
-globalThis.document = {
-  createElement: (tag) => new Node(tag),
-  createElementNS: (_ns, tag) => new Node(tag),
-  createTextNode: (s) => { const n = new Node('#text'); n.text = s; return n; },
-};
+import { noActions as actions, walk } from './dom-stub.mjs';
 
 const { createInitialState } = await import('../src/sim/state.js');
 const { startGame, rollAndMove } = await import('../src/sim/actions.js');
 const { boardScreen } = await import('../src/ui/board.js');
 const { simpleUi } = await import('../src/ui/components.js');
 const { setGuide } = await import('../src/ui/prefs.js');
-
-const actions = new Proxy({}, { get: () => () => {} });
-const walk = (n, f) => { f(n); n.children.forEach((c) => walk(c, f)); };
 
 // O que a tela mostra: abas da lateral, botões de ação, trilha do cabeçalho e legenda das casas.
 function snapshot(state) {

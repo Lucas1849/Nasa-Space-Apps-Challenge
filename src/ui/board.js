@@ -117,6 +117,22 @@ function tileDecision(state, p, actions) {
   ]);
 }
 
+// Retorno imediato: o que acabou de acontecer (escolha do dilema, o que a casa deu, espião, prédio).
+// Fica no centro sem pedir confirmação e some no próximo turno (state.outcome, ver sim/actions.js).
+function outcomeCard(state, p) {
+  const o = state.outcome;
+  if (!o || o.playerId !== p.id || state.pendingDilemma) return null;
+  return el('div', { class: 'outcome' }, [
+    el('strong', { class: 'decision-title' }, [icon('check', { size: 18 }), o.title]),
+    o.choice ? el('small', { class: 'hint' }, `Você escolheu: ${o.choice}`) : null,
+    o.changes.length ? el('div', { class: 'delta-row' }, o.changes.map((c) => el('span', { class: `delta ${c.value > 0 ? 'up' : 'down'}` }, [
+      `${c.label} `, el('strong', { class: 'num' }, `${c.value > 0 ? '+' : ''}${c.value}`),
+    ]))) : null,
+    ...o.notes.map((n) => el('small', { class: 'hint' }, n)),
+    o.lesson ? el('small', { class: 'outcome-lesson' }, [icon('bulb', { size: 14 }), o.lesson]) : null,
+  ]);
+}
+
 // Centro do anel: dados (rolar 2, escolher 1) e as decisões da casa.
 function centerPanel(state, p, actions, rolling) {
   let dice;
@@ -138,7 +154,7 @@ function centerPanel(state, p, actions, rolling) {
       dieFace(state.lastRoll, { size: 54, className: rolling ? 'rolling' : '' }),
     ]);
   }
-  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions)]);
+  return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions), outcomeCard(state, p)]);
 }
 
 // Bloco "o que fazer agora" (fase 2 do turno), conforme a situação da nave.

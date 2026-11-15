@@ -155,9 +155,15 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
   cabeçalho sem a trilha de etapas. Rivais e Sua agência surgem ao usar o espião ou construir. Desligar
   as dicas ou cumprir o 1º degrau mostra tudo. Só muda o que aparece, nenhuma regra depende disso.
   Para esconder algo mais no começo, use `simpleUi` na tela; teste em `test/ui-simple.test.mjs`.
-- **Resumos**: `src/ui/summary.js` monta o "Resumo do seu turno" (ao passar a vez) e o "Desde o
-  seu último turno" comparando fotos da agência. Só mostra o que é público ou do próprio
-  jogador (rival escondido).
+- **Retorno imediato**: depois de escolher num dilema, parar numa casa, construir, espionar ou usar o
+  prédio de um rival, a ação grava `state.outcome` (`setOutcome` em `src/sim/actions.js`: título,
+  opção escolhida, `changes` numéricos, `notes` e a lição). O tabuleiro mostra isso no centro
+  (`outcomeCard`, `src/ui/board.js`) sem pedir confirmação; some no começo do próximo turno. Para
+  dar retorno a uma ação nova, chame `setOutcome` nela. **Passar a vez é direto**: não há janela de
+  confirmação (o `markTurnEnd` e o endTurn rodam juntos em `src/main.js`).
+- **Resumos**: `src/ui/summary.js` monta o "Desde o seu último turno" (no começo da vez seguinte)
+  comparando fotos da agência. Só mostra o que é público ou do próprio jogador (rival escondido).
+  O antigo modal "Resumo do seu turno" foi removido: pedia uma confirmação extra a cada turno.
 
 ## Convenções
 - Código em inglês, comentários e textos do jogo em português (a submissão é em inglês; ver `SUBMISSION.md`).

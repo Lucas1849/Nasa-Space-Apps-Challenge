@@ -257,3 +257,83 @@ test('sandbox libera todas as peças e lançadores', () => {
   for (const id of [...Object.keys(CATALOG), ...Object.keys(LAUNCHERS)]) assert.ok(p.unlocked.includes(id), id);
   assert.equal(buyItem(state, 'hires_camera'), null);
 });
+
+// ---------------------------------------------------------------- retorno imediato (state.outcome)
+
+test('escolher uma opção do dilema mostra na hora o que mudou e o porquê', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  const funds = a.funds;
+  state.pendingDilemma = { id: 'congress' };
+  assert.equal(chooseDilemma(state, 0), null); // cortar o laboratório: +20 de verba, −1 de tecnologia
+  const o = state.outcome;
+  assert.equal(o.playerId, a.id);
+  assert.equal(o.title, 'O Congresso quer resultados');
+  assert.match(o.choice, /Cortar o laboratório/);
+  assert.deepEqual(o.changes, [{ label: 'Verba', value: 20 }, { label: 'Tecnologia', value: -1 }]);
+  assert.match(o.lesson, /Cortar pesquisa/);
+  assert.equal(a.funds, funds + 20);
+});
+
+test('aposta do dilema conta se deu certo ou errado', () => {
+  const state = twoPlayers();
+  state.pendingDilemma = { id: 'public_test' };
+  chooseDilemma(state, 0, () => 0); // aposta: rng 0 < 0.6, deu certo
+  assert.ok(state.outcome.notes.includes('Deu certo!'));
+  assert.ok(state.outcome.changes.some((c) => c.label === 'Proteção' && c.value === 1));
+  state.pendingDilemma = { id: 'public_test' };
+  chooseDilemma(state, 0, () => 0.99); // deu errado
+  assert.ok(state.outcome.notes.includes('Deu errado.'));
+  assert.deepEqual(state.outcome.changes, [{ label: 'Verba', value: -10 }]);
+});
+
+test('parar numa casa mostra o que ela deu; casa de decisão não repete a carta', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  rollAndMove(state, die(2)); // casa 2: discurso, +10 de verba
+  assert.match(state.outcome.title, /Discurso/);
+  assert.ok(state.outcome.notes.some((n) => /\+10 de verba/.test(n)));
+  assert.equal(state.outcome.playerId, a.id);
+  const b = twoPlayers();
+  rollAndMove(b, die(3)); // casa 3: evento, só a carta de dilema
+  assert.equal(b.outcome, null);
+  assert.ok(b.pendingDilemma);
+});
+
+test('Feira: o retorno inclui as peças descobertas', () => {
+  const state = twoPlayers();
+  state.players[0].position = 8;
+  rollAndMove(state, die(2)); // 8 -> 10: Feira
+  assert.ok(state.outcome.notes.some((n) => n.startsWith('Descobriu:')));
+});
+
+test('construir, espionar e usar prédio de rival também devolvem o resultado', () => {
+  const state = twoPlayers();
+  rollAndMove(state, die(1)); // casa 1: terreno livre
+  assert.equal(buildOnLot(state, 'lab'), null);
+  assert.match(state.outcome.title, /Construiu Laboratório/);
+  assert.deepEqual(state.outcome.changes, [{ label: 'Verba', value: -upgradeCost(0) }]);
+  endTurn(state);
+  const b = state.players[1];
+  b.funds = 100;
+  rollAndMove(state, die(1)); // B cai no terreno de A
+  assert.equal(useRivalBuilding(state), null);
+  assert.match(state.outcome.title, /Usou Laboratório de/);
+  assert.ok(state.outcome.changes.some((c) => c.label === 'Tecnologia' && c.value === 1));
+  endTurn(state);
+  const a = state.players[0];
+  a.position = 2;
+  rollAndMove(state, die(2)); // A: 2 -> 4, espionagem
+  assert.equal(spyOn(state, 1), null);
+  assert.match(state.outcome.title, /Espião:/);
+  assert.deepEqual(state.outcome.changes, [{ label: 'Verba', value: -SPY_COST }]);
+  assert.ok(state.outcome.notes.some((n) => /degraus cumpridos/.test(n)));
+});
+
+test('o retorno some quando começa o próximo turno', () => {
+  const state = twoPlayers();
+  rollAndMove(state, die(2));
+  assert.ok(state.outcome);
+  endTurn(state); // vez do jogador B
+  assert.equal(state.outcome, null);
+});

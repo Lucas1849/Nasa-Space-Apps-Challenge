@@ -5,15 +5,13 @@ import { SCREENS } from './ui/screens.js';
 import { rocketSvg } from './ui/icons.js';
 import { setGuide, guideOn } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
-import { trackTurn, markTurnEnd, resetSummaries, turnSummaryModal } from './ui/summary.js';
+import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
-// Estado só da interface (não entra no jogo): qual janela está aberta por cima da tela.
-const ui = { modal: null };
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -21,12 +19,9 @@ function render() {
   const changed = state.screen !== lastScreen || state.turn !== lastTurn;
   const scrollY = window.scrollY;
   trackTurn(state);
-  if (state.screen !== 'board' && state.screen !== 'report' && state.screen !== 'flight') ui.modal = null;
   const node = SCREENS[state.screen](state, actions);
   if (changed) node.classList.add('enter');
-  if (ui.modal === 'turnSummary') node.appendChild(turnSummaryModal(state, actions));
   app.replaceChildren(node);
-  if (ui.modal) node.querySelector('.modal .primary')?.focus();
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
@@ -44,7 +39,7 @@ function wrap(fn, after) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); ui.modal = null; return game.startGame(s, ...args); }),
+  startGame: wrap((s, ...args) => { resetSummaries(); return game.startGame(s, ...args); }),
   rollDice: wrap(game.rollDice),
   moveBy: wrap(game.moveBy),
   chooseDilemma: wrap(game.chooseDilemma),
@@ -64,23 +59,18 @@ const actions = {
   // Atalho de depuração no console: rola e anda com o primeiro dado.
   rollAndMove: wrap(game.rollAndMove),
   chooseStageOption: wrap(game.chooseStageOption),
-  // Passar a vez abre primeiro o "Resumo do turno"; o turno só termina em confirmEndTurn.
+  // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
+  // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
   endTurn: wrap((s) => {
     if (s.sandbox) return game.endTurn(s);
     const blocker = endTurnBlocker(s);
     if (blocker) return blocker;
-    ui.modal = 'turnSummary';
-    return null;
-  }),
-  confirmEndTurn: wrap((s) => {
-    ui.modal = null;
     markTurnEnd(s);
     return game.endTurn(s);
   }),
-  closeModal: wrap(() => { ui.modal = null; }),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); ui.modal = null; }),
+  newGame: wrap(() => { state = createInitialState(); resetSummaries(); }),
 };
 
 function showToast(text) {
@@ -108,11 +98,6 @@ function showLaunchOverlay() {
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
-
-// Esc fecha o resumo do turno (volta ao turno, sem passar a vez).
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && ui.modal) actions.closeModal();
-});
 
 // Exposto para depuração no console do navegador.
 window.__game = { get state() { return state; }, actions };

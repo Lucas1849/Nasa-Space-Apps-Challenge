@@ -68,6 +68,7 @@ export function createInitialState() {
     dice: null,            // [a, b] dados rolados aguardando escolha
     pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
     pendingDilemma: null,  // { id } carta de dilema aguardando escolha
+    outcome: null,         // retorno imediato ao jogador: { playerId, title, choice, changes, notes, lesson }
     winners: [],
     gameOver: false,
   };

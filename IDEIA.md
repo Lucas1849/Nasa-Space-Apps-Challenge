@@ -577,3 +577,23 @@ Resultado medido na tela do tabuleiro no turno 1: 5 botões para 2, 5 abas para 
 
 Ainda por avaliar: a oficina (7 medidores e a checagem do projeto) e o relatório. Teste com alguém que
 nunca viu o jogo antes de concluir que está simples o bastante.
+
+## 19. Retorno imediato e passar a vez sem confirmação (Marcus, 15/11)
+Dois problemas vistos jogando:
+- **Confirmação a cada turno.** "Passar a vez" abria o "Resumo do turno" e pedia para clicar "Passar a vez"
+  de novo. Sozinho, isso era só atrito.
+- **Sem retorno nas escolhas.** Ao escolher uma opção de dilema a carta sumia e o resultado só ia para o
+  Diário (fechado). O jogador não sabia o que tinha acontecido.
+
+Decisão:
+- **Passar a vez é direto**, sem janela. O que aconteceu já foi mostrado na hora, e o cartão "Desde o seu
+  último turno" recapitula no começo da próxima vez.
+- **Cartão de resultado no centro do tabuleiro**, sem botão de confirmar, que some no próximo turno:
+  - dilema: a opção escolhida, o que mudou (verba, tecnologia, proteção), se a aposta deu certo ou errado e a lição;
+  - casa: o que ela deu (verba, tecnologia, peças descobertas);
+  - construir, espionar e usar o prédio de um rival: o custo e o que o jogador ganhou.
+- Regra de interface: **nunca pedir confirmação para algo que não se desfaz de forma custosa**; mostrar o
+  resultado depois, sem bloquear.
+
+Ainda sem retorno imediato: as escolhas durante o voo (tela de voo). Vale conferir se ali o jogador
+entende o que mudou.

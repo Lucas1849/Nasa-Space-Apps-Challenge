@@ -353,6 +353,11 @@ select option { background: #0f1736; }
 .dice-choice { display: grid; gap: 8px; justify-items: center; }
 .die.small { font-size: 1.6rem; vertical-align: middle; }
 .tile-decision.dilemma { border-color: rgba(251,191,36,.45); }
+/* Retorno imediato (o que acabou de acontecer): destaca por um instante e fica até o próximo turno. */
+.outcome { display: grid; gap: 6px; justify-items: center; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(52,211,153,.07); border: 1px solid rgba(52,211,153,.35); max-width: 420px; animation: fadeIn .25s ease; }
+.outcome .delta-row { justify-content: center; margin: 2px 0; }
+.outcome-lesson { display: inline-flex; align-items: flex-start; gap: 6px; color: #c9d3f5; text-align: left; }
+.outcome-lesson .ic { color: var(--accent); margin-top: 2px; flex: none; }
 .intel { color: var(--accent) !important; }
 .gain-text { display: block; color: var(--ok); margin-top: 6px; }
 .lose-text { display: block; color: var(--amber); }
