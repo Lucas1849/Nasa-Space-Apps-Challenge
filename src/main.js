@@ -8,6 +8,8 @@ import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 import { createNetworkController } from './net/sync.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
+import { floatDelta, countUp } from './ui/motion.js';
+import { currentPlayer } from './sim/state.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -15,6 +17,7 @@ let state = createInitialState();
 let lastScreen = null;
 let lastTurn = null;
 let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
+let lastStats = null;     // verba e tecnologia do jogador da vez no desenho anterior (animação do HUD)
 
 // Multiplayer remoto (opcional, ver docs/PLANO-P2P.md). Sem rede, nada muda: netWrap()
 // se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
@@ -62,12 +65,32 @@ function render() {
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  if (typeof node.afterMount === 'function') node.afterMount();
+  animateStats();
   // Virada de ano: anima uma vez, só no tabuleiro do jogador da vez (os ganhos são secretos: nunca na tela de troca).
   const yearKey = yearOverlayKey(state, lastYearShown);
   if (yearKey) {
     lastYearShown = yearKey;
     showYearOverlay(state.yearChange);
   }
+}
+
+// Verba e tecnologia mudaram para o MESMO jogador desde o último desenho? Mostra "+20"/"−8" saindo do
+// número no topo e o número conta até o valor novo (ui/motion.js). Troca de jogador não anima: na tela
+// de troca os recursos de cada agência são secretos.
+function animateStats() {
+  const p = state.players?.length && !['setup', 'lobby', 'handoff'].includes(state.screen) ? currentPlayer(state) : null;
+  const now = p ? { id: p.id, funds: p.funds, tech: p.tech, sandbox: state.sandbox } : null;
+  if (now && lastStats && lastStats.id === now.id && !now.sandbox) {
+    const fundsNode = app.querySelector('.hud .stat.funds');
+    const techNode = app.querySelector('.hud .stat.tech');
+    if (now.funds !== lastStats.funds) {
+      floatDelta(fundsNode, now.funds - lastStats.funds, 'funds');
+      countUp(fundsNode?.querySelector('.stat-num'), lastStats.funds, now.funds);
+    }
+    if (now.tech !== lastStats.tech) floatDelta(techNode, now.tech - lastStats.tech, 'tech');
+  }
+  lastStats = now;
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha. Puramente

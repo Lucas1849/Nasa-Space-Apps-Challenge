@@ -35,7 +35,8 @@ test('oficina: o mínimo escondido aparece como "?" e como pista, nunca como nú
   assert.match(caption, /comunicação baixa/);
   assert.ok(!/ciência ≥/.test(caption) && !/comunicação ≥/.test(caption));
   assert.ok(buttons(root).some((b) => /Ensaio em solo \(5\)/.test(b)));
-  assert.ok(textsOf(root, 'hint with-icon').some((t) => /ainda não sabe se a nave atende/.test(t)));
+  // o aviso fica na barra fixa de lançamento (UX de 15/11)
+  assert.ok(textsOf(root, 'dock-status').some((t) => /ainda não sabe se a nave atende/.test(t)));
 });
 
 test('oficina: o checklist mostra o mínimo desconhecido em cinza, sem travar o Lançar', () => {
