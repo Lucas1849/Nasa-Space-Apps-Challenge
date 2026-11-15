@@ -1,6 +1,7 @@
 // Mapa de telas. Cada tela é uma função (state, actions) => elemento DOM.
 // Ciclo (IDEIA.md v3): setup -> troca -> tabuleiro <-> oficina -> voo (uma etapa por turno) -> relatório -> ... -> fim
 import { setupScreen } from './setup.js';
+import { lobbyScreen } from './lobby.js';
 import { handoffScreen } from './handoff.js';
 import { boardScreen } from './board.js';
 import { workshopScreen } from './workshop.js';
@@ -10,6 +11,7 @@ import { gameoverScreen } from './gameover.js';
 
 export const SCREENS = {
   setup: setupScreen,
+  lobby: lobbyScreen, // sala online antes da partida (docs/PLANO-SALAS.md)
   handoff: handoffScreen,
   board: boardScreen,
   workshop: workshopScreen,
