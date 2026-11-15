@@ -619,3 +619,19 @@ Decisão: **a falha nasce de uma decisão do jogador e ensina**.
 Para testar jogando: o kit do degrau já cobre o mínimo do 1º degrau, então o erro tende a aparecer a partir
 do 2º (ex.: a Tripulação na Lua pede duas antenas parabólicas). Se ninguém errar, a pista qualitativa está
 generosa demais. Ainda sem fazer: variar os mínimos a cada partida e esconder vida útil e suporte de vida.
+
+## 21. O kit do próximo degrau só é liberado ao cumprir o degrau (Marcus, 15/11)
+Problema: ao **lançar** o degrau N, o jogo já trocava a missão para N+1 e revelava o kit dele, mesmo que o
+voo falhasse depois. A oficina mostrava uma nave nova e vazia, e o jogador achava que as peças tinham sumido.
+
+Decisão (do usuário): **descobrir é recompensa por cumprir o degrau.**
+- O kit do degrau seguinte e a troca de missão só acontecem quando o degrau atual é **cumprido**. Se o voo falha,
+  nada é liberado e o jogador monta outra nave para o mesmo degrau.
+- Consequência aceita: **com a nave em voo a oficina fica fechada** ("aguarde o resultado do voo"). Não dá mais
+  para montar a próxima nave enquanto a atual voa. Em voos longos (Lua, 3 a 4 turnos) o jogador só anda no
+  tabuleiro, juntando verba e peças.
+- O relatório de sucesso ganhou o painel **"Peças liberadas"**, que mostra o prêmio por ter cumprido o degrau.
+- O sandbox não muda.
+
+Ponto a observar jogando: nos voos longos, esperar sem poder montar nada pode ficar parado. Se incomodar, uma
+saída é permitir montar com as peças que o jogador já descobriu, sem liberar o kit novo.

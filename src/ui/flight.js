@@ -61,7 +61,6 @@ function resultView(state, p, actions) {
       ? [button(['Próxima etapa', icon('arrowRight', { size: 18 })], () => actions.advanceFlight(), { class: `primary ${hl(state, 'flight', 'next')}` })]
       : [
         button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { class: `primary ${hl(state, 'flight', 'end')}` }),
-        button([icon('wrench', { size: 18 }), 'Montar a próxima nave'], () => actions.go('workshop')),
         button([icon('arrowLeft', { size: 18 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: 'ghost' }),
       ]),
   ];

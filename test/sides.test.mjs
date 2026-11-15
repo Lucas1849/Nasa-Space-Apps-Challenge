@@ -104,32 +104,47 @@ test('cumprir um degrau sobe a escada; o primeiro do lado leva o bônus cheio', 
   assert.equal(b.lastResult.stepBonus.bonus, STEP_BONUS_LATER);
 });
 
-test('durante o voo a oficina mira o próximo degrau; se falhar, volta para o atual', () => {
+// Gera a nave mínima do 1º degrau (o kit já cobre os mínimos dele).
+function firstShip() {
+  return { instruments: ['radio_beacon'], parts: ['solar_small', 'antenna_basic'], launcherId: 'small', orbitId: 'leo' };
+}
+
+test('durante o voo a missão continua a atual e o kit do próximo degrau segue escondido; se falhar, nada muda', () => {
   const state = createInitialState();
   startGame(state, [{ name: 'A' }], { rng: () => 0 });
   const a = state.players[0];
-  a.spacecraft = { instruments: ['radio_beacon'], parts: ['solar_small', 'antenna_basic'], launcherId: 'small', orbitId: 'leo' };
+  const ladder = SIDES[a.side].ladder;
+  a.spacecraft = firstShip();
   walk(state);
   launch(state, noFailure);
-  assert.equal(a.missionId, SIDES[a.side].ladder[1]);
+  assert.equal(a.missionId, ladder[0], 'lançar não troca a missão');
+  for (const id of MISSIONS[ladder[1]].kit.filter((k) => !MISSIONS[ladder[0]].kit.includes(k))) {
+    assert.ok(!a.unlocked.includes(id), `${id} ainda escondida durante o voo`);
+  }
   endTurn(state);
-  walk(state); advanceFlight(state, noFailure); chooseStageOption(state, 0, () => 0);
+  walk(state); advanceFlight(state, noFailure); chooseStageOption(state, 0, () => 0); // falha
   assert.equal(a.step, 0);
-  assert.equal(a.missionId, SIDES[a.side].ladder[0]);
+  assert.equal(a.missionId, ladder[0]);
+  assert.ok(!a.unlocked.includes('life_support'), 'falhar não adianta o kit do próximo degrau');
 });
 
-test('ao lançar, o degrau seguinte revela o kit dele e escolhe a órbita da nova missão', () => {
+test('só ao cumprir o degrau o kit do seguinte é liberado, com a órbita da nova missão', () => {
   const state = createInitialState();
   startGame(state, [{ name: 'A' }], { rng: () => 0 });
   const a = state.players[0];
   const next = MISSIONS[SIDES[a.side].ladder[1]];
   assert.ok(!a.unlocked.includes('life_support')); // ainda escondida no 1º degrau
-  a.spacecraft = { instruments: ['radio_beacon'], parts: ['solar_small', 'antenna_basic'], launcherId: 'small', orbitId: 'leo' };
+  a.spacecraft = firstShip();
   walk(state);
   assert.equal(launch(state, noFailure), null);
+  assert.ok(!a.unlocked.includes('life_support'), 'ao lançar ainda não');
+  endTurn(state);
+  walk(state); advanceFlight(state, noFailure); chooseStageOption(state, 0, noFailure); // cumpre
+  assert.equal(a.lastResult.success, true);
   assert.equal(a.missionId, next.id);
   for (const id of next.kit) assert.ok(a.unlocked.includes(id), id);
   assert.equal(a.spacecraft.orbitId, next.orbit);
+  assert.ok(a.lastResult.unlocked.includes('Cápsula com suporte de vida'), 'o relatório lista o que foi liberado');
 });
 
 test('vitória pela escada só é revelada no fim da rodada', () => {

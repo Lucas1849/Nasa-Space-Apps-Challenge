@@ -11,7 +11,8 @@
 //   1. Tabuleiro: rola 2 dados, escolhe um, anda e decide (dilema, prédio, espião).
 //   2. Uma ação, conforme a nave:
 //      - no chão: oficina à vontade e, se quiser, LANÇA (a subida acontece na hora e encerra o turno);
-//      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado); dá para montar a próxima nave.
+//      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado). A oficina fica fechada: a próxima
+//        nave (e o kit do próximo degrau) só aparece quando esta cumprir a missão.
 //   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
 import {
   createPlayer, currentPlayer, pushLog, emptySpacecraft, humans,
@@ -92,14 +93,21 @@ function assignSide(p, sideId) {
 
 // Muda a missão atual (o degrau da escada). No jogo normal revela o kit do degrau (as peças mínimas
 // para fechar o projeto) e já deixa a órbita da missão escolhida, que não é decisão do jogador.
+// Devolve as peças recém-descobertas (o relatório mostra como prêmio por cumprir o degrau anterior).
 function setMission(state, p, missionId) {
   p.missionId = missionId;
-  if (!missionId || state.sandbox) return;
+  if (!missionId || state.sandbox) return [];
   const mission = MISSIONS[missionId];
   const fresh = discover(p, mission.kit || []);
   p.spacecraft.orbitId = mission.orbit;
   if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
+  return fresh;
 }
+
+// Com a nave em voo a oficina fica fechada no jogo normal: o kit do próximo degrau só é liberado quando
+// o degrau atual é cumprido (completeMission). O sandbox continua livre.
+const inFlightLock = (state, p) =>
+  (!state.sandbox && p.flight ? 'Sua nave está em voo: aguarde o resultado para montar a próxima.' : null);
 
 // Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas). Devolve as descobertas.
 function revealRandom(state, p, count, rng, accept = () => true) {
@@ -522,6 +530,8 @@ export function chooseMission(state, missionId) {
 
 export function buyItem(state, itemId) {
   const p = currentPlayer(state);
+  const locked = inFlightLock(state, p);
+  if (locked) return locked;
   const item = CATALOG[itemId];
   if (!isDiscovered(p, item)) return `${item.name} ainda não foi descoberta: ela aparece nas casas do tabuleiro e a cada Ano novo.`;
   if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
@@ -539,6 +549,8 @@ export function buyItem(state, itemId) {
 // Antes de voar, revende pelo valor cheio (regra do IDEIA.md).
 export function sellItem(state, itemId) {
   const p = currentPlayer(state);
+  const locked = inFlightLock(state, p);
+  if (locked) return locked;
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   const idx = bucket.indexOf(itemId);
   if (idx === -1) return 'Item não está na espaçonave.';
@@ -550,6 +562,8 @@ export function sellItem(state, itemId) {
 
 export function chooseLauncher(state, launcherId) {
   const p = currentPlayer(state);
+  const locked = inFlightLock(state, p);
+  if (locked) return locked;
   const launcher = LAUNCHERS[launcherId];
   if (!isDiscovered(p, launcher)) return `${launcher.name} ainda não foi descoberto: ele é liberado pelo degrau da missão.`;
   if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
@@ -560,6 +574,8 @@ export function chooseLauncher(state, launcherId) {
 
 export function chooseOrbit(state, orbitId) {
   const p = currentPlayer(state);
+  const locked = inFlightLock(state, p);
+  if (locked) return locked;
   p.spacecraft.orbitId = orbitId;
   checkMilestones(state, p);
   return null;
@@ -596,6 +612,8 @@ function checkMilestones(state, player) {
 export function rehearse(state) {
   const p = currentPlayer(state);
   if (state.sandbox) return 'No sandbox os requisitos da missão já aparecem na checagem.';
+  const inFlight = inFlightLock(state, p);
+  if (inFlight) return inFlight;
   if (!p.missionId) return 'Sua escada já está completa.';
   if (!isHidden(p)) return 'Os requisitos desta missão já são conhecidos: veja a checagem do projeto.';
   if (p.rehearsedThisTurn) return 'Só um ensaio por turno.';
@@ -642,9 +660,9 @@ export function launch(state, rng = Math.random) {
     tileEvent: null,
     last: null,
   };
-  // A oficina fica livre para montar a próxima nave (próximo degrau) enquanto esta voa.
+  // A nave da oficina sai zerada (lançador e órbita ficam). No jogo normal a missão continua sendo este degrau
+  // até o voo terminar: o kit do próximo só é liberado ao cumpri-lo (completeMission) e a oficina fica fechada.
   p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
-  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step + 1] || null);
   p.launchedThisTurn = true;
   p.flightAdvanced = true;
   pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
@@ -736,7 +754,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
 
 // Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
 function retarget(state, p) {
-  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step] || null);
+  return state.sandbox ? [] : setMission(state, p, ladderOf(p)[p.step] || null);
 }
 
 function failMission(state, p, stageId) {
@@ -811,7 +829,9 @@ function completeMission(state, p) {
   pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`, p.id);
   p.lastResult = result;
   p.flight = null;
-  retarget(state, p);
+  // Cumprir o degrau libera o kit do próximo (prêmio mostrado no relatório); falhar mantém o degrau atual.
+  const unlocked = retarget(state, p);
+  if (result.success && unlocked.length) result.unlocked = unlocked.map(nameOf);
   state.screen = 'report';
   return null;
 }

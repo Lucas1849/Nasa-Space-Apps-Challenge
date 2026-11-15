@@ -66,13 +66,17 @@ estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida
 5. **Oficina** (centro do jogo): a missão é o degrau atual da escada. Peças e lançadores são
    bloqueados por tecnologia. Mostra recursos, checagem e o **risco do voo** por etapa.
    **Descoberta de peças** (`unlocked` do jogador, `src/sim/resources.js`): a oficina só mostra o que
-   o jogador já descobriu. Ao começar um degrau ele recebe o **kit** do degrau (`kit` em
+   o jogador já descobriu. Ao começar o jogo, e depois ao cumprir o degrau anterior, ele recebe o **kit** do degrau (`kit` em
    `src/data/missions.js`, o mínimo para fechar o projeto) e a órbita da missão já vem escolhida.
    O resto é revelado na **Feira de fornecedores** (até 3 peças), no **Ano Geofísico** (até 2, só
    o que o nível alcança) e a cada **Ano novo** a partir do 2º ano (a peça mais simples que o nível
    alcança). Comprar continua exigindo o nível de tecnologia. O sandbox libera tudo.
-6. **Lançamento**: paga o lançador; a nave sai da oficina (dá para montar a do próximo degrau
-   enquanto ela voa) e a **subida** é sorteada na hora. Lançar encerra o turno.
+6. **Lançamento**: paga o lançador, a nave sai da oficina e a **subida** é sorteada na hora. Lançar
+   encerra o turno. **Com a nave em voo a oficina fica fechada** (jogo normal; o sandbox segue livre):
+   a missão continua sendo o degrau que voa e `buyItem`, `sellItem`, `chooseLauncher`, `chooseOrbit` e
+   `rehearse` recusam (`inFlightLock`). O **kit do degrau seguinte só é liberado quando este é cumprido**
+   (`completeMission` → `retarget` → `setMission`), e o relatório lista as "Peças liberadas". Se o voo
+   falha, nada é liberado e a oficina reabre para o mesmo degrau.
 7. **Voo em etapas** (`src/data/stages.js`, `src/sim/flight.js`): LEO 2 etapas, GEO 3, Lua 3,
    tripulada 4. Uma etapa por turno. Casa de evento com a nave em voo vira imprevisto; chegadas sempre
    têm imprevisto. Cada opção mostra o risco e o porquê; dá para gastar a reserva (revisão paga).

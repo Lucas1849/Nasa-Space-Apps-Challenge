@@ -153,7 +153,7 @@ function missionPanel(state, p, actions, simple = false) {
         ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
         : button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}`, disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
       !p.rolled ? el('p', { class: 'hint' }, 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.') : null,
-      el('p', { class: 'hint' }, 'Enquanto a nave voa, você já pode montar a próxima na oficina.'),
+      el('p', { class: 'hint' }, 'A próxima nave só pode ser montada quando esta cumprir a missão.'),
     ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
   }
   if (!p.missionId) {
@@ -215,7 +215,7 @@ export function boardScreen(state, actions) {
 
   // Interface enxuta: um passo de cada vez. Rolar primeiro; Oficina e Passar a vez só depois de andar;
   // Lançar só quando o projeto fecha. Com a nave em voo aparece tudo (o jogador já conhece o turno).
-  const showWorkshop = !simple || p.rolled || Boolean(p.flight);
+  const showWorkshop = !p.flight && (!simple || p.rolled); // com a nave em voo a oficina fica fechada
   const showLaunch = !simple || design.ok || Boolean(p.flight) || p.launchedThisTurn;
   const showEnd = !simple || p.rolled;
   const actionBar = [

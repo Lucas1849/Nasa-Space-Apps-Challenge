@@ -90,6 +90,22 @@ export function workshopScreen(state, actions) {
     ]);
   }
 
+  // Com a nave em voo a oficina fica fechada (jogo normal): a próxima nave e o kit do próximo degrau só
+  // aparecem quando esta cumprir a missão (sim/actions.js, completeMission).
+  if (p.flight && !state.sandbox) {
+    const flying = MISSIONS[p.flight.missionId];
+    return el('section', { class: 'screen workshop' }, [
+      hud(state, p, 'workshop', actions),
+      el('div', { class: 'panel flight-wait' }, [
+        panelTitle('satellite', 'Oficina fechada: a nave está em voo'),
+        el('p', {}, `Sua nave da missão "${flying.name}" ainda não terminou o voo.`),
+        el('p', { class: 'hint' }, 'Quando ela cumprir a missão, o degrau seguinte libera as peças dele e você monta a próxima nave. Se falhar, você monta outra para este mesmo degrau.'),
+        el('p', { class: 'hint' }, `Etapa ${p.flight.stageIndex + 1} de ${p.flight.plan.length}. Ande no tabuleiro e avance o voo a cada turno.`),
+      ]),
+      el('div', { class: 'row' }, [back]),
+    ]);
+  }
+
   const mission = MISSIONS[p.missionId];
   const design = checkDesign(p);
   // Mínimos de ciência e comunicação escondidos (sim/needs.js): só a pista, sem o número.
@@ -115,7 +131,6 @@ export function workshopScreen(state, actions) {
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop', actions),
     guideCard(state, 'workshop'),
-    p.flight ? el('p', { class: 'banner' }, `Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [

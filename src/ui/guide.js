@@ -127,7 +127,7 @@ export function nextStep(state, screen) {
     if (p.flight?.pending) {
       return { title: 'Escolha como reagir', text: 'Compare o risco de cada opção. O número vem da sua nave: margem de massa e energia, peças reservas, dados de falha e o Controle de missão.', target: 'option' };
     }
-    return { title: 'Etapa superada', text: state.sandbox ? 'Siga para a próxima etapa.' : 'A próxima etapa acontece no seu próximo turno. Enquanto isso, você já pode montar a próxima nave.', target: state.sandbox ? 'next' : 'end' };
+    return { title: 'Etapa superada', text: state.sandbox ? 'Siga para a próxima etapa.' : 'A próxima etapa acontece no seu próximo turno. A próxima nave só pode ser montada quando esta cumprir a missão.', target: state.sandbox ? 'next' : 'end' };
   }
 
   if (screen === 'report') {
