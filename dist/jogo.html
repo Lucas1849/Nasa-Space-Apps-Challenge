@@ -3041,7 +3041,8 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
 button.build-option, .board-screen .board-gadget button.build-option { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; height: auto; padding: 0; overflow: hidden; border-radius: 8px; min-height: 0; text-align: center; white-space: normal; }
 .build-option .build-photo { display: block; aspect-ratio: 160 / 100; background: #0d0e12; }
 .build-option .build-photo svg { width: 100%; height: 100%; display: block; }
-.build-option .build-name { display: block; padding: 6px 4px; font-size: 13px; line-height: 1.2; }
+.build-option .build-name { display: block; padding: 6px 4px 0; font-size: 13px; line-height: 1.2; }
+.build-option .build-effect { display: block; padding: 2px 6px 7px; font-size: 11.5px; line-height: 1.25; opacity: .8; }
 .build-option:hover:not(:disabled) .build-photo svg { transform: scale(1.06); }
 .build-option .build-photo svg { transition: transform .2s ease; }
 .build-option:disabled .build-photo { filter: grayscale(1); opacity: .6; }
@@ -8081,6 +8082,9 @@ function dilemmaDecision(state, actions) {
   ]);
 }
 
+// Efeito curto de cada prédio, para caber no botão do terreno (o texto completo de data/buildings.js fica no balão).
+const BUILD_SHORT = { lab: '+1 tecnologia por ano', factory: 'peças 10% mais baratas', control: '−3% de risco no voo', sponsor: '+10 de verba por ano' };
+
 // Decisão da casa onde o jogador parou: construir, usar o prédio do rival ou espionar.
 function tileDecision(state, p, actions) {
   const pending = state.pendingTile;
@@ -8091,7 +8095,7 @@ function tileDecision(state, p, actions) {
     if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
     return el('div', { class: cls }, [
       el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
-      el('div', { class: 'build-options' }, options.map((b) => button([el('span', { class: 'build-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id) }), el('span', { class: 'build-name' }, b.name)], () => actions.buildOnLot(b.id), { class: 'build-option', disabled: p.funds < upgradeCost(0), title: b.effect }))),
+      el('div', { class: 'build-options' }, options.map((b) => button([el('span', { class: 'build-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id) }), el('span', { class: 'build-name' }, b.name), el('span', { class: 'build-effect' }, BUILD_SHORT[b.id] || b.effect)], () => actions.buildOnLot(b.id), { class: 'build-option', disabled: p.funds < upgradeCost(0), title: b.effect }))),
       el('div', { class: 'row', style: 'justify-content:center' }, [
         button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
       ]),

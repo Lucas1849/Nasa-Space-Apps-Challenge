@@ -191,6 +191,9 @@ function dilemmaDecision(state, actions) {
   ]);
 }
 
+// Efeito curto de cada prédio, para caber no botão do terreno (o texto completo de data/buildings.js fica no balão).
+const BUILD_SHORT = { lab: '+1 tecnologia por ano', factory: 'peças 10% mais baratas', control: '−3% de risco no voo', sponsor: '+10 de verba por ano' };
+
 // Decisão da casa onde o jogador parou: construir, usar o prédio do rival ou espionar.
 function tileDecision(state, p, actions) {
   const pending = state.pendingTile;
@@ -201,7 +204,7 @@ function tileDecision(state, p, actions) {
     if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
     return el('div', { class: cls }, [
       el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
-      el('div', { class: 'build-options' }, options.map((b) => button([el('span', { class: 'build-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id) }), el('span', { class: 'build-name' }, b.name)], () => actions.buildOnLot(b.id), { class: 'build-option', disabled: p.funds < upgradeCost(0), title: b.effect }))),
+      el('div', { class: 'build-options' }, options.map((b) => button([el('span', { class: 'build-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id) }), el('span', { class: 'build-name' }, b.name), el('span', { class: 'build-effect' }, BUILD_SHORT[b.id] || b.effect)], () => actions.buildOnLot(b.id), { class: 'build-option', disabled: p.funds < upgradeCost(0), title: b.effect }))),
       el('div', { class: 'row', style: 'justify-content:center' }, [
         button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
       ]),
