@@ -6,12 +6,34 @@ import { rocketSvg } from './ui/icons.js';
 import { setGuide, guideOn } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
+import { createNetworkController } from './net/sync.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
+
+// Multiplayer remoto (opcional, ver docs/PLANO-P2P.md). Sem rede, nada muda: netWrap()
+// se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
+// host aplicar a ação que chegou do cliente (mesma função que o botão chamaria local).
+// `endTurn` entra com a mesma checagem de bloqueio de hoje, para o host não pular o aviso.
+const networkedActions = {
+  ...game,
+  endTurn: (s) => {
+    if (s.sandbox) return game.endTurn(s);
+    const blocker = endTurnBlocker(s);
+    if (blocker) return blocker;
+    markTurnEnd(s);
+    return game.endTurn(s);
+  },
+};
+const net = createNetworkController({
+  actionsMap: networkedActions,
+  getState: () => state,
+  setState: (s) => { state = s; },
+  render: () => render(),
+});
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -28,9 +50,30 @@ function render() {
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
+// Como host de uma sala online, também transmite o `state` novo (ver docs/PLANO-P2P.md):
+// cobre ações locais que mudam o jogo todo (começar partida, nova partida), que não
+// passam pelo netWrap por não terem um cliente "pedindo" a mesma ação.
 function wrap(fn, after) {
   return (...args) => {
     const error = fn(state, ...args);
+    if (typeof error === 'string') showToast(error);
+    render();
+    if (net.isHost()) net.broadcastState();
+    if (!error && after) after();
+  };
+}
+
+// Como wrap(), mas para ações de gameplay que precisam viajar pela rede quando há uma
+// sala online: sem rede, roda local igual a wrap(); como host, roda local e transmite o
+// `state`; como cliente, só manda a ação pro host (quem aplica é ele) e espera o `state`
+// atualizado chegar. `name` é a chave correspondente em `game` (src/sim/actions.js).
+function netWrap(name, after) {
+  return (...args) => {
+    if (net.dispatch(name, args)) {
+      if (!net.isHost() && after) after();
+      return;
+    }
+    const error = networkedActions[name](state, ...args);
     if (typeof error === 'string') showToast(error);
     render();
     if (!error && after) after();
@@ -40,38 +83,38 @@ function wrap(fn, after) {
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
   startGame: wrap((s, ...args) => { resetSummaries(); return game.startGame(s, ...args); }),
-  rollDice: wrap(game.rollDice),
-  moveBy: wrap(game.moveBy),
-  chooseDilemma: wrap(game.chooseDilemma),
-  spyOn: wrap(game.spyOn),
-  buyItem: wrap(game.buyItem),
-  sellItem: wrap(game.sellItem),
-  chooseLauncher: wrap(game.chooseLauncher),
-  chooseOrbit: wrap(game.chooseOrbit),
-  chooseMission: wrap(game.chooseMission),
-  buildOnLot: wrap(game.buildOnLot),
-  useRivalBuilding: wrap(game.useRivalBuilding),
-  skipTile: wrap(game.skipTile),
-  upgradeBuilding: wrap(game.upgradeBuilding),
-  requestBailout: wrap(game.requestBailout),
-  rehearse: wrap(game.rehearse),
-  launch: wrap(game.launch, showLaunchOverlay),
-  advanceFlight: wrap(game.advanceFlight),
+  rollDice: netWrap('rollDice'),
+  moveBy: netWrap('moveBy'),
+  chooseDilemma: netWrap('chooseDilemma'),
+  spyOn: netWrap('spyOn'),
+  buyItem: netWrap('buyItem'),
+  sellItem: netWrap('sellItem'),
+  chooseLauncher: netWrap('chooseLauncher'),
+  chooseOrbit: netWrap('chooseOrbit'),
+  chooseMission: netWrap('chooseMission'),
+  buildOnLot: netWrap('buildOnLot'),
+  useRivalBuilding: netWrap('useRivalBuilding'),
+  skipTile: netWrap('skipTile'),
+  upgradeBuilding: netWrap('upgradeBuilding'),
+  requestBailout: netWrap('requestBailout'),
+  rehearse: netWrap('rehearse'),
+  launch: netWrap('launch', showLaunchOverlay),
+  advanceFlight: netWrap('advanceFlight'),
   // Atalho de depuração no console: rola e anda com o primeiro dado.
   rollAndMove: wrap(game.rollAndMove),
-  chooseStageOption: wrap(game.chooseStageOption),
+  chooseStageOption: netWrap('chooseStageOption'),
   // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
   // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
-  endTurn: wrap((s) => {
-    if (s.sandbox) return game.endTurn(s);
-    const blocker = endTurnBlocker(s);
-    if (blocker) return blocker;
-    markTurnEnd(s);
-    return game.endTurn(s);
-  }),
+  endTurn: netWrap('endTurn'),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
   newGame: wrap(() => { state = createInitialState(); resetSummaries(); }),
+  // Sala online (ver docs/PLANO-P2P.md). hostOnline resolve com o id da sala para montar
+  // o link de convite; joinOnline troca o `state` local pelo que vier do host.
+  hostOnline: () => net.host(),
+  joinOnline: (id) => net.join(id),
+  isOnline: () => net.isConnected(),
+  isHostOnline: () => net.isHost(),
 };
 
 function showToast(text) {
@@ -104,3 +147,11 @@ function showLaunchOverlay() {
 window.__game = { get state() { return state; }, actions };
 
 render();
+
+// Entrar direto numa sala por link (?sala=<id>, montado por hostOnline() na tela de
+// setup). Ver docs/PLANO-P2P.md.
+const roomId = new URLSearchParams(window.location.search).get('sala');
+if (roomId) {
+  showToast('Conectando à sala...');
+  net.join(roomId).catch((err) => showToast(err.message || 'Não foi possível entrar na sala.'));
+}
