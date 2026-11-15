@@ -4712,10 +4712,16 @@ function turnDock(state, p, design, actions, simple) {
     note = 'Decida a carta no meio do tabuleiro';
   }
 
+  // A Oficina fica SEMPRE na barra: dá para planejar a nave antes de rolar (só o lançamento exige andar).
+  // Antes ela só aparecia depois de rolar, e o jogador não a encontrava. Com a nave em voo ela fecha.
+  const showWorkshop = !p.flight;
+  const early = showWorkshop && !(p.rolled && !state.dice)
+    ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: 'Montar a nave: peças, foguete e o que falta para lançar.' })
+    : null;
+
   // Depois de andar: oficina, voo, lançar e passar a vez (interface enxuta: um passo de cada vez).
   const after = [];
   if (p.rolled && !state.dice) {
-    const showWorkshop = !p.flight; // com a nave em voo a oficina fica fechada
     const showLaunch = !simple || design.ok || p.launchedThisTurn;
     // Só UMA ação cheia por vez: a oficina se a nave não fecha, o Lançar se fecha, e o Passar a vez quando
     // não sobrou nada recomendado (voo avançado, lançou ou a escada acabou).
@@ -4730,6 +4736,7 @@ function turnDock(state, p, design, actions, simple) {
     turnSteps(state, p, design),
     el('div', { class: 'dock-actions' }, [
       note ? el('span', { class: 'dock-note' }, note) : null,
+      early,
       ...main,
       after.length ? el('div', { class: 'row action-bar' }, after) : null,
     ]),

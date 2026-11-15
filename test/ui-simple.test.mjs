@@ -28,7 +28,7 @@ function snapshot(state) {
 const has = (list, word) => list.some((t) => t.includes(word));
 const newGame = () => { const s = createInitialState(); startGame(s, [{ name: 'A' }], { rng: () => 0 }); return s; };
 
-test('começo: só missão e diário na lateral, sem trilha e sem botões antes de rolar', () => {
+test('começo: só missão e diário na lateral, sem trilha; antes de rolar só Rolar e Oficina', () => {
   setGuide(true);
   const state = newGame();
   assert.equal(simpleUi(state, state.players[0]), true);
@@ -40,7 +40,9 @@ test('começo: só missão e diário na lateral, sem trilha e sem botões antes 
   assert.equal(s.steps, false);
   assert.equal(s.actionBar, false, 'antes de rolar a barra fixa só tem o Rolar');
   assert.ok(has(s.buttons, 'Rolar 2 dados'));
-  assert.ok(!has(s.buttons, 'Oficina') && !has(s.buttons, 'Passar a vez'));
+  // a Oficina fica sempre à vista (dá para planejar antes de rolar); Passar a vez só depois de andar
+  assert.ok(has(s.buttons, 'Oficina'));
+  assert.ok(!has(s.buttons, 'Passar a vez'));
 });
 
 test('começo: as legendas das casas ficam curtas mas mantêm o valor que decide o dado', () => {
