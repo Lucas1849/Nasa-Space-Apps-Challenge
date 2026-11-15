@@ -11,7 +11,7 @@
 import { hostRoom, joinRoom } from './peer.js';
 import { newCode, peerIdFor, normalizeCode } from './roomCode.js';
 import {
-  createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor,
+  createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, turnBlockError,
 } from './lobby.js';
 
 const HOST_RETRIES = 3; // tentativas de código até desistir (colisão é raríssima)
@@ -19,10 +19,11 @@ const HOST_RETRIES = 3; // tentativas de código até desistir (colisão é rar�
 export function createNetworkController({
   actionsMap, getState, setState, render, showError, enterLobby, exitToSetup,
 }) {
-  let channel = null;    // { isHost, broadcast?, sendTo?, send?, close }
-  let session = null;    // lobby.js; null fora do modo online
-  let myPeerId = null;   // identidade deste dispositivo na sala
-  let myPlayerId = null; // índice da agência deste dispositivo depois do start
+  let channel = null;     // { isHost, broadcast?, sendTo?, send?, close }
+  let session = null;     // lobby.js; null fora do modo online
+  let myPeerId = null;    // identidade deste dispositivo na sala
+  let myPlayerId = null;  // índice da agência deste dispositivo depois do start
+  let assignments = null; // host: peerId -> índice do jogador (trava de turno, Fase 4)
 
   function applyLocally(name, args) {
     // `name` pode vir de uma mensagem de rede: só roda o que está na lista vetada
@@ -51,7 +52,18 @@ export function createNetworkController({
   }
 
   function onHostData(msg, fromPeer) {
-    if (msg.type === 'action') { applyLocally(msg.name, msg.args); return; }
+    if (msg.type === 'action') {
+      // Trava de turno (Fase 4): o host só aceita ação do peer dono da agência da vez.
+      // Fora da vez, o estado não é tocado e só quem tentou recebe o motivo.
+      if (session?.started) {
+        const block = turnBlockError(assignments?.[fromPeer], getState().turn);
+        if (block) { channel.sendTo(fromPeer, { type: 'toast', text: block }); return; }
+      }
+      // Resultado da ação volta para o autor: o cliente finalmente vê o toast de erro.
+      const error = applyLocally(msg.name, msg.args);
+      if (typeof error === 'string') channel.sendTo(fromPeer, { type: 'toast', text: error });
+      return;
+    }
     if (session && !session.started && (msg.type === 'claim' || msg.type === 'release')) {
       onGuestLobbyMessage(msg, fromPeer);
     }
@@ -173,7 +185,7 @@ export function createNetworkController({
     const error = startGameFn(session.slots.map((s) => ({ name: s.name })));
     if (typeof error === 'string') return error;
     session = { ...session, started: true };
-    const assignments = assignmentsFor(session);
+    assignments = assignmentsFor(session); // o host guarda o mapa para a trava de turno
     myPlayerId = assignments[myPeerId] ?? null;
     channel.broadcast({ type: 'start', state: getState(), assignments });
     return undefined;
@@ -187,6 +199,12 @@ export function createNetworkController({
   // para saber se deu certo (Fase 4 do PLANO-SALAS.md fecha isso).
   function dispatch(name, args) {
     if (!channel) return null;
+    // Trava de turno também para quem age localmente (host) e antes de gastar rede
+    // (cliente): a tela de espera já esconde os botões, mas a regra vale sempre.
+    if (session?.started) {
+      const block = turnBlockError(myPlayerId, getState().turn);
+      if (block) return { error: block };
+    }
     if (channel.isHost) return { error: applyLocally(name, args) };
     channel.send({ type: 'action', name, args });
     return { pending: true };
@@ -209,6 +227,8 @@ export function createNetworkController({
     getHostPeerId: () => (session ? peerIdFor(session.code) : null),
     isConnected: () => !!channel,
     isHost: () => !!channel?.isHost,
-    disconnect: () => { channel?.close(); channel = null; session = null; myPlayerId = null; },
+    // Partida online em andamento neste dispositivo (liga a visão por agência em main.js)
+    isPlaying: () => !!channel && !!session?.started,
+    disconnect: () => { channel?.close(); channel = null; session = null; myPlayerId = null; assignments = null; },
   };
 }
