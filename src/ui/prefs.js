@@ -30,3 +30,29 @@ export function setPanelOpen(id, open) {
   collapsed[id] = !open;
   try { localStorage.setItem(PANELS_KEY, JSON.stringify(collapsed)); } catch { /* ignora */ }
 }
+
+// Tema visual inspirado no sistema Íris (Tesela): 'claro' (papel quente #efeeeb) ou 'escuro' (grafite #0f1012).
+const THEME_KEY = 'smdg.theme';
+let theme = 'claro';
+try {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === 'escuro' || saved === 'claro') theme = saved;
+} catch { /* sem armazenamento: claro por padrão */ }
+
+function syncThemeDom() {
+  if (typeof document !== 'undefined' && document.documentElement) {
+    if (theme === 'escuro') document.documentElement.setAttribute('data-tema', 'escuro');
+    else document.documentElement.removeAttribute('data-tema');
+  }
+}
+syncThemeDom();
+
+export const themeOf = () => theme;
+
+export function toggleTheme() {
+  theme = theme === 'escuro' ? 'claro' : 'escuro';
+  syncThemeDom();
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignora */ }
+  return theme;
+}
+

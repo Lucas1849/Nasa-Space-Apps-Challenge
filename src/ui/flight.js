@@ -3,6 +3,7 @@
 // Depois da escolha, mostra o resultado da etapa.
 import { el, button, hud, stageTrack } from './components.js';
 import { icon } from './icons.js';
+import { asciiMissionCard } from './art.js';
 import { guideCard, hl } from './guide.js';
 import { currentPlayer } from '../sim/state.js';
 import { stageOptions, describeRisk, pct } from '../sim/flight.js';
@@ -55,8 +56,10 @@ function decisionView(state, p, actions) {
   const stage = STAGES[stageId];
   const event = eventId ? FLIGHT_EVENTS[eventId] : null;
   const options = stageOptions(p, p.flight.pending);
+  const sceneOverride = eventId === 'debris' ? 'asteroides' : eventId === 'antenna_stuck' ? 'telescopio' : null;
   return [
-    el('span', { class: 'alarm' }, icon(event ? EVENT_ICONS[event.id] || 'alert' : stage.icon, { size: 64 })),
+    asciiMissionCard({ missionId: p.flight.missionId, stageId, scene: sceneOverride, height: 220, caption: stage.name.toLowerCase() }),
+    el('span', { class: 'alarm' }, icon(event ? EVENT_ICONS[event.id] || 'alert' : stage.icon, { size: 42 })),
     el('p', { class: 'eyebrow' }, `Etapa ${p.flight.stageIndex + 1} de ${p.flight.plan.length}: ${stage.name}`),
     el('h1', {}, event ? event.title : `${stage.name}: tudo nominal`),
     el('p', { class: 'event-text' }, event ? event.text : `${stage.text} Nenhum imprevisto à vista, mas o risco existe.`),
@@ -78,7 +81,8 @@ function resultView(state, p, actions) {
   const rec = p.flight.last;
   const next = STAGES[p.flight.plan[p.flight.stageIndex]];
   return [
-    el('span', { class: 'alarm calm burst' }, icon('check', { size: 64 })),
+    asciiMissionCard({ missionId: p.flight.missionId, stageId: rec.stageId, height: 200, caption: `${rec.name.toLowerCase()} · etapa concluída` }),
+    el('span', { class: 'alarm calm burst' }, icon('check', { size: 42 })),
     el('p', { class: 'eyebrow' }, `Etapa superada. O risco era de ${pct(rec.risk)}.`),
     el('h1', { class: 'ok' }, `${rec.name}: sucesso`),
     rec.usedShield ? el('p', { class: 'event-text' }, 'Algo falhou, mas a proteção salvou a etapa.') : null,

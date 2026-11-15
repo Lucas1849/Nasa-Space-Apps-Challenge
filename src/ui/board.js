@@ -1,19 +1,16 @@
-// Tela do tabuleiro: um tabuleiro "impresso" de 16 casas (papel, tinta, arte própria em ui/boardArt.js),
-// com os dados e as decisões no miolo, e ao lado a missão, a escada, os rivais e o diário.
-// Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
-// e o "desde o seu último turno" vêm de ui/summary.js.
-//
-// UX (15/11): todas as ações do turno ficam numa BARRA FIXA no rodapé (turnDock), sempre à vista, na
-// ordem do turno. Antes, "Rolar 2 dados" e "Lançar" ficavam abaixo da dobra e a página pulava.
-// Animações que explicam o que mudou: dados rolando, peão andando casa a casa (afterMount).
+// Tela do tabuleiro: planta de engenharia (cianotipia) + tabuleiro estilo Monopoly
+// (caminhos conectados, faixas de propriedade, cantos especiais, ilustrações vetoriais em cada casa
+// e baralhos de cartas no tapete central), mantendo 100% da mecânica e dos testes.
+// Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o "desde o seu último
+// turno" vem de ui/summary.js e o retorno imediato (outcomeCard) e a faixa de prédios, de ui/components.js.
 import {
   el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyStrip, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
 } from './components.js';
 import { icon } from './icons.js';
-import { TILE_ART, BUILDING_ART, ORBIT_ART, PRINT_COLORS, pawnSvg, dieSvg } from './boardArt.js';
+import { dieSvg, TILE_ART, BUILDING_ART, ORBIT_ART } from './boardArt.js';
+import { walkPawn, scrollIntoViewIfNeeded } from './motion.js';
 import { guideCard, hl } from './guide.js';
 import { sinceCard } from './summary.js';
-import { walkPawn, scrollIntoViewIfNeeded } from './motion.js';
 import { TILES, atWorkshopTile } from '../board/board.js';
 import { currentPlayer, SPY_COST, SABOTAGE_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
@@ -26,30 +23,37 @@ import { BUILDINGS, upgradeCost } from '../data/buildings.js';
 import { FLIGHT_EVENTS } from '../data/events.js';
 import { STAGES } from '../data/stages.js';
 import { DILEMMAS } from '../data/dilemmas.js';
-import { yearOf, START_YEAR, END_YEAR } from '../data/history.js';
+import { yearOf, ROUNDS_PER_YEAR } from '../data/history.js';
 
-// Anel 6×6 (20 casas) no sentido horário a partir do canto superior esquerdo (o miolo 4×4 fica para os dados).
-// As casas 0, 5, 10 e 15 caem nos cantos, que são maiores, como num tabuleiro de verdade.
-const RING_POS = [
-  '1/1', '1/2', '1/3', '1/4', '1/5', '1/6', '2/6', '3/6', '4/6', '5/6', '6/6',
-  '6/5', '6/4', '6/3', '6/2', '6/1', '5/1', '4/1', '3/1', '2/1',
-];
-const CORNERS = new Set([0, 5, 10, 15]);
-const KIND = {
-  start: 'Largada', lot: 'Terreno', funds: 'Verba', event: 'Evento', spy: 'Espionagem',
-  tech: 'Ciência', shop: 'Fornecedor', workshop: 'Oficina', repair: 'Reparos', catchup: 'Recuperação',
-};
-
-// Memória da animação entre um desenho e outro (a tela é redesenhada inteira a cada clique).
+const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask', shop: 'cart', workshop: 'wrench', lot: 'crane', spy: 'eye', repair: 'wrench', catchup: 'lifebuoy' };
+// Anel quadrado no sentido horário a partir do canto superior esquerdo, calculado pelo número de casas
+// (16 casas = 5×5, 20 casas = 6×6); o miolo fica para os dados. Cantos, setas e a trilha saem da mesma conta.
+const RING_N = TILES.length / 4 + 1;
+const RING_POS = TILES.map((_, i) => {
+  const side = RING_N - 1;
+  if (i < side) return `1/${i + 1}`;
+  if (i < 2 * side) return `${i - side + 1}/${RING_N}`;
+  if (i < 3 * side) return `${RING_N}/${RING_N - (i - 2 * side)}`;
+  return `${RING_N - (i - 3 * side)}/1`;
+});
+// Centro de cada casa num viewBox 600×600 (para a trilha e o rastro do movimento).
+const TILE_CENTERS = RING_POS.map((rc) => {
+  const [r, c] = rc.split('/').map(Number);
+  const cell = 600 / RING_N;
+  return [Math.round((c - 0.5) * cell), Math.round((r - 0.5) * cell)];
+});
+const STEP_DIRS = TILES.map((_, i) => ['→', '↓', '←', '↑'][Math.floor(i / (RING_N - 1))]);
+const CORNER_IDS = new Set([0, 1, 2, 3].map((k) => k * (RING_N - 1)));
+// Grade do anel com os cantos maiores (1,4× na largura e mais altos), como num tabuleiro impresso.
+export const RING_STYLE = `--ring-n:${RING_N};grid-template-columns:1.4fr repeat(${RING_N - 2}, minmax(0, 1fr)) 1.4fr;`
+  + `grid-template-rows:minmax(80px, auto) repeat(${RING_N - 2}, minmax(58px, auto)) minmax(80px, auto)`;
 let lastRollSeen = null;
-let lastDiceKey = null;
-const lastPositions = {};
+let lastDiceKey = null;     // último par de dados já mostrado (para girar só os recém-rolados)
+const lastPositions = {};   // casa de cada jogador no desenho anterior (o peão anda a partir dela)
 
-const isCrisis = (t) => t.type === 'funds' && t.funds < 0;
+// Nome curto na casa: o que vem antes dos dois-pontos ("Discurso", "Crise diplomática"); o completo fica no balão.
 const shortName = (t) => t.label.split(':')[0];
 
-// Legenda curta da casa para a interface enxuta do começo. O que decide a escolha do dado (quanto dá)
-// continua; o texto longo vai só para o balão (title), que sempre tem a legenda completa.
 function shortSub(state, t) {
   switch (t.type) {
     case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
@@ -60,7 +64,7 @@ function shortSub(state, t) {
     case 'workshop': return 'montar e lançar';
     case 'spy': return 'ver um rival';
     case 'repair': return '+1 proteção';
-    case 'catchup': return 'ajuda a quem está atrás';
+    case 'catchup': return `+${t.funds} se atrás`;
     case 'lot': return state.lots[t.id] ? tileSub(state, t) : 'construir';
     default: return '';
   }
@@ -87,47 +91,77 @@ function tileSub(state, t) {
   }
 }
 
-function tileArt(state, t) {
-  if (t.type === 'lot' && state.lots[t.id]) return BUILDING_ART[state.lots[t.id].buildingId];
-  if (isCrisis(t)) return TILE_ART.crisis;
-  return TILE_ART[t.type];
+function tileIcon(state, t) {
+  if (t.type === 'lot' && state.lots[t.id]) return BUILDINGS[state.lots[t.id].buildingId].icon;
+  if (t.type === 'funds' && t.funds < 0) return 'trendDown';
+  return TILE_ICONS[t.type];
 }
 
-// Exportado para a tela de espectador (ui/spectate.js) reaproveitar o mesmo tabuleiro.
-export function boardTile(state, t, i, current, simple) {
-  const [r, c] = RING_POS[i].split('/');
+// Ilustração vetorial estilo jogo de tabuleiro (Monopoly espacial) para cada casa
+function tileBoardArt(state, t, targetDice) {
   const lot = state.lots[t.id];
-  const here = state.players.filter((pl) => !pl.bot && pl.position === t.id);
-  const cls = [
-    'gb-tile', `gb-${isCrisis(t) ? 'crisis' : t.type}`,
-    CORNERS.has(i) ? 'corner' : '',
-    current.position === t.id ? 'here' : '',
-    lot ? 'owned' : '',
-  ].filter(Boolean).join(' ');
-  const style = `grid-row:${r};grid-column:${c};${lot ? `--owner:${PRINT_COLORS[lot.ownerId % 4]};` : ''}`;
-  const name = lot ? BUILDINGS[lot.buildingId].name : shortName(t);
-  return el('div', { class: cls, style, 'data-tile': String(t.id), title: `${t.label}: ${tileSub(state, t)}` }, [
-    CORNERS.has(i) ? null : el('div', { class: 'gb-band' }),
-    el('div', { class: 'gb-kind' }, isCrisis(t) ? 'Crise' : KIND[t.type]),
-    el('span', { class: 'gb-art', html: tileArt(state, t) }),
-    el('div', { class: 'gb-name' }, name),
-    el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t)),
-    here.length ? el('div', { class: 'gb-pawns' }, here.map((pl) =>
-      el('span', {
-        class: `gb-pawn${pl.flight ? ' in-flight' : ''}`, 'data-pid': String(pl.id),
-        title: pl.flight ? `${pl.name}: nave em voo` : pl.name, // lançar é público: todos veem quem está com a nave no ar
-        html: pawnSvg(PRINT_COLORS[pl.id % 4], pl.name[0].toUpperCase()),
-      }, pl.flight ? [el('i', { class: 'gb-flight', 'aria-label': 'em voo' }, icon('rocket', { size: 10 }))] : []))) : null,
-  ]);
+  const isCorner = CORNER_IDS.has(t.id);
+  const dir = STEP_DIRS[t.id];
+  const num = String(t.id).padStart(2, '0');
+  // Faixa do topo: o tipo real da casa (o mesmo que decide o efeito), nunca um rótulo de enfeite.
+  const BAND = { start: 'PARTIDA', event: 'DILEMA', tech: 'PESQUISA', shop: 'FORNECEDOR', workshop: 'OFICINA', spy: 'ESPIÃO', repair: 'REPAROS', catchup: 'APOIO' };
+  let bandTitle = BAND[t.type] || `CASA ${num}`;
+  if (t.type === 'funds') bandTitle = t.funds > 0 ? 'VERBA' : 'CRISE';
+  else if (t.type === 'lot') {
+    if (lot) {
+      const lvl = state.players[lot.ownerId].buildings[lot.buildingId] || 1;
+      bandTitle = `${'★'.repeat(lvl)} NV.${lvl}`;
+    } else bandTitle = 'TERRENO';
+  }
+
+  // Ícone de traço único (ui/boardArt.js), na cor da tinta da planta. Terreno com prédio mostra o prédio.
+  const art = lot ? BUILDING_ART[lot.buildingId] : TILE_ART[t.type === 'funds' && t.funds < 0 ? 'crisis' : t.type] || '';
+
+  const targetBadge = targetDice
+    ? `<span class="t-target-pill">DADO +${targetDice}</span>`
+    : '';
+
+  const wrap = document.createElement('div');
+  wrap.className = `t-monopoly-top ${isCorner ? 'is-corner' : ''}`;
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = `
+    <div class="t-band">
+      <span class="t-band-num">${bandTitle}</span>
+      <span class="t-band-dir">${dir}</span>
+    </div>
+    <div class="t-art-row">
+      <span class="t-art-ink">${art}</span>
+      ${targetBadge}
+    </div>
+  `;
+  return wrap;
 }
 
-// Cartão de decisão impresso (dilema, terreno, prédio do rival, espião).
-function deckCard(kind, title, text, buttons, extraClass = '') {
-  return el('div', { class: `gb-card gb-card-${kind} ${extraClass}` }, [
-    el('div', { class: 'gb-card-head' }, [el('span', {}, title)]),
-    text ? el('p', {}, text) : null,
-    el('div', { class: 'gb-card-actions' }, buttons),
-  ]);
+// Trilha contínua do tabuleiro conectando as casas, com o rastro do último movimento
+function boardMapLayer(state, p) {
+  const wrap = document.createElement('div');
+  wrap.className = 'gadget-map-layer';
+  wrap.setAttribute('aria-hidden', 'true');
+
+  // Rastro do último movimento do jogador pela trilha (traço de propulsão âmbar).
+  const trailPts = [];
+  if (p.rolled && state.lastRoll) {
+    const n = TILES.length;
+    const startIdx = (p.position - state.lastRoll + n) % n;
+    for (let s = 0; s <= state.lastRoll; s += 1) trailPts.push(TILE_CENTERS[(startIdx + s) % n].join(','));
+  }
+  const trailSvg = trailPts.length > 1
+    ? `<polyline points="${trailPts.join(' ')}" fill="none" stroke="#f2c14e" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`
+    : '';
+
+  // Trilha como órbita fina (vector-effect: o traço não deforma quando o tabuleiro estica na largura).
+  wrap.innerHTML = `
+    <svg class="gadget-map-svg" viewBox="0 0 600 600" preserveAspectRatio="none" focusable="false">
+      <rect x="${TILE_CENTERS[0][0]}" y="${TILE_CENTERS[0][1]}" width="${600 - 2 * TILE_CENTERS[0][0]}" height="${600 - 2 * TILE_CENTERS[0][1]}" rx="30" fill="none" stroke="rgba(150, 175, 255, 0.28)" stroke-width="1.5" stroke-dasharray="1 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      ${trailSvg}
+    </svg>
+  `;
+  return wrap;
 }
 
 // O que uma oferta do fornecedor dá e custa, em uma linha para o balão.
@@ -139,28 +173,41 @@ function offerInfo(id) {
   return `Ganha: ${gains.join(', ') || 'nada'}. Custa: ${costs.join(', ')}. Exige tecnologia ${it.minTech}.`;
 }
 
+// Cartão de decisão no miolo (dilema, terreno, fornecedor, espião), no estilo do console.
+function deckCard(kind, title, text, buttons, extraClass = '') {
+  return el('div', { class: `tile-decision deck-${kind} ${extraClass}` }, [
+    el('strong', { class: 'decision-title' }, title),
+    text ? el('small', { class: 'hint' }, text) : null,
+    el('div', { class: 'row wrap', style: 'justify-content:center' }, buttons),
+  ]);
+}
+
 // Carta de dilema: sempre uma escolha, conforme a situação do jogador.
 function dilemmaDecision(state, actions) {
   const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
   if (!card) return null;
-  return deckCard('event', card.title, card.text,
-    card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'gb-btn' })),
-    `deal ${hl(state, 'board', 'dilemma')}`);
+  return el('div', { class: `tile-decision dilemma ${hl(state, 'board', 'dilemma')}` }, [
+    el('strong', { class: 'decision-title' }, [icon('card', { size: 18 }), card.title]),
+    el('small', { class: 'hint' }, card.text),
+    el('div', { class: 'row wrap', style: 'justify-content:center' }, card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'small' }))),
+  ]);
 }
 
 // Decisão da casa onde o jogador parou: construir, usar o prédio do rival ou espionar.
 function tileDecision(state, p, actions) {
   const pending = state.pendingTile;
   if (!pending) return null;
-  const cls = `deal ${hl(state, 'board', 'tile')}`;
+  const cls = `tile-decision ${hl(state, 'board', 'tile')}`;
   if (pending.kind === 'build') {
     const options = Object.values(BUILDINGS).filter((b) => !p.buildings[b.id]);
-    const skip = button('Seguir sem construir', () => actions.skipTile(), { class: 'gb-btn ghost' });
-    if (!options.length) return deckCard('lot', 'Terreno livre', 'Você já tem todos os prédios. Suba o nível no painel da agência.', [skip], cls);
-    return deckCard('lot', `Terreno livre: construir por ${upgradeCost(0)}?`, 'Um prédio dá vantagem até o fim da partida. Passe o mouse para ver o efeito.', [
-      ...options.map((b) => button([el('span', { class: 'gb-btn-art', html: BUILDING_ART[b.id] }), b.name], () => actions.buildOnLot(b.id), { class: 'gb-btn', disabled: p.funds < upgradeCost(0), title: b.effect })),
-      skip,
-    ], cls);
+    if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
+    return el('div', { class: cls }, [
+      el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
+      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
+        ...options.map((b) => button([icon(b.icon, { size: 16 }), b.name], () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
+        button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
+      ]),
+    ]);
   }
   if (pending.kind === 'supplier') {
     const first = !p.freeBlueprintUsed;
@@ -186,47 +233,75 @@ function tileDecision(state, p, actions) {
   const owner = state.players[lot.ownerId];
   const b = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
-  return deckCard('lot', `${b.name} de ${owner.name}`, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`, [
-    button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'gb-btn primary', disabled: p.funds < fee }),
-    button('Seguir', () => actions.skipTile(), { class: 'gb-btn ghost' }),
-  ], cls);
+  return el('div', { class: cls }, [
+    el('strong', { class: 'decision-title' }, [icon(b.icon, { size: 18 }), `${b.name} de ${owner.name}`]),
+    el('small', { class: 'hint' }, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`),
+    el('div', { class: 'row', style: 'justify-content:center' }, [
+      button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
+      button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+    ]),
+  ]);
 }
 
-// Dados do miolo. Recém-rolados, entram girando (CSS .tumble) e só depois mostram o número.
+// Monte de cartas de dilema no tapete central. Só aparece com o centro livre (sem decisão nem resultado),
+// para não disputar espaço com o que o jogador precisa ler.
+function dilemmaDeck(state, p) {
+  if (state.pendingDilemma || state.pendingTile || (state.outcome && state.outcome.playerId === p.id)) return null;
+  return el('div', { class: 'center-court-decks', 'aria-hidden': 'true' }, [
+    el('div', { class: 'court-deck deck-dilemma' }, [el('span', { class: 'deck-icon' }, '?'), el('span', { class: 'deck-label' }, 'DILEMAS')]),
+  ]);
+}
+
+// Dados do miolo (função da equipe, 15/11, no visual do nosso console): antes de rolar, os dois dados
+// mostram "?" e são o próprio botão de rolar; recém-rolados, entram girando (CSS .tumble) e cada um vira
+// um botão "andar N". Passar o mouse (ou o foco) num dado acende a casa onde ele para.
 function diceView(state, p, actions, rolling) {
   if (state.dice) {
     const key = `${state.round}:${state.turn}:${state.dice.join(',')}`;
     const fresh = key !== lastDiceKey;
     lastDiceKey = key;
-    return el('div', { class: 'gb-dice' }, [
-      el('div', { class: 'gb-dice-row' }, state.dice.map((d, i) =>
-        button([el('span', { class: `gb-die ${fresh ? 'tumble' : ''}`, style: `--i:${i}`, html: dieSvg(d) }), el('span', {}, `andar ${d}`)],
-          () => actions.moveBy(i), { class: 'gb-die-btn', title: `Andar ${d} casa${d > 1 ? 's' : ''}` }))),
-      el('span', { class: 'gb-caption' }, 'Escolha um dado: veja onde cada um para'),
+    const preview = (d, on) => () => {
+      const tile = document.querySelector(`[data-tile="${(p.position + d) % TILES.length}"]`);
+      if (tile) tile.classList.toggle('tile-preview', on);
+    };
+    return el('div', { class: 'dice-choice gb-dice' }, [
+      el('div', { class: 'gb-dice-row' }, state.dice.map((d, i) => {
+        const b = button([el('span', { class: `gb-die ${fresh ? 'tumble' : ''}`, style: `--i:${i}`, html: dieSvg(d) }), el('span', {}, `andar ${d}`)],
+          () => actions.moveBy(i), { class: `gb-die-btn ${hl(state, 'board', 'die')}`, title: `Andar ${d} casa${d > 1 ? 's' : ''}` });
+        b.addEventListener('mouseenter', preview(d, true));
+        b.addEventListener('mouseleave', preview(d, false));
+        b.addEventListener('focus', preview(d, true));
+        b.addEventListener('blur', preview(d, false));
+        return b;
+      })),
+      el('span', { class: 'label' }, 'Escolha um dado: veja onde cada um para'),
     ]);
   }
   if (!p.rolled) {
-    return el('div', { class: 'gb-dice' }, [
+    return el('div', { class: 'dice-choice gb-dice' }, [
       button([el('span', { class: 'gb-die idle', html: dieSvg(0) }), el('span', { class: 'gb-die idle', html: dieSvg(0) })],
         () => actions.rollDice(), { class: 'gb-die-btn pair', title: 'Rolar 2 dados' }),
-      el('span', { class: 'gb-caption' }, `Vez de ${p.name}`),
+      el('span', { class: 'label' }, `Vez de ${p.name}: clique nos dados`),
     ]);
   }
-  return el('div', { class: 'gb-dice' }, [
+  return el('div', { class: 'dice-choice gb-dice' }, [
     el('span', { class: `gb-die ${rolling ? 'landed' : ''}`, html: dieSvg(state.lastRoll) }),
-    el('span', { class: 'gb-caption' }, `${p.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
+    el('span', { class: 'label' }, `${p.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
   ]);
 }
 
-// Miolo do tabuleiro: título como arte de caixa, órbitas ao fundo, dados, decisões e o resultado da casa.
+// Centro do anel: faixa de situação, dados e as decisões da casa.
 function centerPanel(state, p, actions, rolling) {
-  return el('div', { class: 'gb-center' }, [
-    el('span', { class: 'gb-orbit', html: ORBIT_ART }),
-    el('div', { class: 'gb-title' }, [
-      el('small', {}, 'Space Mission Design Game'),
-      el('strong', {}, 'Corrida Espacial'),
-      el('span', {}, [`${START_YEAR}`, el('b', {}, ` ${yearOf(state.round)} `), `${END_YEAR}`]),
-    ]),
+  const activeTile = TILES[p.position];
+  const bannerText = state.dice
+    ? 'ESCOLHA UM DADO PARA AVANÇAR'
+    : !p.rolled
+      ? `VEZ DE ${p.name.toUpperCase()} · ROLE OS DADOS`
+      : `CASA ${String(p.position).padStart(2, '0')} · ${activeTile.label.toUpperCase()}`;
+  return el('div', { class: 'panel ring-center gb-center' }, [
+    el('span', { class: 'center-orbits', 'aria-hidden': 'true', html: ORBIT_ART }),
+    dilemmaDeck(state, p),
+    el('div', { class: 'gadget-banner', 'aria-hidden': 'true' }, [el('div', { class: 'gadget-banner-plate' }, bannerText)]),
     diceView(state, p, actions, rolling),
     dilemmaDecision(state, actions),
     tileDecision(state, p, actions),
@@ -271,7 +346,7 @@ function turnSteps(state, p, design) {
   ];
   const current = steps.findIndex((s) => !s.done && !(s.optional && tileDone));
   return el('ol', { class: 'turn-steps', 'aria-label': 'Etapas do turno' }, steps.map((s, i) =>
-    el('li', { class: s.done ? 'done' : i === current ? 'now' : '' }, [
+    el('li', { class: s.done ? 'done' : i === current ? 'now' : '', title: `${i + 1}. ${s.label}` }, [
       el('span', { class: 'n' }, s.done ? icon('check', { size: 14 }) : String(i + 1)),
       el('span', { class: 'lbl' }, s.label),
     ])));
@@ -305,7 +380,7 @@ function turnDock(state, p, design, actions, simple) {
   }
 
   // A Oficina fica SEMPRE na barra: dá para planejar a nave antes de rolar (só o lançamento exige andar).
-  // Antes ela só aparecia depois de rolar, e o jogador não a encontrava. Com a nave em voo ela fecha.
+  // Com a nave em voo ela fecha.
   const showWorkshop = !p.flight;
   const early = showWorkshop && !(p.rolled && !state.dice)
     ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: inShop ? 'Montar a nave: peças, foguete e o que falta para lançar.' : 'Planejar a nave: ver peças e risco. Para comprar e lançar, pare numa casa de Oficina.' })
@@ -335,6 +410,61 @@ function turnDock(state, p, design, actions, simple) {
   ]);
 }
 
+// Topo do console: visor com o ano e a rodada (dados reais da partida) e a casa atual.
+function gadgetTopBar(state, p) {
+  const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  return el('div', { class: 'gadget-top', 'aria-hidden': 'true' }, [
+    el('div', { class: 'gadget-lcd-bezel' }, [
+      el('div', { class: 'gadget-lcd-screen' }, `${yearOf(state.round)} · RODADA ${roundInYear}/${ROUNDS_PER_YEAR}`),
+    ]),
+    el('span', { class: 'g-chip coral' }, `CASA ${String(p.position).padStart(2, '0')} · ${TILES[p.position].label.toUpperCase()}`),
+  ]);
+}
+
+// Peão de cada agência: um foguete na cor do jogador (os mesmos tons dos avatares do topo), com contorno
+// branco para aparecer sobre a casa. Com a nave em voo (lançar é público) o foguete ganha a chama acesa.
+const PAWN_COLORS = ['#6ea6ee', '#f0cf7a', '#4cc49a', '#f08a5c'];
+function rocketPawnSvg(color, flying) {
+  return `<svg viewBox="0 0 20 30" aria-hidden="true" focusable="false">
+    ${flying ? '<path d="M7.2 23.5 10 29.5l2.8-6z" fill="#ffc857" stroke="#10213d" stroke-width="0.8"/>' : ''}
+    <path d="M10 1.2c3.6 3 5.2 7.2 5.2 12.3v8.7H4.8v-8.7C4.8 8.4 6.4 4.2 10 1.2z" fill="${color}" stroke="#f2f6ff" stroke-width="1.3" stroke-linejoin="round"/>
+    <path d="M4.8 15.5 1.6 20.5v3.6l3.2-1.9zM15.2 15.5l3.2 5v3.6l-3.2-1.9z" fill="${color}" stroke="#f2f6ff" stroke-width="1.1" stroke-linejoin="round"/>
+    <circle cx="10" cy="11" r="2.4" fill="#10213d" stroke="#f2f6ff" stroke-width="1"/>
+    <path d="M7 22.2h6" stroke="#f2f6ff" stroke-width="1.1"/>
+  </svg>`;
+}
+
+// Uma casa do tabuleiro. Exportada para a tela de espectador (ui/spectate.js) usar o mesmo tabuleiro.
+// `current` é o jogador cuja casa fica destacada; `targetDice` marca a casa onde um dos dados para.
+export function boardTile(state, t, i, current, simple, targetDice = null) {
+  const [r, c] = RING_POS[i].split('/');
+  const lot = state.lots[t.id];
+  const neg = t.type === 'funds' && t.funds < 0;
+  const isCorner = CORNER_IDS.has(t.id);
+  return el('div', {
+    class: `tile tile-${t.type} ${neg ? 'tile-neg' : ''} ${isCorner ? 'tile-corner' : ''} ${targetDice ? 'tile-target' : ''} ${current.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`,
+    style: `grid-row:${r};grid-column:${c}`,
+    'data-tile': String(t.id),
+    title: `${t.label}: ${tileSub(state, t)}`,
+  }, [
+    tileBoardArt(state, t, targetDice),
+    // Lançar é público: o peão de quem está com a nave no ar ganha um marcador de foguete.
+    el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', {
+      class: `pawn gb-pawn rocket-pawn${pl.flight ? ' in-flight' : ''}`, 'data-pid': String(pl.id),
+      role: 'img', 'aria-label': pl.flight ? `${pl.name}, nave em voo` : pl.name, title: pl.flight ? `${pl.name}: nave em voo` : pl.name,
+      html: rocketPawnSvg(PAWN_COLORS[pl.id % 4], Boolean(pl.flight)),
+    }))),
+    el('div', { class: 't-main-row' }, [
+      lot ? el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 16 })) : null,
+      el('div', { class: 't-body', lang: 'pt-BR' }, [
+        el('div', { class: 't-label' }, shortName(t)),
+        // Na casa vai só o efeito curto (como em jogos de tabuleiro publicados); o texto completo fica no balão.
+        el('div', { class: 't-sub' }, shortSub(state, t)),
+      ]),
+    ]),
+  ]);
+}
+
 export function boardScreen(state, actions) {
   const p = currentPlayer(state);
   const design = p.missionId ? checkDesign(p) : { ok: false };
@@ -347,7 +477,11 @@ export function boardScreen(state, actions) {
   const walked = from != null && from !== p.position && p.rolled && !state.dice;
   state.players.forEach((pl) => { lastPositions[pl.id] = pl.position; });
 
-  const tiles = TILES.map((t, i) => boardTile(state, t, i, p, simple));
+  // Com os 2 dados na mesa, as duas casas-alvo ficam marcadas no tabuleiro ("DADO +N").
+  const targetMap = new Map();
+  if (state.dice) state.dice.forEach((d) => targetMap.set((p.position + d) % TILES.length, d));
+
+  const tiles = TILES.map((t, i) => boardTile(state, t, i, p, simple, targetMap.get(t.id)));
 
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
   const showLadder = !simple;
@@ -361,10 +495,17 @@ export function boardScreen(state, actions) {
     hud(state, p, 'board', actions),
     guideCard(state, 'board'),
     el('div', { class: 'board-layout' }, [
-      el('div', {}, [
+      el('div', { class: 'board-gadget-wrap' }, [
         sinceCard(state),
-        el('div', { class: 'gameboard' }, [...tiles, centerPanel(state, p, actions, rolling)]),
-        showStrip ? agencyStrip(state, p, actions) : null,
+        el('div', { class: 'board-gadget' }, [
+          gadgetTopBar(state, p),
+          // .gameboard: a faixa de prédios é irmã do tabuleiro, logo depois dele (test/year-strip.test.mjs)
+          el('div', { class: 'gadget-screen gameboard' }, [
+            boardMapLayer(state, p),
+            el('div', { class: 'ring ring-16', style: RING_STYLE }, [...tiles, centerPanel(state, p, actions, rolling)]),
+          ]),
+          showStrip ? agencyStrip(state, p, actions) : null,
+        ]),
       ]),
       el('div', { class: 'side-stack' }, [
         missionPanel(state, p, simple),

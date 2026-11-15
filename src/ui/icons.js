@@ -88,6 +88,7 @@ export const ICONS = {
   scroll: '<path d="M6 3h12v14.5a3.5 3.5 0 0 1-3.5 3.5H6a3 3 0 0 1-3-3v-1h12"/><path d="M6 3v13M9 8h6M9 12h6"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   alert: '<path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5"/><circle cx="12" cy="17.8" r=".9" ' + F + '/>',
   bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8v.3h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/>',
   testTube: '<path d="M14.5 3l6.5 6.5M16 4.5L6.2 14.3a3.5 3.5 0 1 0 5 5L21 9.5"/><path d="M8.7 11.8h6.6"/>',
@@ -114,7 +115,7 @@ const PIPS = {
 };
 
 function svgMarkup(inner, size) {
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
 
 // Devolve um <span class="ic"> com o ícone. `label` vira texto acessível (senão o ícone é decorativo).
@@ -138,7 +139,7 @@ export function dieFace(n, { size = 48, className = '' } = {}) {
   span.className = `ic die-face ${className}`.trim();
   span.setAttribute('role', 'img');
   span.setAttribute('aria-label', `dado ${n}`);
-  span.innerHTML = svgMarkup(`<rect x="3" y="3" width="18" height="18" rx="4"/>${pips}`, size);
+  span.innerHTML = svgMarkup(`<rect x="3" y="3" width="18" height="18" rx="1.5"/>${pips}`, size);
   return span;
 }
 

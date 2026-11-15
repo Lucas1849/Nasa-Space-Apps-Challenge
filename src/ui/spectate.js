@@ -10,7 +10,7 @@ import {
   el, button, hud, avatar, sideBadge, outcomeCard, logPanel, milestoneTrack, ladderPanel, sidePanel, MISSION_ICONS,
 } from './components.js';
 import { icon } from './icons.js';
-import { boardTile } from './board.js';
+import { boardTile, RING_STYLE } from './board.js';
 import { ORBIT_ART, dieSvg } from './boardArt.js';
 import { TILES } from '../board/board.js';
 import { currentPlayer } from '../sim/state.js';
@@ -61,8 +61,8 @@ function spectateCenter(state, current) {
       el('span', { class: 'gb-caption' }, `${current.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
     ]);
   }
-  return el('div', { class: 'gb-center' }, [
-    el('span', { class: 'gb-orbit', html: ORBIT_ART }),
+  return el('div', { class: 'panel ring-center gb-center' }, [
+    el('span', { class: 'center-orbits', 'aria-hidden': 'true', html: ORBIT_ART }),
     dice,
     outcomeCard(state, current),
   ]);
@@ -95,7 +95,12 @@ export function spectateScreen(state, me, actions) {
     banner(state, current),
     el('div', { class: 'board-layout' }, [
       el('div', {}, [
-        el('div', { class: 'gameboard' }, [...TILES.map((t, i) => boardTile(state, t, i, current, false)), spectateCenter(state, current)]),
+        // Mesmo console do tabuleiro (ui/board.js), só para leitura: casas e o miolo com o dado do jogador da vez.
+        el('div', { class: 'board-gadget' }, [
+          el('div', { class: 'gadget-screen gameboard' }, [
+            el('div', { class: 'ring ring-16', style: RING_STYLE }, [...TILES.map((t, i) => boardTile(state, t, i, current, false)), spectateCenter(state, current)]),
+          ]),
+        ]),
         el('div', { class: 'row action-bar' }, [
           button([icon('wrench', { size: 18 }), 'Minha oficina'], () => actions.openWorkshop(), {}),
         ]),

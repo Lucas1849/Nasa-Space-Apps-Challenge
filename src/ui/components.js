@@ -14,7 +14,7 @@ import { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } from '../data/history.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
-import { guideOn, panelOpen, setPanelOpen } from './prefs.js';
+import { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } from './prefs.js';
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -101,9 +101,117 @@ export function hud(state, player, step, actions = null) {
       income ? `+${income.tech} ${when}` : null),
     player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
     el('span', { class: 'spacer' }),
-    simple ? null : el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
-    actions ? guideToggle(actions) : null,
+    // Sem `actions` (tela só de leitura) a trilha de etapas fica no topo; com `actions` ela vira a navegação
+    // da barra lateral.
+    !actions && !simple ? el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))) : null,
+    actions ? sideRail(state, player, step, actions, steps, names, simple) : null,
   ]);
+}
+
+// Barra lateral fixa (padrão de aplicativos de trabalho: navegação em cima, utilidades embaixo).
+// Em cima, as telas da partida (a atual marcada; Voo e Relatório só acendem quando a partida está neles).
+// Embaixo: regras, dicas, tema e sair.
+const RAIL_ICONS = { board: 'die', workshop: 'wrench', flight: 'rocket', report: 'clipboard' };
+function sideRail(state, player, step, actions, steps, names, simple) {
+  const item = (iconName, label, title, run, cls = '') => el('button', { type: 'button', class: `rail-item ${cls}`, title, onclick: run }, [icon(iconName, { size: 20 }), el('span', { class: 'rail-label' }, label)]);
+  const canNavigate = !(step === 'flight' && player.flight?.pending); // decisão de voo pendente: resolva antes
+  // Com a nave em voo a oficina fica fechada (sim/actions.js, inFlightLock): o atalho some da barra.
+  const navSteps = steps.filter((s) => !(s === 'workshop' && player.flight && !state.sandbox && step !== 'workshop'));
+  const nav = navSteps.map((s) => {
+    const current = s === step;
+    const b = item(RAIL_ICONS[s], names[s], names[s], () => { if (!current) actions.go(s); }, current ? 'on' : '');
+    if (current) b.setAttribute('aria-current', 'page');
+    else if (!canNavigate || s === 'flight' || s === 'report') b.disabled = true;
+    return b;
+  });
+  const guide = item('compass', 'Dicas', guideOn() ? 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Clique para desligar.' : 'Ligar as orientações e a interface enxuta no começo', () => actions.toggleGuide(), `guide-toggle ${guideOn() ? 'on-soft' : ''}`);
+  guide.setAttribute('aria-pressed', String(guideOn()));
+  const theme = themeToggle();
+  theme.className = 'rail-item theme-toggle';
+  return el('nav', { class: 'side-rail', 'aria-label': 'Navegação da partida' }, [
+    el('span', { class: 'rail-brand', 'aria-hidden': 'true' }, icon('rocket', { size: 20 })),
+    // a classe `steps` (trilha de etapas) só entra fora da interface enxuta (test/ui-simple.test.mjs)
+    el('div', { class: simple ? 'rail-nav' : 'rail-nav steps' }, nav),
+    el('span', { class: 'rail-spacer' }),
+    item('bulb', 'Regras', 'Como funciona: regras, lados e glossário', () => openRulesModal()),
+    guide,
+    theme,
+    item('arrowLeft', 'Sair', 'Sair da partida e voltar à tela inicial', () => openExitDialog(actions), 'rail-exit'),
+  ]);
+}
+
+// Sair da partida: confirmação própria (o navegador não mostra confirm() dentro do visualizador).
+// Online, sai também da sala; se for o anfitrião, a partida termina para todos.
+export function openExitDialog(actions) {
+  const close = () => { backdrop.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const online = Boolean(actions.isOnline && actions.isOnline());
+  const leave = () => {
+    close();
+    if (online) actions.lobby.leave();
+    actions.newGame();
+  };
+  const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
+    el('div', { class: 'modal exit-dialog', role: 'dialog', 'aria-label': 'Sair da partida', onclick: (e) => e.stopPropagation() }, [
+      el('h2', { class: 'modal-title' }, 'Sair da partida?'),
+      el('p', {}, online
+        ? 'Você sai da sala online e volta à tela inicial. Se for o anfitrião, a partida termina para todos.'
+        : 'Você volta à tela inicial e o progresso desta partida é perdido.'),
+      el('div', { class: 'row modal-actions' }, [
+        button('Sair da partida', leave, { class: 'danger' }),
+        button('Continuar jogando', close, { class: 'primary' }),
+      ]),
+    ]),
+  ]);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(backdrop);
+}
+
+// Modal "Como funciona": passos da partida, lados e escadas, glossário. Abre pela tela inicial e pelo menu.
+export function openRulesModal() {
+  const close = () => backdrop.remove();
+  const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
+    el('div', { class: 'modal rules-modal', onclick: (e) => e.stopPropagation() }, [
+      el('div', { class: 'modal-head', style: 'justify-content:space-between' }, [
+        el('h2', { class: 'modal-title' }, 'Como funciona a partida'),
+        button(icon('x', { size: 16 }), close, { class: 'small ghost', title: 'Fechar' }),
+      ]),
+      el('div', { class: 'steps-grid', style: 'margin-top:12px' }, [
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 16 }), 'Tabuleiro']), el('p', {}, `Role 2 dados e escolha 1. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 16 }), 'Oficina']), el('p', {}, 'Monte a nave do próximo degrau respeitando massa, energia, dados e verba.')]),
+        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 16 }), 'Voo']), el('p', {}, 'Avance uma etapa por turno. Se falhar, ainda resta uma missão de consolação.')]),
+      ]),
+      el('h3', { style: 'margin:18px 0 8px' }, 'Lados e escadas (sorteados no início)'),
+      el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
+        el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, icon(s.icon, { size: 20 })), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
+        el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', { class: 'with-icon' }, [missionIcon(m, { size: 15 }), MISSIONS[m].name]))),
+        el('small', { class: 'gain-text' }, `+ ${s.advantage}`),
+        el('small', { class: 'lose-text' }, `− ${s.weakness}`),
+      ]))),
+      glossary(),
+      el('p', { class: 'hint', style: 'margin-top:14px' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
+    ]),
+  ]);
+  document.body.appendChild(backdrop);
+}
+
+
+// Botão que alterna entre o tema Claro (papel quente Íris) e Escuro (grafite neutro Íris).
+export function themeToggle() {
+  const renderContent = (b) => {
+    const dark = themeOf() === 'escuro';
+    b.innerHTML = '';
+    b.appendChild(icon(dark ? 'sun' : 'moon', { size: 15 }));
+    b.appendChild(document.createTextNode(dark ? 'Claro' : 'Escuro'));
+    b.setAttribute('aria-pressed', String(dark));
+    b.title = dark ? 'Mudar para o tema claro (papel técnico)' : 'Mudar para o tema escuro (grafite)';
+  };
+  const b = el('button', {
+    class: 'small ghost theme-toggle',
+    onclick: () => { toggleTheme(); renderContent(b); },
+  });
+  renderContent(b);
+  return b;
 }
 
 // Botão que liga e desliga as orientações (preferência salva no navegador).
