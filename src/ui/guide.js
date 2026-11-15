@@ -49,8 +49,10 @@ function firstHardFailure(player) {
 
 // Próximo passo recomendado: { title, text, target, tips[] }.
 // `target` é a chave do botão que a tela destaca (ver hl() abaixo).
-export function nextStep(state, screen) {
-  const p = currentPlayer(state);
+// `player` opcional: por padrão é o jogador da vez, mas a oficina de espectador
+// (ui/spectate.js) passa a SUA própria agência para ver as dicas dela, não as do rival.
+export function nextStep(state, screen, player = null) {
+  const p = player ?? currentPlayer(state);
   if (!p) return null;
   const mission = MISSIONS[p.missionId];
 
@@ -167,10 +169,10 @@ function tipCard(state) {
 }
 
 // Cartão "Próximo passo" exibido sob o HUD quando as dicas estão ligadas.
-export function guideCard(state, screen) {
+export function guideCard(state, screen, player = null) {
   if (!guideOn()) return null;
   const tip = tipCard(state);
-  const step = nextStep(state, screen);
+  const step = nextStep(state, screen, player);
   if (tip) return el('div', { class: 'guide-stack' }, [tip, step ? stepCard(step) : null]);
   return step ? stepCard(step) : null;
 }
@@ -190,7 +192,7 @@ function stepCard(step) {
 }
 
 // Classe que destaca o botão recomendado (só com as dicas ligadas).
-export function hl(state, screen, key) {
+export function hl(state, screen, key, player = null) {
   if (!guideOn()) return '';
-  return nextStep(state, screen)?.target === key ? 'guide-target' : '';
+  return nextStep(state, screen, player)?.target === key ? 'guide-target' : '';
 }

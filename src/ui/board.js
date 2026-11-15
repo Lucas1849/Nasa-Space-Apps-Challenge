@@ -93,7 +93,8 @@ function tileArt(state, t) {
   return TILE_ART[t.type];
 }
 
-function boardTile(state, t, i, current, simple) {
+// Exportado para a tela de espectador (ui/spectate.js) reaproveitar o mesmo tabuleiro.
+export function boardTile(state, t, i, current, simple) {
   const [r, c] = RING_POS[i].split('/');
   const lot = state.lots[t.id];
   const here = state.players.filter((pl) => !pl.bot && pl.position === t.id);

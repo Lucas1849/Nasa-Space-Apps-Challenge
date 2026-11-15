@@ -8,6 +8,8 @@ import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 import { createNetworkController } from './net/sync.js';
 import { waitScreen } from './ui/wait.js';
+import { spectateScreen } from './ui/spectate.js';
+import { workshopScreen } from './ui/workshop.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 import { floatDelta, countUp } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
@@ -19,6 +21,10 @@ let lastScreen = null;
 let lastTurn = null;
 let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
 let lastStats = null;     // verba e tecnologia do jogador da vez no desenho anterior (animação do HUD)
+// Qual tela de espectador olhar fora da sua vez (online): tabuleiro público ou a SUA oficina.
+// É só local (nunca entra no estado sincronizado); volta a 'board' quando chega a sua vez.
+let spectateView = 'board';
+let lastSpectateView = null;
 
 // Multiplayer remoto (opcional, ver docs/PLANO-P2P.md). Sem rede, nada muda: netWrap()
 // se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
@@ -57,24 +63,34 @@ const net = createNetworkController({
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
 function render() {
-  const changed = state.screen !== lastScreen || state.turn !== lastTurn;
+  const changed = state.screen !== lastScreen || state.turn !== lastTurn || spectateView !== lastSpectateView;
   const scrollY = window.scrollY;
   trackTurn(state);
   // Partida online (Fase 4 do PLANO-SALAS.md): cada um vê só a própria agência.
-  // Fora da sua vez: tela de espera, sem tabuleiro de ninguém (o fim de jogo é público
-  // e aparece para todos). Na sua vez: a tela de troca do hot-seat é pulada — você já
-  // está no seu dispositivo, não há para quem "passar".
+  // Fora da sua vez: tela de espectador — o palco público do jogador da vez (dados, casas,
+  // o que ele fez) mais os SEUS painéis (recursos, objetivos, diário e a sua oficina em modo
+  // leitura), sem os dados sigilosos do rival. O fim de jogo é público e aparece para todos.
+  // Na sua vez: a tela de troca do hot-seat é pulada — você já está no seu dispositivo.
   let waiting = false;
   if (net.isPlaying() && state.screen !== 'gameover') {
     if (state.turn !== net.getMyPlayerId()) waiting = true;
-    else if (state.screen === 'handoff') state.screen = 'board';
+    else { spectateView = 'board'; if (state.screen === 'handoff') state.screen = 'board'; }
   }
-  const node = waiting ? waitScreen(state, net.getMyPlayerId()) : SCREENS[state.screen](state, actions);
+  let node;
+  if (waiting) {
+    const me = state.players[net.getMyPlayerId()] ?? null;
+    if (!me) node = waitScreen(state, net.getMyPlayerId());
+    else if (spectateView === 'workshop') node = workshopScreen(state, spectatorActions, me, { readOnly: true });
+    else node = spectateScreen(state, me, spectatorActions);
+  } else {
+    node = SCREENS[state.screen](state, actions);
+  }
   if (changed) node.classList.add('enter');
   app.replaceChildren(node);
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  lastSpectateView = spectateView;
   if (waiting) return; // na espera não há virada de ano a animar (os ganhos são de quem joga)
   // Animações da tela (peão, dados) e da verba no HUD: só para quem está jogando (ui/motion.js).
   if (typeof node.afterMount === 'function') node.afterMount();
@@ -217,6 +233,25 @@ const actions = {
       render();
     },
   },
+};
+
+// Ações da tela de espectador (fora da sua vez, online). Só navegação LOCAL entre o
+// tabuleiro público e a sua oficina em modo leitura, mais o botão de dicas. Nenhuma
+// jogada viaja pela rede: os botões de jogada nem são renderizados/ficam desabilitados
+// e, se algo escapar, a trava de turno (net.dispatch) barra do mesmo jeito.
+const blockedInSpectate = () => showToast('Você poderá mexer na oficina na sua vez.');
+const spectatorActions = {
+  openWorkshop: () => { spectateView = 'workshop'; render(); },
+  go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
+  toggleGuide: () => { setGuide(!guideOn()); render(); },
+  buyItem: blockedInSpectate,
+  sellItem: blockedInSpectate,
+  chooseLauncher: blockedInSpectate,
+  chooseOrbit: blockedInSpectate,
+  chooseMission: blockedInSpectate,
+  launch: blockedInSpectate,
+  rehearse: blockedInSpectate,
+  newGame: blockedInSpectate,
 };
 
 function showToast(text) {

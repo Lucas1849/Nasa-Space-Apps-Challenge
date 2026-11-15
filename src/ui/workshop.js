@@ -17,15 +17,16 @@ import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscover
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
 
-// Fora de uma casa de oficina a tela é só de planejamento: ver é livre, agir exige a casa (sim/actions.js, workshopLock).
-const AWAY_HINT = 'Vá a uma casa de Oficina do tabuleiro para comprar, vender e lançar.';
-
 // Peças a bordo no desenho anterior (por jogador), para a peça recém-comprada "entrar" com um pulo.
 let lastOwned = { playerId: null, counts: {} };
 
 const ownedCount = (player, id) => [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((x) => x === id).length;
 
-function itemCard(player, item, actions, justBought, canAct = true) {
+// Fora de uma casa de oficina a tela é só de planejamento: ver é livre, agir exige a casa (sim/actions.js, workshopLock).
+const AWAY_HINT = 'Vá a uma casa de Oficina do tabuleiro para comprar, vender e lançar.';
+
+// `canAct` falso trava comprar/vender: na oficina de espectador (ui/spectate.js) ou longe de uma casa de Oficina.
+function itemCard(player, item, actions, justBought = false, canAct = true) {
   const owned = ownedCount(player, item.id);
   const price = priceFor(player, item.id);
   const locked = isLocked(player, item);
@@ -95,11 +96,17 @@ function riskPanel(player) {
   ]);
 }
 
+// `viewer`/`opts.readOnly`: por padrão a oficina é do jogador da vez e totalmente interativa.
+// A tela de espectador (ui/spectate.js) passa a SUA agência com readOnly para você ver as peças,
+// o projeto e as dicas da sua nave enquanto espera, sem poder comprar, vender ou lançar.
 const launchersCount = (obj) => Object.keys(obj).length;
 
-export function workshopScreen(state, actions) {
-  const p = currentPlayer(state);
-  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back')}` });
+export function workshopScreen(state, actions, viewer = null, opts = {}) {
+  const p = viewer ?? currentPlayer(state);
+  const readOnly = Boolean(opts.readOnly);
+  // Ver é livre, agir exige a casa: o espectador nunca age; o jogador da vez só age numa casa de Oficina (ou no sandbox).
+  const canAct = !readOnly && (state.sandbox || atWorkshopTile(p));
+  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), readOnly ? 'Voltar a assistir' : 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back', p)}` });
 
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
@@ -139,9 +146,8 @@ export function workshopScreen(state, actions) {
     `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
-  const canAct = state.sandbox || atWorkshopTile(p);
   const blocked = p.flight ? 'Você já tem uma nave em voo: monte esta para depois.'
-    : !canAct ? 'Modo planejamento: vá a uma casa de Oficina para lançar.'
+    : !readOnly && !canAct ? 'Modo planejamento: vá a uma casa de Oficina para lançar.'
     : !state.sandbox && !p.rolled ? 'Ande no tabuleiro antes de lançar.'
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
@@ -159,24 +165,25 @@ export function workshopScreen(state, actions) {
   lastOwned = { playerId: p.id, counts };
   const card = (item) => itemCard(p, item, actions, bought.has(item.id), canAct);
 
-  return el('section', { class: 'screen workshop' }, [
+  return el('section', { class: `screen workshop${readOnly ? ' read-only' : ''}` }, [
     hud(state, p, 'workshop', actions),
-    canAct ? null : el('div', { class: 'panel planning' }, [
+    readOnly || canAct ? null : el('div', { class: 'panel planning' }, [
       panelTitle('clipboard', 'Modo planejamento'),
       el('p', {}, 'Você pode ver as peças, o projeto e o risco daqui, mas só compra, vende e lança com o peão numa casa de Oficina (são 3 no tabuleiro).'),
     ]),
-    guideCard(state, 'workshop'),
+    readOnly ? el('p', { class: 'hint with-icon spectate-note' }, [icon('eye', { size: 16 }), 'Você está vendo a sua oficina enquanto espera. Na sua vez, poderá comprar peças e lançar.']) : null,
+    guideCard(state, 'workshop', p),
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: `spacecraft-box ${bought.size ? 'build-pulse' : ''}` }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
         choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher'), canAct),
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher', p), canAct),
         // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
         state.sandbox
           ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'), canAct)
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit', p), canAct)
           : null,
         instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
         instruments.length ? el('div', { class: 'cards' }, instruments.map(card)) : null,
@@ -186,20 +193,22 @@ export function workshopScreen(state, actions) {
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
-        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'O que falta no projeto'), compactChecklist(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks', p)}` }, [panelTitle('clipboard', 'O que falta no projeto'), compactChecklist(p)]),
         // Só o resultado do que foi feito AQUI (ensaio em solo); o da casa do tabuleiro já apareceu lá.
         state.outcome?.where === 'workshop' ? outcomeCard(state, p) : null,
         design.ok ? riskPanel(p) : null,
         glossary(),
       ]),
     ]),
-    launchDock(state, p, design, blocked, hidden, back, actions, canAct),
+    launchDock(state, p, design, blocked, hidden, back, actions, readOnly, canAct),
   ]);
 }
 
 // Barra fixa da oficina: o estado do projeto numa frase e o Lançar sempre à vista (antes ficava no fim
 // de uma coluna longa, depois do painel, da checagem e do risco).
-function launchDock(state, p, design, blocked, hidden, back, actions, canAct) {
+// `readOnly`: na oficina de espectador a barra mostra o estado do projeto, mas sem lançar nem
+// ensaiar (não é a sua vez) — só o botão de voltar a assistir.
+function launchDock(state, p, design, blocked, hidden, back, actions, readOnly = false, canAct = true) {
   const firstFail = checkDesign(p).checks.find((c) => !c.hidden && !c.ok && c.hard);
   const status = !design.ok
     ? [icon('x', { size: 16 }), firstFail ? `Falta: ${firstFail.text}` : 'O projeto ainda não fecha.']
@@ -209,16 +218,16 @@ function launchDock(state, p, design, blocked, hidden, back, actions, canAct) {
     ].filter(Boolean).join(' ')]
       : [icon('check', { size: 16 }), 'Pronto para lançar.'];
   const ready = design.ok && !blocked;
-  return el('div', { class: `launch-dock ${ready ? 'ready' : ''}`, role: 'region', 'aria-label': 'Lançamento' }, [
+  return el('div', { class: `launch-dock ${ready && !readOnly ? 'ready' : ''}`, role: 'region', 'aria-label': 'Lançamento' }, [
     el('p', { class: `dock-status ${design.ok ? (blocked ? 'warn' : 'ok') : 'bad'}` }, status),
     el('div', { class: 'row dock-buttons' }, [
       back,
-      hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+      !readOnly && hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
         disabled: !canAct || p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
         class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
         title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
       }) : null,
-      button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !ready, class: `primary ${ready ? 'launch-ready' : ''} ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+      readOnly ? null : button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !ready, class: `primary ${ready ? 'launch-ready' : ''} ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
     ]),
   ]);
 }

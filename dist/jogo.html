@@ -403,6 +403,15 @@ select option { background: #0f1736; }
 .handoff { min-height: 70vh; display: grid; place-items: center; }
 .handoff-card { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 40px; max-width: 480px; }
 .handoff-card .avatar { font-size: 1.6rem; }
+
+/* Tela de espectador (ui/spectate.js): faixa de "quem está jogando" e aviso de só leitura. */
+.spectate-banner { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 16px; }
+.spectate-who { display: flex; flex-direction: column; gap: 2px; }
+.spectate-who .chip { align-self: flex-start; }
+.spectating-chip { border-color: var(--accent); color: var(--accent); }
+.spectating .action-bar button { opacity: 1; }
+.workshop.read-only .spectate-note { margin-top: 0; }
+
 .hud .chip small { color: var(--muted); }
 
 /* ---------- Responsivo ---------- */
@@ -4422,8 +4431,10 @@ function firstHardFailure(player) {
 
 // Próximo passo recomendado: { title, text, target, tips[] }.
 // `target` é a chave do botão que a tela destaca (ver hl() abaixo).
-function nextStep(state, screen) {
-  const p = currentPlayer(state);
+// `player` opcional: por padrão é o jogador da vez, mas a oficina de espectador
+// (ui/spectate.js) passa a SUA própria agência para ver as dicas dela, não as do rival.
+function nextStep(state, screen, player = null) {
+  const p = player ?? currentPlayer(state);
   if (!p) return null;
   const mission = MISSIONS[p.missionId];
 
@@ -4540,10 +4551,10 @@ function tipCard(state) {
 }
 
 // Cartão "Próximo passo" exibido sob o HUD quando as dicas estão ligadas.
-function guideCard(state, screen) {
+function guideCard(state, screen, player = null) {
   if (!guideOn()) return null;
   const tip = tipCard(state);
-  const step = nextStep(state, screen);
+  const step = nextStep(state, screen, player);
   if (tip) return el('div', { class: 'guide-stack' }, [tip, step ? stepCard(step) : null]);
   return step ? stepCard(step) : null;
 }
@@ -4563,9 +4574,9 @@ function stepCard(step) {
 }
 
 // Classe que destaca o botão recomendado (só com as dicas ligadas).
-function hl(state, screen, key) {
+function hl(state, screen, key, player = null) {
   if (!guideOn()) return '';
-  return nextStep(state, screen)?.target === key ? 'guide-target' : '';
+  return nextStep(state, screen, player)?.target === key ? 'guide-target' : '';
 }
 
 return { endTurnBlocker, nextStep, guideCard, hl };
@@ -4765,6 +4776,7 @@ function tileArt(state, t) {
   return TILE_ART[t.type];
 }
 
+// Exportado para a tela de espectador (ui/spectate.js) reaproveitar o mesmo tabuleiro.
 function boardTile(state, t, i, current, simple) {
   const [r, c] = RING_POS[i].split('/');
   const lot = state.lots[t.id];
@@ -5062,7 +5074,7 @@ function boardScreen(state, actions) {
   return screen;
 }
 
-return { boardScreen };
+return { boardTile, boardScreen };
 })();
 
 // ---- src/ui/workshop.js
@@ -5086,15 +5098,16 @@ const { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscovere
 const { checkDesign } = __mods["src/sim/simulate.js"];
 const { missionRisk, describeRisk, pct } = __mods["src/sim/flight.js"];
 
-// Fora de uma casa de oficina a tela é só de planejamento: ver é livre, agir exige a casa (sim/actions.js, workshopLock).
-const AWAY_HINT = 'Vá a uma casa de Oficina do tabuleiro para comprar, vender e lançar.';
-
 // Peças a bordo no desenho anterior (por jogador), para a peça recém-comprada "entrar" com um pulo.
 let lastOwned = { playerId: null, counts: {} };
 
 const ownedCount = (player, id) => [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((x) => x === id).length;
 
-function itemCard(player, item, actions, justBought, canAct = true) {
+// Fora de uma casa de oficina a tela é só de planejamento: ver é livre, agir exige a casa (sim/actions.js, workshopLock).
+const AWAY_HINT = 'Vá a uma casa de Oficina do tabuleiro para comprar, vender e lançar.';
+
+// `canAct` falso trava comprar/vender: na oficina de espectador (ui/spectate.js) ou longe de uma casa de Oficina.
+function itemCard(player, item, actions, justBought = false, canAct = true) {
   const owned = ownedCount(player, item.id);
   const price = priceFor(player, item.id);
   const locked = isLocked(player, item);
@@ -5164,11 +5177,17 @@ function riskPanel(player) {
   ]);
 }
 
+// `viewer`/`opts.readOnly`: por padrão a oficina é do jogador da vez e totalmente interativa.
+// A tela de espectador (ui/spectate.js) passa a SUA agência com readOnly para você ver as peças,
+// o projeto e as dicas da sua nave enquanto espera, sem poder comprar, vender ou lançar.
 const launchersCount = (obj) => Object.keys(obj).length;
 
-function workshopScreen(state, actions) {
-  const p = currentPlayer(state);
-  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back')}` });
+function workshopScreen(state, actions, viewer = null, opts = {}) {
+  const p = viewer ?? currentPlayer(state);
+  const readOnly = Boolean(opts.readOnly);
+  // Ver é livre, agir exige a casa: o espectador nunca age; o jogador da vez só age numa casa de Oficina (ou no sandbox).
+  const canAct = !readOnly && (state.sandbox || atWorkshopTile(p));
+  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), readOnly ? 'Voltar a assistir' : 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back', p)}` });
 
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
@@ -5208,9 +5227,8 @@ function workshopScreen(state, actions) {
     `vida útil ≥ ${mission.needs.lifetime} ano(s)`,
     mission.needs.lifeSupport && 'suporte de vida',
   ].filter(Boolean).join(' · ');
-  const canAct = state.sandbox || atWorkshopTile(p);
   const blocked = p.flight ? 'Você já tem uma nave em voo: monte esta para depois.'
-    : !canAct ? 'Modo planejamento: vá a uma casa de Oficina para lançar.'
+    : !readOnly && !canAct ? 'Modo planejamento: vá a uma casa de Oficina para lançar.'
     : !state.sandbox && !p.rolled ? 'Ande no tabuleiro antes de lançar.'
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
@@ -5228,24 +5246,25 @@ function workshopScreen(state, actions) {
   lastOwned = { playerId: p.id, counts };
   const card = (item) => itemCard(p, item, actions, bought.has(item.id), canAct);
 
-  return el('section', { class: 'screen workshop' }, [
+  return el('section', { class: `screen workshop${readOnly ? ' read-only' : ''}` }, [
     hud(state, p, 'workshop', actions),
-    canAct ? null : el('div', { class: 'panel planning' }, [
+    readOnly || canAct ? null : el('div', { class: 'panel planning' }, [
       panelTitle('clipboard', 'Modo planejamento'),
       el('p', {}, 'Você pode ver as peças, o projeto e o risco daqui, mas só compra, vende e lança com o peão numa casa de Oficina (são 3 no tabuleiro).'),
     ]),
-    guideCard(state, 'workshop'),
+    readOnly ? el('p', { class: 'hint with-icon spectate-note' }, [icon('eye', { size: 16 }), 'Você está vendo a sua oficina enquanto espera. Na sua vez, poderá comprar peças e lançar.']) : null,
+    guideCard(state, 'workshop', p),
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: `spacecraft-box ${bought.size ? 'build-pulse' : ''}` }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
         choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher'), canAct),
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher', p), canAct),
         // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
         state.sandbox
           ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'), canAct)
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit', p), canAct)
           : null,
         instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
         instruments.length ? el('div', { class: 'cards' }, instruments.map(card)) : null,
@@ -5255,20 +5274,22 @@ function workshopScreen(state, actions) {
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
-        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'O que falta no projeto'), compactChecklist(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks', p)}` }, [panelTitle('clipboard', 'O que falta no projeto'), compactChecklist(p)]),
         // Só o resultado do que foi feito AQUI (ensaio em solo); o da casa do tabuleiro já apareceu lá.
         state.outcome?.where === 'workshop' ? outcomeCard(state, p) : null,
         design.ok ? riskPanel(p) : null,
         glossary(),
       ]),
     ]),
-    launchDock(state, p, design, blocked, hidden, back, actions, canAct),
+    launchDock(state, p, design, blocked, hidden, back, actions, readOnly, canAct),
   ]);
 }
 
 // Barra fixa da oficina: o estado do projeto numa frase e o Lançar sempre à vista (antes ficava no fim
 // de uma coluna longa, depois do painel, da checagem e do risco).
-function launchDock(state, p, design, blocked, hidden, back, actions, canAct) {
+// `readOnly`: na oficina de espectador a barra mostra o estado do projeto, mas sem lançar nem
+// ensaiar (não é a sua vez) — só o botão de voltar a assistir.
+function launchDock(state, p, design, blocked, hidden, back, actions, readOnly = false, canAct = true) {
   const firstFail = checkDesign(p).checks.find((c) => !c.hidden && !c.ok && c.hard);
   const status = !design.ok
     ? [icon('x', { size: 16 }), firstFail ? `Falta: ${firstFail.text}` : 'O projeto ainda não fecha.']
@@ -5278,16 +5299,16 @@ function launchDock(state, p, design, blocked, hidden, back, actions, canAct) {
     ].filter(Boolean).join(' ')]
       : [icon('check', { size: 16 }), 'Pronto para lançar.'];
   const ready = design.ok && !blocked;
-  return el('div', { class: `launch-dock ${ready ? 'ready' : ''}`, role: 'region', 'aria-label': 'Lançamento' }, [
+  return el('div', { class: `launch-dock ${ready && !readOnly ? 'ready' : ''}`, role: 'region', 'aria-label': 'Lançamento' }, [
     el('p', { class: `dock-status ${design.ok ? (blocked ? 'warn' : 'ok') : 'bad'}` }, status),
     el('div', { class: 'row dock-buttons' }, [
       back,
-      hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+      !readOnly && hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
         disabled: !canAct || p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
         class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
         title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
       }) : null,
-      button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !ready, class: `primary ${ready ? 'launch-ready' : ''} ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+      readOnly ? null : button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !ready, class: `primary ${ready ? 'launch-ready' : ''} ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
     ]),
   ]);
 }
@@ -6082,6 +6103,121 @@ function waitScreen(state, myPlayerId) {
 return { waitScreen };
 })();
 
+// ---- src/ui/spectate.js
+__mods["src/ui/spectate.js"] = (() => {
+// Tela de espectador do modo online (Fase 4 do PLANO-SALAS.md): fora da sua vez você
+// acompanha o PALCO PÚBLICO do jogador da vez — dados, casas, peões e o que ele fez
+// (a ação e a variação de recursos) — e vê os SEUS próprios painéis: recursos, objetivos,
+// diário e um atalho para a sua oficina em modo leitura. O que é sigiloso do jogador da vez
+// (a oficina dele, a escada, os rivais, as decisões pendentes) fica escondido.
+// Não entra em SCREENS: é um override do render em main.js quando a partida online não está
+// na sua vez. A trava de turno (net.dispatch) já barra qualquer ação; aqui nem renderizamos
+// os botões de jogada.
+const { el, button, hud, avatar, sideBadge, outcomeCard, logPanel, milestoneTrack, ladderPanel, sidePanel, MISSION_ICONS } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { boardTile } = __mods["src/ui/board.js"];
+const { ORBIT_ART, dieSvg } = __mods["src/ui/boardArt.js"];
+const { TILES } = __mods["src/board/board.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+
+// Em que ponto do turno o jogador da vez está (público, sem revelar número nenhum).
+function phaseText(state, current) {
+  if (!current.rolled) return 'vai rolar os dados';
+  if (state.dice) return 'escolhendo o dado';
+  if (state.pendingDilemma) return 'resolvendo uma carta de dilema';
+  if (state.pendingTile) return 'resolvendo a casa onde parou';
+  if (current.flight && !current.flightAdvanced) return 'cuidando do voo da nave';
+  return 'cuidando da nave';
+}
+
+// Faixa do topo: quem está jogando e em que fase do turno (nada sigiloso).
+function banner(state, current) {
+  return el('div', { class: 'panel spectate-banner' }, [
+    avatar(current, 44),
+    el('div', { class: 'spectate-who' }, [
+      el('strong', {}, `Vez de ${current.name}`),
+      el('span', { class: 'chip' }, sideBadge(current)),
+      el('small', { class: 'hint' }, `${current.name} está ${phaseText(state, current)}.`),
+    ]),
+    el('span', { class: 'spacer' }),
+    el('span', { class: 'chip spectating-chip' }, [icon('eye', { size: 15 }), 'Assistindo']),
+  ]);
+}
+
+// Miolo do tabuleiro em modo leitura: só o resultado dos dados (sem botões) e o cartão de
+// resultado do jogador da vez (a ação que ele tomou e a variação de recursos). Usa a mesma
+// arte do tabuleiro de verdade (ui/boardArt.js) para o espectador ver a mesma coisa.
+function spectateCenter(state, current) {
+  let dice;
+  if (state.dice) {
+    dice = el('div', { class: 'gb-dice' }, [
+      el('div', { class: 'gb-dice-row' }, state.dice.map((d) => el('span', { class: 'gb-die', html: dieSvg(d) }))),
+      el('span', { class: 'gb-caption' }, `${current.name} rolou — escolhendo o dado`),
+    ]);
+  } else if (!current.rolled) {
+    dice = el('div', { class: 'gb-dice' }, [
+      el('span', { class: 'gb-die idle', html: dieSvg(0) }),
+      el('span', { class: 'gb-caption' }, `Vez de ${current.name} — aguardando a rolagem`),
+    ]);
+  } else {
+    dice = el('div', { class: 'gb-dice' }, [
+      el('span', { class: 'gb-die', html: dieSvg(state.lastRoll) }),
+      el('span', { class: 'gb-caption' }, `${current.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
+    ]);
+  }
+  return el('div', { class: 'gb-center' }, [
+    el('span', { class: 'gb-orbit', html: ORBIT_ART }),
+    dice,
+    outcomeCard(state, current),
+  ]);
+}
+
+// Painel "Seus objetivos": a missão do degrau atual e os marcos, só leitura.
+function myObjectives(state, me) {
+  if (me.flight) {
+    const f = me.flight;
+    return sidePanel('mission', 'satellite', `Sua nave em voo: ${MISSIONS[f.missionId].name}`, [
+      el('p', { class: 'hint' }, `Etapa ${f.stageIndex + 1} de ${f.plan.length}. Você avança o voo na sua vez.`),
+    ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
+  }
+  if (!me.missionId) {
+    return sidePanel('mission', 'flag', 'Sua escada está completa', [
+      el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.'),
+    ], { hint: 'Todos os degraus cumpridos' });
+  }
+  return sidePanel('mission', MISSION_ICONS[me.missionId] || 'rocket', MISSIONS[me.missionId].name, [
+    el('p', { class: 'hint' }, MISSIONS[me.missionId].goal),
+    milestoneTrack(me),
+  ], { hint: 'Seu objetivo atual' });
+}
+
+// `actions` aqui é o conjunto de espectador (ver main.js): só navegação local e o botão de dicas.
+function spectateScreen(state, me, actions) {
+  const current = currentPlayer(state);
+  return el('section', { class: 'screen board-screen spectating' }, [
+    hud(state, me, 'board', actions),
+    banner(state, current),
+    el('div', { class: 'board-layout' }, [
+      el('div', {}, [
+        el('div', { class: 'gameboard' }, [...TILES.map((t, i) => boardTile(state, t, i, current, false)), spectateCenter(state, current)]),
+        el('div', { class: 'row action-bar' }, [
+          button([icon('wrench', { size: 18 }), 'Minha oficina'], () => actions.openWorkshop(), {}),
+        ]),
+        el('p', { class: 'hint action-hint' }, 'Você está assistindo: pode ver sua oficina e seus objetivos, mas só joga na sua vez.'),
+      ]),
+      el('div', { class: 'side-stack' }, [
+        myObjectives(state, me),
+        ladderPanel(state, me),
+        logPanel(state, me),
+      ]),
+    ]),
+  ]);
+}
+
+return { spectateScreen };
+})();
+
 // ---- src/ui/yearOverlay.js
 __mods["src/ui/yearOverlay.js"] = (() => {
 // Animação da virada de ano: um calendário no meio da tela passa o ano e mostra o que a agência ganhou
@@ -6165,6 +6301,8 @@ const { endTurnBlocker } = __mods["src/ui/guide.js"];
 const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
 const { createNetworkController } = __mods["src/net/sync.js"];
 const { waitScreen } = __mods["src/ui/wait.js"];
+const { spectateScreen } = __mods["src/ui/spectate.js"];
+const { workshopScreen } = __mods["src/ui/workshop.js"];
 const { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } = __mods["src/ui/yearOverlay.js"];
 const { floatDelta, countUp } = __mods["src/ui/motion.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
@@ -6176,6 +6314,10 @@ let lastScreen = null;
 let lastTurn = null;
 let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
 let lastStats = null;     // verba e tecnologia do jogador da vez no desenho anterior (animação do HUD)
+// Qual tela de espectador olhar fora da sua vez (online): tabuleiro público ou a SUA oficina.
+// É só local (nunca entra no estado sincronizado); volta a 'board' quando chega a sua vez.
+let spectateView = 'board';
+let lastSpectateView = null;
 
 // Multiplayer remoto (opcional, ver docs/PLANO-P2P.md). Sem rede, nada muda: netWrap()
 // se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
@@ -6214,24 +6356,34 @@ const net = createNetworkController({
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
 function render() {
-  const changed = state.screen !== lastScreen || state.turn !== lastTurn;
+  const changed = state.screen !== lastScreen || state.turn !== lastTurn || spectateView !== lastSpectateView;
   const scrollY = window.scrollY;
   trackTurn(state);
   // Partida online (Fase 4 do PLANO-SALAS.md): cada um vê só a própria agência.
-  // Fora da sua vez: tela de espera, sem tabuleiro de ninguém (o fim de jogo é público
-  // e aparece para todos). Na sua vez: a tela de troca do hot-seat é pulada — você já
-  // está no seu dispositivo, não há para quem "passar".
+  // Fora da sua vez: tela de espectador — o palco público do jogador da vez (dados, casas,
+  // o que ele fez) mais os SEUS painéis (recursos, objetivos, diário e a sua oficina em modo
+  // leitura), sem os dados sigilosos do rival. O fim de jogo é público e aparece para todos.
+  // Na sua vez: a tela de troca do hot-seat é pulada — você já está no seu dispositivo.
   let waiting = false;
   if (net.isPlaying() && state.screen !== 'gameover') {
     if (state.turn !== net.getMyPlayerId()) waiting = true;
-    else if (state.screen === 'handoff') state.screen = 'board';
+    else { spectateView = 'board'; if (state.screen === 'handoff') state.screen = 'board'; }
   }
-  const node = waiting ? waitScreen(state, net.getMyPlayerId()) : SCREENS[state.screen](state, actions);
+  let node;
+  if (waiting) {
+    const me = state.players[net.getMyPlayerId()] ?? null;
+    if (!me) node = waitScreen(state, net.getMyPlayerId());
+    else if (spectateView === 'workshop') node = workshopScreen(state, spectatorActions, me, { readOnly: true });
+    else node = spectateScreen(state, me, spectatorActions);
+  } else {
+    node = SCREENS[state.screen](state, actions);
+  }
   if (changed) node.classList.add('enter');
   app.replaceChildren(node);
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  lastSpectateView = spectateView;
   if (waiting) return; // na espera não há virada de ano a animar (os ganhos são de quem joga)
   // Animações da tela (peão, dados) e da verba no HUD: só para quem está jogando (ui/motion.js).
   if (typeof node.afterMount === 'function') node.afterMount();
@@ -6374,6 +6526,25 @@ const actions = {
       render();
     },
   },
+};
+
+// Ações da tela de espectador (fora da sua vez, online). Só navegação LOCAL entre o
+// tabuleiro público e a sua oficina em modo leitura, mais o botão de dicas. Nenhuma
+// jogada viaja pela rede: os botões de jogada nem são renderizados/ficam desabilitados
+// e, se algo escapar, a trava de turno (net.dispatch) barra do mesmo jeito.
+const blockedInSpectate = () => showToast('Você poderá mexer na oficina na sua vez.');
+const spectatorActions = {
+  openWorkshop: () => { spectateView = 'workshop'; render(); },
+  go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
+  toggleGuide: () => { setGuide(!guideOn()); render(); },
+  buyItem: blockedInSpectate,
+  sellItem: blockedInSpectate,
+  chooseLauncher: blockedInSpectate,
+  chooseOrbit: blockedInSpectate,
+  chooseMission: blockedInSpectate,
+  launch: blockedInSpectate,
+  rehearse: blockedInSpectate,
+  newGame: blockedInSpectate,
 };
 
 function showToast(text) {
