@@ -20,15 +20,23 @@ let lastYearShown = null; // última virada de ano já animada (`round:playerId`
 // se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
 // host aplicar a ação que chegou do cliente (mesma função que o botão chamaria local).
 // `endTurn` entra com a mesma checagem de bloqueio de hoje, para o host não pular o aviso.
-const networkedActions = {
-  ...game,
-  endTurn: (s) => {
-    if (s.sandbox) return game.endTurn(s);
-    const blocker = endTurnBlocker(s);
-    if (blocker) return blocker;
-    markTurnEnd(s);
-    return game.endTurn(s);
-  },
+// Lista fechada (não é `{ ...game }`): uma mensagem de rede só pode disparar uma destas
+// ações de gameplay, nunca outra função exportada por sim/actions.js (startGame, helpers
+// como useFeeFor etc., que têm outra assinatura ou efeitos que não fazem sentido vindos
+// de um cliente).
+const NETWORKED_ACTION_NAMES = [
+  'rollDice', 'moveBy', 'chooseDilemma', 'spyOn', 'buyItem', 'sellItem', 'chooseLauncher',
+  'chooseOrbit', 'chooseMission', 'buildOnLot', 'useRivalBuilding', 'skipTile',
+  'upgradeBuilding', 'requestBailout', 'rehearse', 'launch', 'advanceFlight',
+  'chooseStageOption',
+];
+const networkedActions = Object.fromEntries(NETWORKED_ACTION_NAMES.map((name) => [name, game[name]]));
+networkedActions.endTurn = (s) => {
+  if (s.sandbox) return game.endTurn(s);
+  const blocker = endTurnBlocker(s);
+  if (blocker) return blocker;
+  markTurnEnd(s);
+  return game.endTurn(s);
 };
 const net = createNetworkController({
   actionsMap: networkedActions,
@@ -57,28 +65,30 @@ function render() {
   }
 }
 
-// Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
-// Como host de uma sala online, também transmite o `state` novo (ver docs/PLANO-P2P.md):
-// cobre ações locais que mudam o jogo todo (começar partida, nova partida), que não
-// passam pelo netWrap por não terem um cliente "pedindo" a mesma ação.
+// Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha. Puramente
+// local: nunca transmite nada pela rede (ver docs/PLANO-P2P.md — navegação de tela,
+// dicas etc. ficam sempre só no dispositivo de quem clicou).
 function wrap(fn, after) {
   return (...args) => {
     const error = fn(state, ...args);
     if (typeof error === 'string') showToast(error);
     render();
-    if (net.isHost()) net.broadcastState();
     if (!error && after) after();
   };
 }
 
 // Como wrap(), mas para ações de gameplay que precisam viajar pela rede quando há uma
-// sala online: sem rede, roda local igual a wrap(); como host, roda local e transmite o
-// `state`; como cliente, só manda a ação pro host (quem aplica é ele) e espera o `state`
-// atualizado chegar. `name` é a chave correspondente em `game` (src/sim/actions.js).
+// sala online: sem rede, roda local igual a wrap(). Como host, net.dispatch() já aplica a
+// ação e devolve o erro de volta (o toast e o after() funcionam igual ao modo local). Como
+// cliente, só manda a ação pro host e não sabe ainda se vai dar certo — por isso não
+// mostra toast nem chama after() aqui; o after() só roda para quem sabe o resultado na
+// hora (local ou host). `name` é a chave correspondente em `networkedActions`.
 function netWrap(name, after) {
   return (...args) => {
-    if (net.dispatch(name, args)) {
-      if (!net.isHost() && after) after();
+    const result = net.dispatch(name, args);
+    if (result) {
+      if (typeof result.error === 'string') showToast(result.error);
+      if (!result.error && after) after();
       return;
     }
     const error = networkedActions[name](state, ...args);
@@ -88,9 +98,21 @@ function netWrap(name, after) {
   };
 }
 
+// Para as duas ações locais que recriam o jogo inteiro (começar partida, nova partida):
+// como host, precisa mandar o `state` novo pros clientes também, já que eles não "pedem"
+// essa ação (não passa por netWrap/dispatch).
+function wrapAndSync(fn) {
+  return (...args) => {
+    const error = fn(state, ...args);
+    if (typeof error === 'string') showToast(error);
+    render();
+    if (!error && net.isHost()) net.broadcastState();
+  };
+}
+
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
+  startGame: wrapAndSync((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
   rollDice: netWrap('rollDice'),
   moveBy: netWrap('moveBy'),
   chooseDilemma: netWrap('chooseDilemma'),
@@ -116,7 +138,7 @@ const actions = {
   endTurn: netWrap('endTurn'),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
+  newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
   // Sala online (ver docs/PLANO-P2P.md). hostOnline resolve com o id da sala para montar
   // o link de convite; joinOnline troca o `state` local pelo que vier do host.
   hostOnline: () => net.host(),

@@ -9,6 +9,9 @@ export function createNetworkController({ actionsMap, getState, setState, render
   let channel = null; // { isHost, broadcast?, send?, close }
 
   function applyLocally(name, args) {
+    // `name` pode vir de uma mensagem de rede: só roda o que está na lista vetada
+    // (ver NETWORKED_ACTION_NAMES em main.js), nunca uma função arbitrária.
+    if (typeof actionsMap[name] !== 'function') return 'Ação desconhecida.';
     const error = actionsMap[name](getState(), ...args);
     render();
     if (channel?.isHost) channel.broadcast({ type: 'state', state: getState() });
@@ -37,12 +40,16 @@ export function createNetworkController({ actionsMap, getState, setState, render
   }
 
   // Chamado pelo wrapper de ações do jogo (ver netWrap em main.js).
-  // Devolve true se já cuidou da ação (rede ligada); false = quem chamou aplica normal.
+  // Sem rede: devolve null (quem chamou aplica normal, como antes).
+  // Como host: aplica na hora e devolve { error } — o host sabe o resultado igual a
+  // antes, então o toast e o after() continuam funcionando no dispositivo dele.
+  // Como cliente: só manda a ação pro host e devolve { pending: true } — ainda não dá
+  // para saber se deu certo (limitação conhecida, ver docs/PLANO-P2P.md).
   function dispatch(name, args) {
-    if (!channel) return false;
-    if (channel.isHost) applyLocally(name, args);
-    else channel.send({ type: 'action', name, args });
-    return true;
+    if (!channel) return null;
+    if (channel.isHost) return { error: applyLocally(name, args) };
+    channel.send({ type: 'action', name, args });
+    return { pending: true };
   }
 
   return {
