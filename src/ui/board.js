@@ -2,7 +2,7 @@
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
 import {
-  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
+  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyStrip, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
 } from './components.js';
 import { icon, dieFace } from './icons.js';
 import { guideCard, hl } from './guide.js';
@@ -227,7 +227,8 @@ export function boardScreen(state, actions) {
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
   const showLadder = !simple;
   const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3;
-  const showAgency = !simple || Object.values(p.buildings).some(Boolean);
+  // Faixa de prédios sob o tabuleiro: sempre à vista; na interface enxuta só depois do 1º prédio.
+  const showStrip = !simple || Object.values(p.buildings).some(Boolean);
 
   return el('section', { class: 'screen board-screen' }, [
     hud(state, p, 'board', actions),
@@ -239,12 +240,12 @@ export function boardScreen(state, actions) {
         el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
         actionBar.length ? el('div', { class: 'row action-bar' }, actionBar) : null,
         blocked && blockedReason && showEnd ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
+        showStrip ? agencyStrip(state, p, actions) : null,
       ]),
       el('div', { class: 'side-stack' }, [
         missionPanel(state, p, actions, simple),
         showLadder ? ladderPanel(state, p) : null,
         showRivals ? rivalsPanel(state, p) : null,
-        showAgency ? agencyPanel(state, p, actions) : null,
         logPanel(state, p),
       ]),
     ]),

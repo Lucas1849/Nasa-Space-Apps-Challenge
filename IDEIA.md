@@ -635,3 +635,25 @@ Decisão (do usuário): **descobrir é recompensa por cumprir o degrau.**
 
 Ponto a observar jogando: nos voos longos, esperar sem poder montar nada pode ficar parado. Se incomodar, uma
 saída é permitir montar com as peças que o jogador já descobriu, sem liberar o kit novo.
+
+## 22. Virada de ano animada, prédios sempre à vista e recursos em destaque (Marcus, 15/11)
+Problemas vistos jogando:
+- **Passar o ano era só uma linha de texto.** Um marco do jogo (o ano muda, a verba e a tecnologia entram) não tinha peso.
+- **Os prédios ficavam numa aba fechada** ("Sua agência"), com os botões de subir de nível dentro dela. Para o jogador
+  era uma opção escondida, não algo seu.
+- **O HUD "só em menus"**: recursos pequenos no topo e o resto atrás de cliques.
+
+Decisão:
+- **Animação do ano**: um calendário no meio da tela vira do ano antigo para o novo e mostra o que a agência ganhou
+  (verba, tecnologia, peça liberada pela pesquisa), com a origem de cada ganho no balão. Dura cerca de 2 s, some
+  sozinha e um clique pula, **sem botão de confirmar**. Aparece também na abertura (1957). Como os ganhos são secretos
+  de cada agência, **só aparece no tabuleiro do jogador da vez, nunca na tela de troca**.
+- **Faixa de prédios sob o tabuleiro e os botões Oficina / Lançar / Passar a vez**: os 4 prédios em cartões, com
+  nível, o que dão e o botão de subir com o custo; os não construídos aparecem esmaecidos, para o jogador ver o que
+  existe. O socorro de emergência fica junto. No começo (interface enxuta) a faixa só aparece depois do 1º prédio.
+- **Recursos em destaque no topo**: verba, tecnologia e proteções em números grandes, com a previsão do próximo
+  Ano novo ("+25 em 2 rodadas"). Subir um prédio passou a dar retorno imediato.
+
+Fora desta entrega: mostrar o progresso da escada no topo (o usuário preferiu só prédios e recursos) e deixar a
+escada, os rivais e o diário fora de abas. Para avaliar jogando: se a faixa e o HUD maior apertam o tabuleiro em
+telas pequenas, e se 2 s de animação cansam quando a virada vem a cada 3 rodadas.

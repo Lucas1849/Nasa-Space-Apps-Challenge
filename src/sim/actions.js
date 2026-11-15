@@ -16,10 +16,11 @@
 //   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
 import {
   createPlayer, currentPlayer, pushLog, emptySpacecraft, humans,
-  SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR,
+  SANDBOX_FUNDS, SANDBOX_TECH,
   BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST,
 } from './state.js';
 import { isHidden, learnNeeds, assessNeeds, HIDDEN_CHECK_IDS } from './needs.js';
+import { yearlyIncome } from './income.js';
 import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
 import {
   CATALOG, priceFor, isLocked, requiredTech,
@@ -38,7 +39,6 @@ import { DILEMMAS, pickDilemma } from '../data/dilemmas.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost, USE_FEE, CATCHUP_UPGRADE_DISCOUNT } from '../data/buildings.js';
 import { MAX_ROUNDS, REAL_HISTORY, yearOf, isNewYear } from '../data/history.js';
 
-const SPONSOR_FUNDS_PER_LEVEL = 10; // por ano
 const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
 
 // ---------------------------------------------------------------- partida e turno
@@ -57,6 +57,7 @@ export function startGame(state, setup, options = {}) {
   state.pendingTile = null;
   state.pendingDilemma = null;
   state.outcome = null;
+  state.yearChange = null;
   state.winners = [];
   state.gameOver = false;
   state.lastRoll = null;
@@ -172,11 +173,16 @@ function startTurn(state) {
   state.outcome = null;
   if (p.bot) return;
   if (isNewYear(state.round)) {
-    const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
-    const tech = TECH_PER_YEAR + p.buildings.lab;
+    const income = yearlyIncome(p);
+    const { funds, tech } = income;
     p.funds += funds;
     p.tech += tech;
     pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+    // Registro estruturado da virada: a UI anima o calendário e mostra o que entrou (só para este jogador).
+    state.yearChange = {
+      playerId: p.id, round: state.round, year: yearOf(state.round),
+      funds, tech, techLevel: p.tech, parts: income.parts, techParts: income.techParts, part: null,
+    };
     // A pesquisa libera a peça mais simples que o nível de tecnologia já alcança (ninguém fica travado).
     // No 1º ano não: o jogador começa só com o kit do 1º degrau, para o turno 1 não ter excesso de opções.
     const next = state.round > 1
@@ -187,6 +193,7 @@ function startTurn(state) {
     if (next) {
       discover(p, [next.id]);
       pushLog(state, `${p.name}: a pesquisa do ano liberou ${next.name}.`, p.id);
+      state.yearChange.part = next.name;
     }
   }
 }
@@ -493,6 +500,12 @@ export function upgradeBuilding(state, buildingId) {
   p.funds -= cost;
   p.buildings[buildingId] = level + 1;
   pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`, p.id);
+  // Retorno imediato: o clique em "subir" mostra o custo e o que o novo nível rende.
+  setOutcome(state, p, {
+    title: `${BUILDINGS[buildingId].name}: nível ${level + 1} de ${MAX_LEVEL}`,
+    changes: [{ label: 'Verba', value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, level + 1 >= MAX_LEVEL ? 'Nível máximo.' : `Próximo nível: ${upgradeCostFor(state, p, buildingId)} de verba.`],
+  });
   return null;
 }
 

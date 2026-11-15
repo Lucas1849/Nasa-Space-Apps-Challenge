@@ -14,12 +14,13 @@ const { setGuide } = await import('../src/ui/prefs.js');
 // O que a tela mostra: abas da lateral, botões de ação, trilha do cabeçalho e legenda das casas.
 function snapshot(state) {
   const root = boardScreen(state, actions);
-  const out = { tabs: [], buttons: [], steps: false, actionBar: false, subs: [] };
+  const out = { tabs: [], buttons: [], steps: false, actionBar: false, subs: [], strip: false };
   walk(root, (n) => {
     if (n.tag === 'summary') out.tabs.push(n.textContent.trim());
     if (n.tag === 'button') out.buttons.push(n.textContent.trim());
     if (/\bsteps\b/.test(n.className) && n.tag === 'div') out.steps = true;
     if (/\baction-bar\b/.test(n.className)) out.actionBar = true;
+    if (/\bagency-strip\b/.test(n.className)) out.strip = true;
     if (n.className === 't-sub') out.subs.push(n.textContent.trim());
   });
   return out;
@@ -34,7 +35,8 @@ test('começo: só missão e diário na lateral, sem trilha e sem botões antes 
   const s = snapshot(state);
   assert.ok(has(s.tabs, 'Primeiro satélite'));
   assert.ok(has(s.tabs, 'Diário'));
-  for (const hidden of ['Escada', 'Rivais', 'Sua agência']) assert.ok(!has(s.tabs, hidden), hidden);
+  for (const hidden of ['Escada', 'Rivais']) assert.ok(!has(s.tabs, hidden), hidden);
+  assert.equal(s.strip, false, 'a faixa de prédios só aparece depois do 1º prédio');
   assert.equal(s.steps, false);
   assert.equal(s.actionBar, false);
   assert.ok(has(s.buttons, 'Rolar 2 dados'));
@@ -63,7 +65,9 @@ test('dicas desligadas mostram tudo', () => {
   const state = newGame();
   assert.equal(simpleUi(state, state.players[0]), false);
   const s = snapshot(state);
-  for (const tab of ['Escada', 'Rivais', 'Sua agência', 'Diário']) assert.ok(has(s.tabs, tab), tab);
+  for (const tab of ['Escada', 'Rivais', 'Diário']) assert.ok(has(s.tabs, tab), tab);
+  assert.equal(s.strip, true, 'faixa de prédios sempre à vista');
+  assert.ok(!has(s.tabs, 'Sua agência'), 'a agência não é mais uma aba');
   assert.equal(s.steps, true);
   assert.ok(has(s.buttons, 'Lançar'));
   setGuide(true);
@@ -77,7 +81,8 @@ test('cumprir o 1º degrau mostra tudo, mesmo com as dicas ligadas', () => {
   p.completed.push({ missionId: 'first_satellite', year: 1957, science: 2 });
   assert.equal(simpleUi(state, p), false);
   const s = snapshot(state);
-  for (const tab of ['Escada', 'Rivais', 'Sua agência']) assert.ok(has(s.tabs, tab), tab);
+  for (const tab of ['Escada', 'Rivais']) assert.ok(has(s.tabs, tab), tab);
+  assert.equal(s.strip, true);
 });
 
 test('o sandbox nunca usa a interface enxuta', () => {
@@ -95,6 +100,6 @@ test('rivais e agência aparecem quando passam a importar (espião usado ou pré
   p.buildings.lab = 1;
   const s = snapshot(state);
   assert.ok(has(s.tabs, 'Rivais'));
-  assert.ok(has(s.tabs, 'Sua agência'));
+  assert.equal(s.strip, true, 'com um prédio a faixa aparece');
   assert.ok(!has(s.tabs, 'Escada'));
 });

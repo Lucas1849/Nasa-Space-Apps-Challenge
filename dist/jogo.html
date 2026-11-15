@@ -325,10 +325,6 @@ select option { background: #0f1736; }
 .records { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: .86rem; }
 .records li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .records li.taken span:first-child { color: var(--amber); }
-.buildings { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; }
-.buildings li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; font-size: .86rem; }
-.buildings .b-icon { font-size: 1.3rem; }
-.buildings small { display: block; }
 .swap { margin-top: 10px; font-size: .88rem; }
 .swap summary { cursor: pointer; color: var(--accent); }
 .swap .mission-grid { margin-top: 10px; }
@@ -423,8 +419,6 @@ p.with-icon .ic, small.with-icon .ic { margin-top: 2px; }
 .tile-tech .t-icon, .tile-spy .t-icon { color: #c4b5fd; }
 .tile-repair .t-icon, .tile-catchup .t-icon { color: var(--accent); }
 .avatar .ic { color: #06101f; }
-.buildings .b-icon { color: var(--accent); }
-.buildings li.not-built .b-icon { color: var(--muted); }
 .ladder-name { display: inline-flex; align-items: center; gap: 7px; }
 .ladder li.done .ladder-name .ic { color: var(--ok); }
 .checklist li .ic { margin-top: 1px; }
@@ -516,6 +510,55 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 .choice.guide-target, .panel.guide-target { border-radius: var(--radius); }
 .choice.guide-target { padding: 2px 12px 10px; }
 
+/* ---- HUD: recursos em números grandes e sempre à vista ---- */
+.hud .stat { display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 10px; border-radius: var(--radius-sm); background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+.hud .stat .ic { color: var(--accent); flex: none; }
+.hud .stat-body { display: grid; line-height: 1.1; }
+.hud .stat-num { font-family: var(--mono); font-size: 1.45rem; font-weight: 700; color: var(--fg); }
+.hud .stat-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.hud .stat-next { font-size: .72rem; color: var(--ok); margin-top: 2px; }
+.hud .stat.funds .ic { color: var(--amber); }
+.hud .stat.shield .ic { color: var(--ok); }
+
+/* ---- Faixa de prédios sob o tabuleiro ---- */
+.agency-strip { margin-top: 12px; }
+.agency-strip .strip-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.agency-strip .strip-head .panel-title { margin: 0; }
+.building-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.building-card { display: grid; gap: 6px; align-content: start; padding: 10px 11px; border-radius: var(--radius-sm); background: rgba(0,0,0,.22); border: 1px solid var(--line); font-size: .84rem; }
+.building-card .bc-head { display: flex; align-items: center; gap: 8px; }
+.building-card .b-icon { color: var(--accent); display: inline-flex; }
+.building-card .bc-level { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); }
+.building-card .pips { display: inline-flex; gap: 4px; }
+.building-card .pip { width: 14px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.14); }
+.building-card .pip.on { background: var(--accent); }
+.building-card .upgrade { justify-self: start; }
+.building-card.not-built { opacity: .55; border-style: dashed; }
+.building-card.not-built .b-icon { color: var(--muted); }
+.building-card.maxed { border-color: rgba(52,211,153,.4); }
+.building-card .badge.max { justify-self: start; color: var(--ok); border-color: rgba(52,211,153,.4); }
+@media (max-width: 900px) { .building-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- Virada de ano: calendário no meio da tela e os ganhos do ano ---- */
+.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .25s ease, yearFadeOut .35s ease 1.95s forwards; }
+.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .35s ease both; }
+.year-calendar { width: 190px; border-radius: 14px; overflow: hidden; background: #f4f6ff; color: #0a1030; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.year-calendar .cal-top { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; background: var(--danger); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .2em; }
+.year-calendar .cal-digits { position: relative; height: 92px; overflow: hidden; display: grid; place-items: center; font-family: var(--mono); font-size: 3.6rem; font-weight: 800; }
+.year-calendar .year-old, .year-calendar .year-new { position: absolute; }
+.year-calendar .year-old { animation: yearOut .45s ease .55s forwards; }
+.year-calendar .year-new { animation: yearIn .45s ease .55s both; }
+.year-overlay .gains { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 40px; }
+.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .4s ease both; }
+.year-overlay .gain.up { color: var(--ok); border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.1); }
+.year-overlay .gain.down { color: var(--danger); border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.1); }
+.year-overlay .gain.part { color: var(--accent); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.1); }
+@keyframes yearOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+@keyframes yearIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes yearCardIn { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes yearFadeOut { to { opacity: 0; } }
+@keyframes gainPop { from { transform: translateY(8px) scale(.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
 </style>
 </head>
 <body>
@@ -597,6 +640,7 @@ const SANDBOX_FUNDS = 999;
 const SANDBOX_TECH = 99;
 const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
 const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
+const SPONSOR_FUNDS_PER_LEVEL = 10; // verba por ano de cada nível do Patrocinador
 const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 const BAILOUT_TECH_COST = 2;
 const BAILOUT_LIMIT = 15;     // só pode pedir socorro com menos verba que isso
@@ -662,6 +706,7 @@ function createInitialState() {
     pendingTile: null,     // { tileId, kind: 'build' | 'use' | 'spy' } decisão de casa
     pendingDilemma: null,  // { id } carta de dilema aguardando escolha
     outcome: null,         // retorno imediato ao jogador: { playerId, title, choice, changes, notes, lesson }
+    yearChange: null,      // virada de ano do jogador da vez: { playerId, round, year, funds, tech, techLevel, parts, techParts, part } (a UI anima uma vez por round:playerId)
     winners: [],
     gameOver: false,
   };
@@ -676,7 +721,7 @@ function pushLog(state, text, who = null) {
   if (state.log.length > 60) state.log.length = 60;
 }
 
-return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
+return { STARTING_FUNDS, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, SPONSOR_FUNDS_PER_LEVEL, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST, emptySpacecraft, createPlayer, createInitialState, currentPlayer, humans, pushLog };
 })();
 
 // ---- src/data/missions.js
@@ -998,6 +1043,95 @@ function assessNeeds(player) {
 }
 
 return { HIDDEN_KINDS, NEED_LABELS, HIDDEN_CHECK_IDS, isHidden, needLevel, learnNeeds, assessNeeds };
+})();
+
+// ---- src/data/sides.js
+__mods["src/data/sides.js"] = (() => {
+// Lados da Guerra Fria e escadas de missões (IDEIA.md v3 seção 2). A win con é completar a escada do
+// próprio lado: cada degrau é uma nave nova; tecnologia, prédios, verba e bônus persistem.
+// Agências são do jogador; o lado só define a escada, uma vantagem pequena e uma fraqueza pequena.
+// ATENÇÃO: vantagens e fraquezas FICTÍCIAS, para balanceamento. Sem bandeiras nem marcas.
+//
+// launcherTech = ajuste no nível de tecnologia exigido pelos lançadores (−1 = foguetes fortes cedo).
+// A ordem e o degrau final da URSS estão "a definir" na v3; aqui o final é a Lua para os dois lados
+// (a corrida à Lua). Mudar a escada é só trocar a lista.
+
+const SIDES = {
+  usa: {
+    id: 'usa',
+    name: 'EUA',
+    icon: 'wings',
+    ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
+    focus: 'Foguete pesado e suporte de vida',
+    advantage: 'Mais verba: +20 no início e +5 por ano.',
+    weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
+    startFunds: 20,
+    yearlyBonus: 5,
+    launcherTech: 1,
+  },
+  ussr: {
+    id: 'ussr',
+    name: 'URSS',
+    icon: 'star',
+    ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
+    focus: 'Vida no espaço e energia contínua',
+    advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
+    weakness: 'Orçamento mais apertado: −5 de verba por ano.',
+    startFunds: 0,
+    yearlyBonus: -5,
+    launcherTech: -1,
+  },
+};
+
+const STEP_BONUS_FIRST = 20; // primeiro do lado a cumprir o degrau
+const STEP_BONUS_LATER = 8;  // quem cumpre depois, no mesmo lado, leva menos
+
+const ladderOf = (player) => SIDES[player.side]?.ladder || [];
+
+// Lados sorteados de forma equilibrada: 1 jogador = um lado (o bot fica com o outro);
+// 2 = lados diferentes; 3 ou 4 = 2 contra 1 ou 2 contra 2.
+function drawSides(n, rng = Math.random) {
+  const first = rng() < 0.5 ? 'usa' : 'ussr';
+  const other = first === 'usa' ? 'ussr' : 'usa';
+  const sides = Array.from({ length: n }, (_, i) => (i % 2 === 0 ? first : other));
+  for (let i = sides.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [sides[i], sides[j]] = [sides[j], sides[i]];
+  }
+  return sides;
+}
+
+return { SIDES, STEP_BONUS_FIRST, STEP_BONUS_LATER, ladderOf, drawSides };
+})();
+
+// ---- src/sim/income.js
+__mods["src/sim/income.js"] = (() => {
+// Renda do Ano novo (a cada 3 rodadas): verba e tecnologia que a agência recebe. Uma conta só, usada pelo
+// jogo (sim/actions.js, startTurn) e pela previsão do HUD (ui/components.js), para os dois nunca divergirem.
+// Funções puras, sem DOM.
+const { YEARLY_BUDGET, TECH_PER_YEAR, SPONSOR_FUNDS_PER_LEVEL } = __mods["src/sim/state.js"];
+const { SIDES } = __mods["src/data/sides.js"];
+
+// Devolve o total e de onde veio cada parte (para a animação e o balão explicarem a origem).
+//   funds = orçamento + bônus do lado + Patrocinador;  tech = base + Laboratório.
+function yearlyIncome(player) {
+  const side = SIDES[player.side];
+  const buildings = player.buildings || {};
+  const parts = {
+    base: YEARLY_BUDGET,
+    side: side ? side.yearlyBonus : 0,
+    sponsor: SPONSOR_FUNDS_PER_LEVEL * (buildings.sponsor || 0),
+  };
+  const techParts = { base: TECH_PER_YEAR, lab: buildings.lab || 0 };
+  return {
+    funds: parts.base + parts.side + parts.sponsor,
+    tech: techParts.base + techParts.lab,
+    parts,
+    techParts,
+  };
+}
+
+return { yearlyIncome };
 })();
 
 // ---- src/board/board.js
@@ -1523,65 +1657,6 @@ function missionRisk(player) {
 return { CONTROL_RISK_CUT, flightPlan, stageRisk, pct, describeRisk, flyer, stageOptions, missionRisk };
 })();
 
-// ---- src/data/sides.js
-__mods["src/data/sides.js"] = (() => {
-// Lados da Guerra Fria e escadas de missões (IDEIA.md v3 seção 2). A win con é completar a escada do
-// próprio lado: cada degrau é uma nave nova; tecnologia, prédios, verba e bônus persistem.
-// Agências são do jogador; o lado só define a escada, uma vantagem pequena e uma fraqueza pequena.
-// ATENÇÃO: vantagens e fraquezas FICTÍCIAS, para balanceamento. Sem bandeiras nem marcas.
-//
-// launcherTech = ajuste no nível de tecnologia exigido pelos lançadores (−1 = foguetes fortes cedo).
-// A ordem e o degrau final da URSS estão "a definir" na v3; aqui o final é a Lua para os dois lados
-// (a corrida à Lua). Mudar a escada é só trocar a lista.
-
-const SIDES = {
-  usa: {
-    id: 'usa',
-    name: 'EUA',
-    icon: 'wings',
-    ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
-    focus: 'Foguete pesado e suporte de vida',
-    advantage: 'Mais verba: +20 no início e +5 por ano.',
-    weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
-    startFunds: 20,
-    yearlyBonus: 5,
-    launcherTech: 1,
-  },
-  ussr: {
-    id: 'ussr',
-    name: 'URSS',
-    icon: 'star',
-    ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
-    focus: 'Vida no espaço e energia contínua',
-    advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
-    weakness: 'Orçamento mais apertado: −5 de verba por ano.',
-    startFunds: 0,
-    yearlyBonus: -5,
-    launcherTech: -1,
-  },
-};
-
-const STEP_BONUS_FIRST = 20; // primeiro do lado a cumprir o degrau
-const STEP_BONUS_LATER = 8;  // quem cumpre depois, no mesmo lado, leva menos
-
-const ladderOf = (player) => SIDES[player.side]?.ladder || [];
-
-// Lados sorteados de forma equilibrada: 1 jogador = um lado (o bot fica com o outro);
-// 2 = lados diferentes; 3 ou 4 = 2 contra 1 ou 2 contra 2.
-function drawSides(n, rng = Math.random) {
-  const first = rng() < 0.5 ? 'usa' : 'ussr';
-  const other = first === 'usa' ? 'ussr' : 'usa';
-  const sides = Array.from({ length: n }, (_, i) => (i % 2 === 0 ? first : other));
-  for (let i = sides.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    [sides[i], sides[j]] = [sides[j], sides[i]];
-  }
-  return sides;
-}
-
-return { SIDES, STEP_BONUS_FIRST, STEP_BONUS_LATER, ladderOf, drawSides };
-})();
-
 // ---- src/sim/progress.js
 __mods["src/sim/progress.js"] = (() => {
 // Progresso de cada agência na escada do próprio lado (IDEIA.md v3 seções 2 e 11).
@@ -1765,8 +1840,9 @@ __mods["src/sim/actions.js"] = (() => {
 //      - em voo: avança UMA etapa (imprevisto + decisão + risco explicado). A oficina fica fechada: a próxima
 //        nave (e o kit do próximo degrau) só aparece quando esta cumprir a missão.
 //   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
-const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST } = __mods["src/sim/state.js"];
+const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST, REHEARSAL_COST } = __mods["src/sim/state.js"];
 const { isHidden, learnNeeds, assessNeeds, HIDDEN_CHECK_IDS } = __mods["src/sim/needs.js"];
+const { yearlyIncome } = __mods["src/sim/income.js"];
 const { TILES, rollDie, movePlayer, applyTile } = __mods["src/board/board.js"];
 const { CATALOG, priceFor, isLocked, requiredTech, isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf } = __mods["src/sim/resources.js"];
 const { checkDesign, simulate } = __mods["src/sim/simulate.js"];
@@ -1782,7 +1858,6 @@ const { DILEMMAS, pickDilemma } = __mods["src/data/dilemmas.js"];
 const { BUILDINGS, MAX_LEVEL, upgradeCost, USE_FEE, CATCHUP_UPGRADE_DISCOUNT } = __mods["src/data/buildings.js"];
 const { MAX_ROUNDS, REAL_HISTORY, yearOf, isNewYear } = __mods["src/data/history.js"];
 
-const SPONSOR_FUNDS_PER_LEVEL = 10; // por ano
 const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
 
 // ---------------------------------------------------------------- partida e turno
@@ -1801,6 +1876,7 @@ function startGame(state, setup, options = {}) {
   state.pendingTile = null;
   state.pendingDilemma = null;
   state.outcome = null;
+  state.yearChange = null;
   state.winners = [];
   state.gameOver = false;
   state.lastRoll = null;
@@ -1916,11 +1992,16 @@ function startTurn(state) {
   state.outcome = null;
   if (p.bot) return;
   if (isNewYear(state.round)) {
-    const funds = YEARLY_BUDGET + SIDES[p.side].yearlyBonus + SPONSOR_FUNDS_PER_LEVEL * p.buildings.sponsor;
-    const tech = TECH_PER_YEAR + p.buildings.lab;
+    const income = yearlyIncome(p);
+    const { funds, tech } = income;
     p.funds += funds;
     p.tech += tech;
     pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+    // Registro estruturado da virada: a UI anima o calendário e mostra o que entrou (só para este jogador).
+    state.yearChange = {
+      playerId: p.id, round: state.round, year: yearOf(state.round),
+      funds, tech, techLevel: p.tech, parts: income.parts, techParts: income.techParts, part: null,
+    };
     // A pesquisa libera a peça mais simples que o nível de tecnologia já alcança (ninguém fica travado).
     // No 1º ano não: o jogador começa só com o kit do 1º degrau, para o turno 1 não ter excesso de opções.
     const next = state.round > 1
@@ -1931,6 +2012,7 @@ function startTurn(state) {
     if (next) {
       discover(p, [next.id]);
       pushLog(state, `${p.name}: a pesquisa do ano liberou ${next.name}.`, p.id);
+      state.yearChange.part = next.name;
     }
   }
 }
@@ -2237,6 +2319,12 @@ function upgradeBuilding(state, buildingId) {
   p.funds -= cost;
   p.buildings[buildingId] = level + 1;
   pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`, p.id);
+  // Retorno imediato: o clique em "subir" mostra o custo e o que o novo nível rende.
+  setOutcome(state, p, {
+    title: `${BUILDINGS[buildingId].name}: nível ${level + 1} de ${MAX_LEVEL}`,
+    changes: [{ label: 'Verba', value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, level + 1 >= MAX_LEVEL ? 'Nível máximo.' : `Próximo nível: ${upgradeCostFor(state, p, buildingId)} de verba.`],
+  });
   return null;
 }
 
@@ -2802,6 +2890,7 @@ const { isHidden, needLevel } = __mods["src/sim/needs.js"];
 const { flightPlan, pct } = __mods["src/sim/flight.js"];
 const { ladderProgress } = __mods["src/sim/progress.js"];
 const { upgradeCostFor } = __mods["src/sim/actions.js"];
+const { yearlyIncome } = __mods["src/sim/income.js"];
 const { BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT } = __mods["src/sim/state.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { GLOSSARY } = __mods["src/data/glossary.js"];
@@ -2868,6 +2957,19 @@ function hud(state, player, step, actions = null) {
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
   const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  // Recursos sempre à vista, em números grandes, com a previsão do próximo Ano novo (de onde vem o recurso).
+  // Na interface enxuta a previsão fica só no balão, para não somar texto no começo.
+  const income = state.sandbox || !player.side ? null : yearlyIncome(player);
+  const roundsLeft = ROUNDS_PER_YEAR - ((state.round - 1) % ROUNDS_PER_YEAR);
+  const when = `em ${roundsLeft} ${roundsLeft === 1 ? 'rodada' : 'rodadas'}`;
+  const stat = (cls, iconName, label, value, title, next = null) => el('div', { class: `stat ${cls}`, title }, [
+    icon(iconName, { size: 22, label }),
+    el('div', { class: 'stat-body' }, [
+      el('span', { class: 'stat-num num' }, value),
+      el('span', { class: 'stat-label' }, label),
+      next && !simple ? el('small', { class: 'stat-next' }, next) : null,
+    ]),
+  ]);
   return el('div', { class: 'hud' }, [
     state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), 'sandbox'])
       : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), simple ? null : el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
@@ -2876,9 +2978,13 @@ function hud(state, player, step, actions = null) {
     el('span', { class: 'chip' }, mission
       ? [missionIcon(mission.id, { size: 15 }), state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ', em voo' : '']
       : state.sandbox ? [icon('target', { size: 15 }), 'escolhendo missão'] : [icon('flag', { size: 15 }), 'escada completa']),
-    el('span', { class: 'chip', title: 'Verba' }, [icon('coins', { size: 15, label: 'Verba' }), el('span', { class: 'num' }, player.funds)]),
-    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, [icon('chip', { size: 15, label: 'Tecnologia' }), 'tec', el('span', { class: 'num' }, player.tech)]),
-    player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, [icon('shield', { size: 15, label: 'Proteções' }), el('span', { class: 'num' }, player.shields)]) : null,
+    stat('funds', 'coins', 'Verba', player.funds,
+      income ? `Verba. No próximo Ano novo entram +${income.funds} (${Object.entries({ orçamento: income.parts.base, lado: income.parts.side, Patrocinador: income.parts.sponsor }).filter(([, v]) => v).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(', ')}).` : 'Verba',
+      income ? `+${income.funds} ${when}` : null),
+    state.sandbox ? null : stat('tech', 'chip', 'Tecnologia', player.tech,
+      income ? `Tecnologia: desbloqueia peças e foguetes melhores. No próximo Ano novo entram +${income.tech}.` : 'Tecnologia: desbloqueia peças e foguetes melhores',
+      income ? `+${income.tech} ${when}` : null),
+    player.shields || (!simple && !state.sandbox) ? stat('shield', 'shield', 'Proteções', player.shields, 'Proteções contra falha: cada uma salva uma etapa do voo que falharia.') : null,
     el('span', { class: 'spacer' }),
     simple ? null : el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
     actions ? guideToggle(actions) : null,
@@ -2963,28 +3069,39 @@ function rivalsPanel(state, player) {
   ], { defaultOpen: false, hint: `${rivals.length} ${rivals.length === 1 ? 'rival' : 'rivais'} na corrida` });
 }
 
-// Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
-function agencyPanel(state, player, actions) {
-  const built = Object.values(BUILDINGS).filter((b) => player.buildings[b.id]).length;
-  return sidePanel('agency', 'building', 'Sua agência', [
-    el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
-      const level = player.buildings[b.id];
-      const cost = level ? upgradeCostFor(state, player, b.id) : null;
-      return el('li', { class: level ? '' : 'not-built' }, [
-        el('span', { class: 'b-icon' }, icon(b.icon, { size: 20 })),
-        el('div', {}, [
-          el('strong', {}, `${b.name}${level ? `, nível ${level}/${MAX_LEVEL}` : ''}`),
-          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
-        ]),
-        level && level < MAX_LEVEL
-          ? button([icon('arrowUp', { size: 14 }), el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: `Subir para o nível ${level + 1} por ${cost}` })
-          : null,
-      ]);
-    })),
-    player.funds < BAILOUT_LIMIT
-      ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
-      : null,
-  ], { defaultOpen: false, hint: `${built} de ${Object.keys(BUILDINGS).length} prédios construídos` });
+// Faixa da agência, sempre visível sob o tabuleiro e os botões de ação: os 4 prédios em cartões (nível,
+// o que dão e o botão de subir com o custo) e o socorro de emergência. Prédio não construído aparece
+// esmaecido, para o jogador ver o que existe. Construir continua sendo num terreno livre do tabuleiro.
+function agencyStrip(state, player, actions) {
+  const cards = Object.values(BUILDINGS).map((b) => {
+    const level = player.buildings[b.id] || 0;
+    const built = level > 0;
+    const maxed = level >= MAX_LEVEL;
+    const cost = built && !maxed ? upgradeCostFor(state, player, b.id) : null;
+    return el('div', { class: `building-card${built ? '' : ' not-built'}${maxed ? ' maxed' : ''}` }, [
+      el('div', { class: 'bc-head' }, [el('span', { class: 'b-icon' }, icon(b.icon, { size: 22 })), el('strong', {}, b.name)]),
+      el('div', { class: 'bc-level' }, built
+        ? [el('span', { class: 'pips' }, Array.from({ length: MAX_LEVEL }, (_, i) => el('span', { class: `pip${i < level ? ' on' : ''}` }))), el('span', {}, `nível ${level}/${MAX_LEVEL}`)]
+        : el('span', { class: 'hint' }, 'não construído')),
+      el('small', { class: 'hint' }, built ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
+      built && !maxed
+        ? button([icon('arrowUp', { size: 14 }), 'Subir ', el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), {
+          class: 'small upgrade', disabled: player.funds < cost,
+          title: player.funds < cost ? `Faltam ${cost - player.funds} de verba para subir ao nível ${level + 1}` : `Subir para o nível ${level + 1} por ${cost}`,
+        })
+        : null,
+      maxed ? el('span', { class: 'badge max' }, 'nível máximo') : null,
+    ]);
+  });
+  return el('section', { class: 'panel agency-strip' }, [
+    el('div', { class: 'strip-head' }, [
+      panelTitle('building', 'Sua agência'),
+      player.funds < BAILOUT_LIMIT
+        ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
+        : null,
+    ]),
+    el('div', { class: 'building-grid' }, cards),
+  ]);
 }
 
 // Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
@@ -3094,7 +3211,7 @@ function glossary(open = false) {
   return d;
 }
 
-return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, outcomeCard, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, simpleUi, hud, guideToggle, panelTitle, sidePanel, progressBar, ladderPanel, rivalsPanel, agencyStrip, missionPicker, stageTrack, outcomeCard, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
 })();
 
 // ---- src/ui/spacecraft.js
@@ -3644,7 +3761,7 @@ __mods["src/ui/board.js"] = (() => {
 // Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
-const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard } = __mods["src/ui/components.js"];
+const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyStrip, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard } = __mods["src/ui/components.js"];
 const { icon, dieFace } = __mods["src/ui/icons.js"];
 const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { sinceCard } = __mods["src/ui/summary.js"];
@@ -3868,7 +3985,8 @@ function boardScreen(state, actions) {
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
   const showLadder = !simple;
   const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3;
-  const showAgency = !simple || Object.values(p.buildings).some(Boolean);
+  // Faixa de prédios sob o tabuleiro: sempre à vista; na interface enxuta só depois do 1º prédio.
+  const showStrip = !simple || Object.values(p.buildings).some(Boolean);
 
   return el('section', { class: 'screen board-screen' }, [
     hud(state, p, 'board', actions),
@@ -3880,12 +3998,12 @@ function boardScreen(state, actions) {
         el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
         actionBar.length ? el('div', { class: 'row action-bar' }, actionBar) : null,
         blocked && blockedReason && showEnd ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
+        showStrip ? agencyStrip(state, p, actions) : null,
       ]),
       el('div', { class: 'side-stack' }, [
         missionPanel(state, p, actions, simple),
         showLadder ? ladderPanel(state, p) : null,
         showRivals ? rivalsPanel(state, p) : null,
-        showAgency ? agencyPanel(state, p, actions) : null,
         logPanel(state, p),
       ]),
     ]),
@@ -4349,6 +4467,73 @@ const SCREENS = {
 return { SCREENS };
 })();
 
+// ---- src/ui/yearOverlay.js
+__mods["src/ui/yearOverlay.js"] = (() => {
+// Animação da virada de ano: um calendário no meio da tela passa o ano e mostra o que a agência ganhou
+// (verba, tecnologia, peça liberada pela pesquisa). Some sozinha e um clique pula (main.js).
+// Os ganhos são secretos de cada agência: só aparece no tabuleiro, nunca na tela de troca (yearOverlayKey).
+// Só monta DOM a partir de state.yearChange (sim/actions.js, startTurn); nenhuma regra de jogo mora aqui.
+const { el } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+
+// Chave que identifica uma virada ainda não mostrada, ou null se não deve aparecer agora.
+// `shownKey` é a última chave já animada (guardada em main.js).
+function yearOverlayKey(state, shownKey = null) {
+  const yc = state.yearChange;
+  if (!yc || state.sandbox || state.gameOver || state.screen !== 'board') return null;
+  const current = state.players[state.turn];
+  if (!current || current.bot || current.id !== yc.playerId) return null;
+  const key = `${yc.round}:${yc.playerId}`;
+  return key === shownKey ? null : key;
+}
+
+// Origem de cada ganho, para o balão explicar de onde vem o recurso.
+function fundsOrigin(yc) {
+  const { base, side, sponsor } = yc.parts;
+  return [`Orçamento do ano ${base}`, side ? `bônus do lado ${side > 0 ? '+' : ''}${side}` : null, sponsor ? `Patrocinador +${sponsor}` : null]
+    .filter(Boolean).join(' · ');
+}
+function techOrigin(yc) {
+  const { base, lab } = yc.techParts;
+  return [`Pesquisa do ano ${base}`, lab ? `Laboratório +${lab}` : null].filter(Boolean).join(' · ');
+}
+
+// `reduced`: movimento reduzido (sem o ano antigo saindo), só o ano novo e os ganhos.
+function yearOverlayNode(yc, { reduced = false } = {}) {
+  const first = yc.round === 1; // abertura da partida: não há ano anterior para sair
+  const calendar = el('div', { class: 'year-calendar', 'aria-hidden': 'true' }, [
+    el('div', { class: 'cal-top' }, [icon('calendar', { size: 16 }), 'ANO']),
+    el('div', { class: 'cal-digits' }, [
+      !first && !reduced ? el('span', { class: 'year-old' }, String(yc.year - 1)) : null,
+      el('span', { class: 'year-new' }, String(yc.year)),
+    ]),
+  ]);
+
+  const gains = [
+    { cls: 'funds', ic: 'coins', label: 'Verba', value: yc.funds, title: fundsOrigin(yc) },
+    { cls: 'tech', ic: 'chip', label: 'Tecnologia', value: yc.tech, title: techOrigin(yc) },
+  ].filter((g) => g.value !== 0).map((g, i) => el('span', { class: `gain ${g.cls} ${g.value > 0 ? 'up' : 'down'}`, title: g.title, style: `animation-delay:${0.95 + i * 0.18}s` }, [
+    icon(g.ic, { size: 18 }), `${g.label} `, el('strong', { class: 'num' }, `${g.value > 0 ? '+' : ''}${g.value}`),
+  ]));
+  if (yc.part) {
+    gains.push(el('span', { class: 'gain part', title: 'A pesquisa do ano liberou uma peça nova na oficina.', style: `animation-delay:${0.95 + gains.length * 0.18}s` }, [
+      icon('flask', { size: 18 }), 'Peça liberada ', el('strong', {}, yc.part),
+    ]));
+  }
+
+  return el('div', { class: 'year-overlay', role: 'status', 'aria-live': 'polite', title: 'Clique para pular' }, [
+    el('div', { class: 'year-card' }, [
+      el('p', { class: 'eyebrow' }, first ? 'Começa a corrida espacial' : 'Ano novo'),
+      calendar,
+      el('p', { class: 'hint' }, `Nível de tecnologia ${yc.techLevel}`),
+      el('div', { class: 'gains' }, gains),
+    ]),
+  ]);
+}
+
+return { yearOverlayKey, yearOverlayNode };
+})();
+
 // ---- src/main.js
 __mods["src/main.js"] = (() => {
 // Ponto de entrada: cria o estado, liga as ações à UI e re-renderiza a cada mudança.
@@ -4359,12 +4544,14 @@ const { rocketSvg } = __mods["src/ui/icons.js"];
 const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
 const { endTurnBlocker } = __mods["src/ui/guide.js"];
 const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
+const { yearOverlayKey, yearOverlayNode } = __mods["src/ui/yearOverlay.js"];
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
+let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -4378,6 +4565,12 @@ function render() {
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  // Virada de ano: anima uma vez, só no tabuleiro do jogador da vez (os ganhos são secretos: nunca na tela de troca).
+  const yearKey = yearOverlayKey(state, lastYearShown);
+  if (yearKey) {
+    lastYearShown = yearKey;
+    showYearOverlay(state.yearChange);
+  }
 }
 
 // Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
@@ -4392,7 +4585,7 @@ function wrap(fn, after) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); return game.startGame(s, ...args); }),
+  startGame: wrap((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
   rollDice: wrap(game.rollDice),
   moveBy: wrap(game.moveBy),
   chooseDilemma: wrap(game.chooseDilemma),
@@ -4424,7 +4617,7 @@ const actions = {
   }),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); }),
+  newGame: wrap(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
 };
 
 function showToast(text) {
@@ -4451,6 +4644,17 @@ function showLaunchOverlay() {
     setTimeout(() => o.remove(), 1400),
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
+}
+
+// Calendário da virada de ano (ui/yearOverlay.js): ~2,3 s, some sozinho, um clique pula, sem confirmar.
+// Com movimento reduzido mostra só o ano novo e os ganhos, sem o ano antigo saindo.
+function showYearOverlay(yc) {
+  document.querySelector('.year-overlay')?.remove();
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const node = yearOverlayNode(yc, { reduced });
+  document.body.appendChild(node);
+  const timer = setTimeout(() => node.remove(), reduced ? 1800 : 2300);
+  node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
 
 // Exposto para depuração no console do navegador.
