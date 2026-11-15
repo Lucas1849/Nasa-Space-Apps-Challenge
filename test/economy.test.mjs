@@ -37,3 +37,14 @@ for (const [label, rngValue] of [['EUA', 0], ['URSS', 0.99]]) {
     assert.match(launch(state, () => 0.99) || '', /Verba|pendência/i);
   });
 }
+
+// Os mínimos de ciência e comunicação começam escondidos, então o jogo deixa lançar uma nave "vazia"
+// (lançador + 1 painel) que vai falhar. Nem essa cabe na verba do turno 1.
+for (const [label, rngValue] of [['EUA', 0], ['URSS', 0.99]]) {
+  test(`${label}: nem a nave mais barata (lançador + painel) cabe na verba do turno 1`, () => {
+    const state = soloAs(rngValue);
+    const p = state.players[0];
+    const cheapest = LAUNCHERS.small.cost + CATALOG.solar_small.cost;
+    assert.ok(p.funds < cheapest, `começa com ${p.funds}, a nave mais barata custa ${cheapest}`);
+  });
+}

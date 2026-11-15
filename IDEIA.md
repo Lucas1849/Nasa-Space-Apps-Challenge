@@ -519,7 +519,7 @@ O tabuleiro antigo (8 casas, quase todas de dinheiro) tinha quatro problemas:
 - **Escada da URSS:** Primeiro satélite → Ser vivo → Estação espacial → Tripulação na Lua. O final
   é a Lua para os dois lados: a corrida à Lua. Na história real a URSS nunca chegou, então o bot
   soviético nunca cumpre esse degrau.
-- **Vantagens:** EUA com mais verba (+5 no início, +5 por ano; era +20 até o balanceamento de 15/11) e foguetes mais tarde (+1 de
+- **Vantagens:** EUA com mais verba (+5 por ano; o bônus de +20 no início saiu no balanceamento de 15/11) e foguetes mais tarde (+1 de
   tecnologia nos lançadores). URSS com foguetes cedo (−1) e orçamento menor (−5 por ano).
 - **Espião:** custa 12, uma vez por ano, e mostra degraus, missão atual e quanto a nave está pronta.
 - **Limite:** 1969 (39 rodadas). Com verba de 40 por ano, a Lua fica alcançável perto de 1965–1968.

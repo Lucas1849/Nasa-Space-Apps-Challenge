@@ -273,7 +273,9 @@ function turnDock(state, p, design, actions, simple) {
   if (p.rolled && !state.dice) {
     const showWorkshop = !p.flight; // com a nave em voo a oficina fica fechada
     const showLaunch = !simple || design.ok || p.launchedThisTurn;
-    const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : !design.ok || p.launchedThisTurn);
+    // Só UMA ação cheia por vez: a oficina se a nave não fecha, o Lançar se fecha, e o Passar a vez quando
+    // não sobrou nada recomendado (voo avançado, lançou ou a escada acabou).
+    const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId);
     if (mustAdvance) after.push(button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}` }));
     if (showWorkshop) after.push(button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `${!design.ok && !p.launchedThisTurn ? 'primary' : ''} ${hl(state, 'board', 'workshop')}` }));
     if (showLaunch && !p.flight) after.push(button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: `${canLaunch ? 'primary launch-ready' : ''} ${hl(state, 'board', 'launch')}` }));

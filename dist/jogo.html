@@ -932,9 +932,10 @@ __mods["src/sim/state.js"] = (() => {
 // ATENÇÃO: valores iniciais FICTÍCIOS.
 const { yearOf } = __mods["src/data/history.js"];
 
-// Balanceamento (15/11): o 1º satélite custa 38 (peças 18 + lançador 20). A rodada 1 já paga o orçamento do
-// 1º ano, então a URSS começa com 5 + 15 = 20 e os EUA com 5 + 5 + 25 = 35 (mas sem tecnologia para o lançador).
-// Meta: ninguém lança no turno 1; o 1º satélite sai por volta da rodada 3–4 (fim do 1º ano).
+// Balanceamento (15/11): o 1º satélite custa 43 (peças 18 + lançador pequeno 25). A rodada 1 já paga o orçamento
+// do 1º ano, então a URSS começa com 5 + 15 = 20 e os EUA com 5 + 25 = 30 (e sem tecnologia para o lançador).
+// Nem a nave "vazia" (lançador + painel = 33, que falharia pelos mínimos escondidos) cabe no turno 1.
+// Simulação com jogadas aleatórias: o 1º satélite completo sai na rodada 4 (EUA) e 4–5 (URSS).
 const STARTING_FUNDS = 5;
 const SANDBOX_FUNDS = 999;
 const SANDBOX_TECH = 99;
@@ -1189,7 +1190,7 @@ __mods["src/data/launchers.js"] = (() => {
 // Trade-off: foguete maior cabe mais carga, mas custa muito mais e exige mais tecnologia.
 
 const LAUNCHERS = {
-  small: { id: 'small', name: 'Lançador pequeno', maxMass: 40, cost: 20, reach: ['leo'], minTech: 1 },
+  small: { id: 'small', name: 'Lançador pequeno', maxMass: 40, cost: 25, reach: ['leo'], minTech: 1 },
   medium: { id: 'medium', name: 'Lançador médio', maxMass: 120, cost: 50, reach: ['leo', 'geo'], minTech: 3 },
   heavy: { id: 'heavy', name: 'Lançador pesado', maxMass: 300, cost: 110, reach: ['leo', 'geo', 'moon'], minTech: 5 },
 };
@@ -1366,9 +1367,9 @@ const SIDES = {
     icon: 'wings',
     ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
     focus: 'Foguete pesado e suporte de vida',
-    advantage: 'Mais verba: +5 no início e +5 por ano.',
+    advantage: 'Mais verba: +5 por ano (a URSS tem −5).',
     weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
-    startFunds: 5,
+    startFunds: 0,
     yearlyBonus: 5,
     launcherTech: 1,
   },
@@ -3950,6 +3951,7 @@ __mods["src/ui/summary.js"] = (() => {
 // e compara. Respeita o rival escondido: só mostra entradas públicas do diário ou do próprio jogador.
 const { el } = __mods["src/ui/components.js"];
 const { icon } = __mods["src/ui/icons.js"];
+const { guideOn } = __mods["src/ui/prefs.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
 const { ladderProgress } = __mods["src/sim/progress.js"];
 const { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } = __mods["src/data/history.js"];
@@ -4039,6 +4041,8 @@ function sinceCard(state) {
   if (!since || p.rolled) return null;
   const newYear = isNewYear(state.round);
   if (since.first) {
+    // Com as dicas ligadas o cartão de orientação já diz o que fazer: este só empurraria o tabuleiro para baixo.
+    if (guideOn()) return null;
     return el('div', { class: 'panel since-card' }, [
       el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
       el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
@@ -4713,7 +4717,9 @@ function turnDock(state, p, design, actions, simple) {
   if (p.rolled && !state.dice) {
     const showWorkshop = !p.flight; // com a nave em voo a oficina fica fechada
     const showLaunch = !simple || design.ok || p.launchedThisTurn;
-    const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : !design.ok || p.launchedThisTurn);
+    // Só UMA ação cheia por vez: a oficina se a nave não fecha, o Lançar se fecha, e o Passar a vez quando
+    // não sobrou nada recomendado (voo avançado, lançou ou a escada acabou).
+    const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId);
     if (mustAdvance) after.push(button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}` }));
     if (showWorkshop) after.push(button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `${!design.ok && !p.launchedThisTurn ? 'primary' : ''} ${hl(state, 'board', 'workshop')}` }));
     if (showLaunch && !p.flight) after.push(button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: `${canLaunch ? 'primary launch-ready' : ''} ${hl(state, 'board', 'launch')}` }));
