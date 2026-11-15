@@ -16,7 +16,7 @@ import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscover
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
 
-function itemCard(player, item, actions) {
+function itemCard(player, item, actions, readOnly = false) {
   const owned = [...player.spacecraft.instruments, ...player.spacecraft.parts].filter((id) => id === item.id).length;
   const price = priceFor(player, item.id);
   const locked = isLocked(player, item);
@@ -45,20 +45,20 @@ function itemCard(player, item, actions) {
     el('div', { class: 'row' }, [
       locked
         ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, [icon('lock', { size: 14 }), `exige tecnologia ${requiredTech(player, item)}`])
-        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
-      button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
+        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: readOnly || player.funds < price, class: 'small' }),
+      button('Vender', () => actions.sellItem(item.id), { disabled: readOnly || !owned, class: 'small ghost' }),
     ]),
   ]);
 }
 
-function choice(label, options, selectedId, onPick, describe, player, cls = '') {
+function choice(label, options, selectedId, onPick, describe, player, cls = '', readOnly = false) {
   return el('div', { class: `choice ${cls}` }, [
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
       return button(locked ? [icon('lock', { size: 14 }), `${o.name}: exige tecnologia ${requiredTech(player, o)}`] : describe(o), () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
-        disabled: locked,
+        disabled: locked || readOnly,
       });
     })),
   ]);
@@ -74,9 +74,13 @@ function riskPanel(player) {
   ]);
 }
 
-export function workshopScreen(state, actions) {
-  const p = currentPlayer(state);
-  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back')}` });
+// `viewer`/`opts.readOnly`: por padrão a oficina é do jogador da vez e totalmente interativa.
+// A tela de espectador (ui/spectate.js) passa a SUA agência com readOnly para você ver as peças,
+// o projeto e as dicas da sua nave enquanto espera, sem poder comprar, vender ou lançar.
+export function workshopScreen(state, actions, viewer = null, opts = {}) {
+  const p = viewer ?? currentPlayer(state);
+  const readOnly = Boolean(opts.readOnly);
+  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), readOnly ? 'Voltar a assistir' : 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back', p)}` });
 
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
@@ -128,39 +132,40 @@ export function workshopScreen(state, actions) {
   const parts = known(PARTS);
   const moreToDiscover = !state.sandbox && undiscoveredItems(p).length > 0;
 
-  return el('section', { class: 'screen workshop' }, [
+  return el('section', { class: `screen workshop${readOnly ? ' read-only' : ''}` }, [
     hud(state, p, 'workshop', actions),
-    guideCard(state, 'workshop'),
+    readOnly ? el('p', { class: 'hint with-icon spectate-note' }, [icon('eye', { size: 16 }), 'Você está vendo a sua oficina enquanto espera. Na sua vez, poderá comprar peças e lançar.']) : null,
+    guideCard(state, 'workshop', p),
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
         choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher', p), readOnly),
         // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
         state.sandbox
           ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'))
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit', p), readOnly)
           : null,
         instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
-        instruments.length ? el('div', { class: 'cards' }, instruments.map((i) => itemCard(p, i, actions))) : null,
+        instruments.length ? el('div', { class: 'cards' }, instruments.map((i) => itemCard(p, i, actions, readOnly))) : null,
         parts.length ? el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida') : null,
-        parts.length ? el('div', { class: 'cards' }, parts.map((i) => itemCard(p, i, actions))) : null,
+        parts.length ? el('div', { class: 'cards' }, parts.map((i) => itemCard(p, i, actions, readOnly))) : null,
         moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais peças para descobrir: na Feira de fornecedores, no Ano Geofísico Internacional e a cada Ano novo.']) : null,
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
-        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks', p)}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
         design.ok ? riskPanel(p) : null,
         blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
         hidden && design.ok ? el('p', { class: 'hint with-icon' }, [icon('eye', { size: 16 }), 'Você ainda não sabe se a nave atende aos mínimos da missão. Faça um ensaio em solo ou lance e descubra: errar também ensina.']) : null,
         outcomeCard(state, p),
         el('div', { class: 'row', style: 'margin:0' }, [
-          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
-          hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
+          readOnly ? null : button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch', p)}`, title: blocked || (design.ok ? (hidden ? 'Os mínimos de ciência e comunicação ainda são desconhecidos: você descobre ao lançar.' : 'Tudo pronto.') : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          !readOnly && hidden && !p.flight ? button([icon('testTube', { size: 18 }), `Ensaio em solo (${REHEARSAL_COST})`], () => actions.rehearse(), {
             disabled: p.rehearsedThisTurn || p.funds < REHEARSAL_COST,
-            class: `ghost ${hl(state, 'workshop', 'rehearse')}`,
+            class: `ghost ${hl(state, 'workshop', 'rehearse', p)}`,
             title: p.rehearsedThisTurn ? 'Só um ensaio por turno.' : `Por ${REHEARSAL_COST} de verba, diz em palavras se a nave atende aos mínimos da missão. Não gasta foguete.`,
           }) : null,
           back,

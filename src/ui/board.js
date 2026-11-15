@@ -66,6 +66,20 @@ function tileIcon(state, t) {
   return TILE_ICONS[t.type];
 }
 
+// Casas do anel (16), com peões, ícone e legenda. `p` é o jogador em foco (destaca a casa dele).
+// Exportado para a tela de espectador (ui/spectate.js) reaproveitar o mesmo tabuleiro.
+export function ringTiles(state, p, simple) {
+  return TILES.map((t, i) => {
+    const [r, c] = RING_POS[i].split('/');
+    const lot = state.lots[t.id];
+    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: `${t.label}: ${tileSub(state, t)}` }, [
+      el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
+      el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 20 })),
+      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t))]),
+    ]);
+  });
+}
+
 // Carta de dilema: sempre uma escolha, conforme a situação do jogador.
 function dilemmaDecision(state, actions) {
   const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
@@ -193,15 +207,7 @@ export function boardScreen(state, actions) {
   if (p.rolled) lastRollSeen = state.lastRoll;
   const simple = simpleUi(state, p);
 
-  const tiles = TILES.map((t, i) => {
-    const [r, c] = RING_POS[i].split('/');
-    const lot = state.lots[t.id];
-    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: `${t.label}: ${tileSub(state, t)}` }, [
-      el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
-      el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 20 })),
-      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t))]),
-    ]);
-  });
+  const tiles = ringTiles(state, p, simple);
 
   const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn;
   const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
