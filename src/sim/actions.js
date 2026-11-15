@@ -19,7 +19,10 @@ import {
   BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST,
 } from './state.js';
 import { TILES, rollDie, movePlayer, applyTile } from '../board/board.js';
-import { CATALOG, priceFor, isLocked, requiredTech } from './resources.js';
+import {
+  CATALOG, priceFor, isLocked, requiredTech,
+  isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf,
+} from './resources.js';
 import { checkDesign, simulate } from './simulate.js';
 import { flightPlan, stageRisk, stageOptions, flyer, describeRisk, pct } from './flight.js';
 import { ladderProgress } from './progress.js';
@@ -56,7 +59,7 @@ export function startGame(state, setup, options = {}) {
   state.lastRoll = null;
 
   if (state.sandbox) {
-    state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; });
+    state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; p.unlocked = allDiscoverableIds(); });
     state.screen = 'workshop';
     pushLog(state, 'Modo sandbox: verba livre, tecnologia liberada, sem tabuleiro. Explore os trade-offs à vontade.');
     return null;
@@ -68,6 +71,7 @@ export function startGame(state, setup, options = {}) {
 
   pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
   state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
+  state.players.filter((p) => !p.bot).forEach((p) => setMission(state, p, p.missionId)); // kit do 1º degrau
   startTurn(state);
   state.screen = humans(state).length > 1 ? 'handoff' : 'board';
   return null;
@@ -79,6 +83,27 @@ function assignSide(p, sideId) {
   p.launcherTech = side.launcherTech;
   p.funds += side.startFunds;
   p.missionId = side.ladder[0];
+}
+
+// Muda a missão atual (o degrau da escada). No jogo normal revela o kit do degrau (as peças mínimas
+// para fechar o projeto) e já deixa a órbita da missão escolhida, que não é decisão do jogador.
+function setMission(state, p, missionId) {
+  p.missionId = missionId;
+  if (!missionId || state.sandbox) return;
+  const mission = MISSIONS[missionId];
+  const fresh = discover(p, mission.kit || []);
+  p.spacecraft.orbitId = mission.orbit;
+  if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
+}
+
+// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas).
+function revealRandom(state, p, count, rng, accept = () => true) {
+  const pool = undiscoveredItems(p).filter(accept);
+  const picked = [];
+  while (picked.length < count && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  if (!picked.length) return;
+  discover(p, picked.map((item) => item.id));
+  pushLog(state, `${p.name} descobriu: ${picked.map((item) => item.name).join(', ')}.`, p.id);
 }
 
 // Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
@@ -110,6 +135,17 @@ function startTurn(state) {
     p.funds += funds;
     p.tech += tech;
     pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+    // A pesquisa libera a peça mais simples que o nível de tecnologia já alcança (ninguém fica travado).
+    // No 1º ano não: o jogador começa só com o kit do 1º degrau, para o turno 1 não ter excesso de opções.
+    const next = state.round > 1
+      ? undiscoveredItems(p)
+        .filter((item) => requiredTech(p, item) <= p.tech)
+        .sort((a, b) => a.minTech - b.minTech || a.cost - b.cost)[0]
+      : null;
+    if (next) {
+      discover(p, [next.id]);
+      pushLog(state, `${p.name}: a pesquisa do ano liberou ${next.name}.`, p.id);
+    }
   }
 }
 
@@ -216,6 +252,10 @@ export function moveBy(state, index, rng = Math.random) {
   state.lastRoll = steps;
   pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
+
+  // Descoberta de peças: a Feira mostra novidades dos fornecedores; a cooperação científica libera o que o nível alcança.
+  if (tile.type === 'shop') revealRandom(state, p, 3, rng);
+  if (tile.type === 'tech') revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
@@ -410,6 +450,7 @@ export function chooseMission(state, missionId) {
 export function buyItem(state, itemId) {
   const p = currentPlayer(state);
   const item = CATALOG[itemId];
+  if (!isDiscovered(p, item)) return `${item.name} ainda não foi descoberta: ela aparece nas casas do tabuleiro e a cada Ano novo.`;
   if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
   const price = priceFor(p, itemId);
   if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
@@ -437,6 +478,7 @@ export function sellItem(state, itemId) {
 export function chooseLauncher(state, launcherId) {
   const p = currentPlayer(state);
   const launcher = LAUNCHERS[launcherId];
+  if (!isDiscovered(p, launcher)) return `${launcher.name} ainda não foi descoberto: ele é liberado pelo degrau da missão.`;
   if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
   p.spacecraft.launcherId = launcherId;
   checkMilestones(state, p);
@@ -502,7 +544,7 @@ export function launch(state, rng = Math.random) {
   };
   // A oficina fica livre para montar a próxima nave (próximo degrau) enquanto esta voa.
   p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
-  if (!state.sandbox) p.missionId = ladderOf(p)[p.step + 1] || null;
+  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step + 1] || null);
   p.launchedThisTurn = true;
   p.flightAdvanced = true;
   pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
@@ -594,7 +636,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
 
 // Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
 function retarget(state, p) {
-  if (!state.sandbox) p.missionId = ladderOf(p)[p.step] || null;
+  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step] || null);
 }
 
 function failMission(state, p, stageId) {

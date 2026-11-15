@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import { guideOn } from './prefs.js';
 import { currentPlayer, SPY_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
-import { isLocked, requiredTech } from '../sim/resources.js';
+import { isLocked, requiredTech, isDiscovered } from '../sim/resources.js';
 import { LAUNCHERS } from '../data/launchers.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
@@ -27,8 +27,8 @@ export function endTurnBlocker(state) {
 // Sem lançador escolhido e nenhum liberado: explica que falta tecnologia e como ganhar.
 function noLauncherYet(player) {
   if (player.spacecraft.launcherId) return null;
-  const all = Object.values(LAUNCHERS);
-  if (!all.every((l) => isLocked(player, l))) return null;
+  const all = Object.values(LAUNCHERS).filter((l) => isDiscovered(player, l));
+  if (!all.length || !all.every((l) => isLocked(player, l))) return null;
   const need = Math.min(...all.map((l) => requiredTech(player, l)));
   return {
     title: 'Nenhum foguete liberado ainda',
@@ -56,7 +56,7 @@ export function nextStep(state, screen) {
       return { title: 'Escolha um dos dados', text: 'Olhe as casas à frente do seu peão e escolha o dado que para na melhor casa para você agora.', target: 'die' };
     }
     if (!p.rolled) {
-      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
+      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, peças novas, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
     }
     const pending = state.pendingTile;
     if (pending?.kind === 'build') {
@@ -84,7 +84,7 @@ export function nextStep(state, screen) {
       const fail = firstHardFailure(p);
       return {
         title: `Monte a nave: ${mission.name}`,
-        text: fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.',
+        text: `${fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.'} Não precisa montar tudo agora: andar pelo tabuleiro rende verba e peças novas.`,
         target: 'workshop',
       };
     }

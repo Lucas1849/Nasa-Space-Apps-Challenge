@@ -531,3 +531,31 @@ O tabuleiro antigo (8 casas, quase todas de dinheiro) tinha quatro problemas:
 - Contratos completos (seção 10). Só existe o "usar prédio do rival".
 - Pagar para andar mais, sinergias entre peças, mais nações e escadas.
 - Balanceamento por partidas de teste.
+
+## 17. Ajuste de início de jogo (Marcus, 14/11)
+Problema: no turno 1 a oficina mostrava o catálogo inteiro (12 peças, 3 foguetes, 3 órbitas, 7
+medidores) e a verba cobria o primeiro satélite sem esforço. Era informação demais e opção demais.
+
+### 17.1 Verba menor
+- Verba inicial **20** (era 60) e orçamento anual **20** (era 40). O +20 de "Projeto pronto" continua.
+- Na rodada 1, a URSS fica com 35 e os EUA com 65. O jogador precisa passar pelo tabuleiro para
+  completar o primeiro projeto.
+
+### 17.2 Peças descobertas aos poucos
+- A oficina só mostra o que o jogador já **descobriu**. Cada degrau da escada dá um **kit** (o mínimo
+  para fechar o projeto) e a órbita da missão já vem escolhida.
+- O resto é revelado pelo tabuleiro: **Feira de fornecedores** (até 3 peças), **Ano Geofísico**
+  (até 2, só o que o nível de tecnologia alcança) e o **Ano novo** a partir do 2º ano.
+- Comprar continua exigindo o nível de tecnologia. O sandbox libera tudo.
+- Nada obriga a montar a nave no turno 1: o guia agora diz que andar pelo tabuleiro rende verba e
+  peças novas.
+
+### 17.3 Decidido não fazer agora
+- Loja de 3 itens no lugar da oficina e troca de peças entre jogadores: a troca só faz sentido com
+  escassez, e a oficina foi mantida.
+- Limites por turno e "kit básico" de um clique.
+
+### 17.4 Pontos para testar jogando
+- Os EUA exigem tecnologia 2 para o foguete pequeno e começam com 1 (a URSS lança no turno 1), e a
+  verba menor deixa os EUA com quase o dobro de dinheiro.
+- Se o início ainda ficar fácil, cortar a verba mais (10 inicial e 10 por ano).

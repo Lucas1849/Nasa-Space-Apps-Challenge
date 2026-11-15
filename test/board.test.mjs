@@ -8,6 +8,8 @@ import {
   upgradeBuilding, launch, chooseLauncher, requestBailout, chooseDilemma, spyOn,
 } from '../src/sim/actions.js';
 import { SIDES } from '../src/data/sides.js';
+import { LAUNCHERS } from '../src/data/launchers.js';
+import { CATALOG, discover } from '../src/sim/resources.js';
 import { upgradeCost } from '../src/data/buildings.js';
 import { dilemmasFor } from '../src/data/dilemmas.js';
 
@@ -79,6 +81,7 @@ test('turno completo: andar, comprar, vender, passar a vez; 3 rodadas = 1 ano', 
   rollAndMove(state, die(2)); // casa 2: verba
   assert.match(rollAndMove(state, die(2)), /já rolou/);
   const before = state.players[0].funds;
+  discover(state.players[0], ['camera']);
   assert.equal(buyItem(state, 'camera'), null);
   assert.ok(state.players[0].funds < before);
   assert.equal(sellItem(state, 'camera'), null);
@@ -127,6 +130,7 @@ test('peça e lançador bloqueados por tecnologia; o lado muda o lançador', () 
   const state = twoPlayers();
   const a = state.players[0]; // URSS: lançadores exigem −1
   a.funds = 999;
+  discover(a, ['hires_camera', 'heavy']);
   assert.match(buyItem(state, 'hires_camera'), /exige tecnologia 4/);
   assert.match(chooseLauncher(state, 'heavy'), /exige tecnologia 4/);
   a.tech = 4;
@@ -191,5 +195,65 @@ test('socorro de emergência só com pouca verba e custa tecnologia', () => {
 test('comprar sem verba devolve mensagem de erro', () => {
   const state = twoPlayers();
   state.players[0].funds = 0;
+  discover(state.players[0], ['camera']);
   assert.match(buyItem(state, 'camera'), /Verba insuficiente/);
+});
+
+// ---------------------------------------------------------------- descoberta de peças
+
+test('começa só com o kit do 1º degrau: peça fora do kit não aparece nem se compra', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  assert.deepEqual([...a.unlocked].sort(), ['antenna_basic', 'radio_beacon', 'small', 'solar_small']);
+  assert.equal(a.spacecraft.orbitId, 'leo'); // a órbita da missão já vem escolhida
+  a.funds = 999;
+  assert.match(buyItem(state, 'camera'), /ainda não foi descoberta/);
+  assert.match(chooseLauncher(state, 'heavy'), /ainda não foi descoberto/);
+  assert.equal(buyItem(state, 'radio_beacon'), null);
+});
+
+test('Feira de fornecedores revela até 3 peças escondidas e mantém o desconto', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  const before = a.unlocked.length;
+  a.position = 8;
+  rollAndMove(state, die(2)); // 8 -> 10: Feira
+  assert.equal(a.position, 10);
+  assert.equal(a.unlocked.length, before + 3);
+  assert.equal(a.discount, TILES[10].discount);
+  assert.match(state.log.find((l) => /descobriu/.test(l.text)).text, /descobriu: /);
+});
+
+test('casa de tecnologia só revela peças que o nível já alcança', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  a.position = 4;
+  rollAndMove(state, die(2)); // 4 -> 6: Ano Geofísico, +1 de tecnologia (nível 2)
+  assert.equal(a.position, 6);
+  const found = a.unlocked.filter((id) => !['antenna_basic', 'radio_beacon', 'small', 'solar_small'].includes(id));
+  assert.equal(found.length, 2);
+  for (const id of found) assert.ok(CATALOG[id].minTech <= a.tech, id);
+});
+
+test('Ano novo libera a peça mais simples que o nível alcança', () => {
+  const state = twoPlayers();
+  const a = state.players[0];
+  assert.ok(!a.unlocked.includes('magnetometer'));
+  // rodada 4 = 2º ano: o jogador A começa o turno com +1 de tecnologia e a pesquisa libera uma peça
+  state.round = 3;
+  a.rolled = true;
+  state.players[1].rolled = true;
+  state.turn = 1;
+  endTurn(state); // fecha a rodada 3, vira para a rodada 4 e o jogador A inicia o turno
+  assert.equal(state.round, 4);
+  assert.ok(a.unlocked.length > 4);
+  assert.match(state.log.find((l) => /a pesquisa do ano liberou/.test(l.text)).text, /liberou/);
+});
+
+test('sandbox libera todas as peças e lançadores', () => {
+  const state = createInitialState();
+  startGame(state, [{ name: 'S', missionId: 'first_satellite' }], { sandbox: true });
+  const p = state.players[0];
+  for (const id of [...Object.keys(CATALOG), ...Object.keys(LAUNCHERS)]) assert.ok(p.unlocked.includes(id), id);
+  assert.equal(buyItem(state, 'hires_camera'), null);
 });

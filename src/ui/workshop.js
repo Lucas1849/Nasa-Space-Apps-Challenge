@@ -11,7 +11,7 @@ import { LAUNCHERS } from '../data/launchers.js';
 import { ORBITS } from '../data/orbits.js';
 import { MISSIONS } from '../data/missions.js';
 import { currentPlayer } from '../sim/state.js';
-import { priceFor, isLocked, requiredTech, discountFor } from '../sim/resources.js';
+import { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems } from '../sim/resources.js';
 import { checkDesign } from '../sim/simulate.js';
 import { missionRisk, describeRisk, pct } from '../sim/flight.js';
 
@@ -102,6 +102,12 @@ export function workshopScreen(state, actions) {
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
   const discount = discountFor(p);
+  // Só aparece o que o jogador já descobriu (sim/resources.js); o resto é revelado pelo tabuleiro.
+  const known = (items) => Object.values(items).filter((item) => isDiscovered(p, item));
+  const launchers = Object.fromEntries(known(LAUNCHERS).map((l) => [l.id, l]));
+  const instruments = known(INSTRUMENTS);
+  const parts = known(PARTS);
+  const moreToDiscover = !state.sandbox && undiscoveredItems(p).length > 0;
 
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop', actions),
@@ -112,14 +118,18 @@ export function workshopScreen(state, actions) {
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
-        choice('Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
+        choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
           (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
-        choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-          (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit')),
-        el('h2', {}, 'Instrumentos científicos'),
-        el('div', { class: 'cards' }, Object.values(INSTRUMENTS).map((i) => itemCard(p, i, actions))),
-        el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida'),
-        el('div', { class: 'cards' }, Object.values(PARTS).map((i) => itemCard(p, i, actions))),
+        // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
+        state.sandbox
+          ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'))
+          : null,
+        instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
+        instruments.length ? el('div', { class: 'cards' }, instruments.map((i) => itemCard(p, i, actions))) : null,
+        parts.length ? el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida') : null,
+        parts.length ? el('div', { class: 'cards' }, parts.map((i) => itemCard(p, i, actions))) : null,
+        moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais peças para descobrir: na Feira de fornecedores, no Ano Geofísico Internacional e a cada Ano novo.']) : null,
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),

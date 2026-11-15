@@ -65,6 +65,12 @@ estar na frente)**. O rival é escondido, então o custo de esperar é a dúvida
    o estado real de um rival (uma vez por ano); boatos dão informação vaga.
 5. **Oficina** (centro do jogo): a missão é o degrau atual da escada. Peças e lançadores são
    bloqueados por tecnologia. Mostra recursos, checagem e o **risco do voo** por etapa.
+   **Descoberta de peças** (`unlocked` do jogador, `src/sim/resources.js`): a oficina só mostra o que
+   o jogador já descobriu. Ao começar um degrau ele recebe o **kit** do degrau (`kit` em
+   `src/data/missions.js`, o mínimo para fechar o projeto) e a órbita da missão já vem escolhida.
+   O resto é revelado na **Feira de fornecedores** (até 3 peças), no **Ano Geofísico** (até 2, só
+   o que o nível alcança) e a cada **Ano novo** a partir do 2º ano (a peça mais simples que o nível
+   alcança). Comprar continua exigindo o nível de tecnologia. O sandbox libera tudo.
 6. **Lançamento**: paga o lançador; a nave sai da oficina (dá para montar a do próximo degrau
    enquanto ela voa) e a **subida** é sorteada na hora. Lançar encerra o turno.
 7. **Voo em etapas** (`src/data/stages.js`, `src/sim/flight.js`): LEO 2 etapas, GEO 3, Lua 3,
@@ -127,8 +133,11 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
 
 ## Como adicionar coisas sem quebrar os outros
 
-- **Missão nova**: entrada em `src/data/missions.js`. Zero código.
-- **Peça nova**: entrada em `parts.js` ou `instruments.js` com os mesmos campos. Aparece na oficina sozinha.
+- **Missão nova**: entrada em `src/data/missions.js`, com o `kit` de peças e lançador que o degrau
+  revela. Zero código.
+- **Peça nova**: entrada em `parts.js` ou `instruments.js` com os mesmos campos. Entra sozinha no
+  sorteio de descoberta (Feira, Ano Geofísico, Ano novo). Para garantir a peça em um degrau, ponha
+  o id no `kit` da missão; sem isso o jogador só a vê se a descobrir.
 - **Regra nova**: função em `simulate.js` que faz `add(id, ok, okText, failText)` + teste em `test/simulate.test.mjs`.
 - **Casa nova no tabuleiro**: entrada em `TILES` e um `case` em `applyTile`.
 - **Tela nova**: arquivo em `src/ui/`, registrar em `screens.js`.

@@ -41,7 +41,7 @@ export function checkDesign(player, modifiers = {}) {
 
   add('power', t.powerBalance >= 0,
     `Energia: gera ${t.powerGen}, consome ${t.powerUse}. Sobra ${t.powerBalance}.`,
-    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione painel solar ou bateria, ou remova instrumentos.`);
+    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione geração de energia (painel solar) ou remova instrumentos.`);
 
   add('comms', t.commsEffective >= t.data,
     `Comunicação ${t.commsEffective} dá conta dos ${t.data} de dados gerados.`,
@@ -61,7 +61,7 @@ export function checkDesign(player, modifiers = {}) {
     const lifetime = t.lifetime + (modifiers.lifetimeDelta || 0);
     add('lifetime', lifetime >= mission.needs.lifetime,
       `Vida útil ${lifetime} ano(s): atende aos ${mission.needs.lifetime} exigidos.`,
-      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} propulsor de manutenção ou bateria estendem a vida.`);
+      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} peças como o propulsor de manutenção ou a bateria estendem a vida, se você já as descobriu.`);
   }
 
   // `modifiers.launched`: avaliação depois do voo, o lançamento já foi pago.

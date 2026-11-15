@@ -3,10 +3,10 @@
 // ATENÇÃO: valores iniciais FICTÍCIOS.
 import { yearOf } from '../data/history.js';
 
-export const STARTING_FUNDS = 60;
+export const STARTING_FUNDS = 20;
 export const SANDBOX_FUNDS = 999;
 export const SANDBOX_TECH = 99;
-export const YEARLY_BUDGET = 40;     // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
+export const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
 export const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
 export const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 export const BAILOUT_TECH_COST = 2;
@@ -31,6 +31,7 @@ export function createPlayer(id, name, missionId = null) {
     position: 0,           // casa atual do tabuleiro
     funds: STARTING_FUNDS, // verba disponível
     tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
+    unlocked: [],          // ids de peças e lançadores já descobertos (sim/resources.js); o kit do degrau entra ao começar o degrau
     launcherTech: 0,       // ajuste do lado no nível exigido pelos lançadores
     discount: 0,           // % de desconto na próxima compra (evento ou degrau)
     shields: 0,            // proteções contra falha no voo

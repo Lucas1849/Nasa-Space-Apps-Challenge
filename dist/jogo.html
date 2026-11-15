@@ -583,10 +583,10 @@ __mods["src/sim/state.js"] = (() => {
 // ATENÇÃO: valores iniciais FICTÍCIOS.
 const { yearOf } = __mods["src/data/history.js"];
 
-const STARTING_FUNDS = 60;
+const STARTING_FUNDS = 20;
 const SANDBOX_FUNDS = 999;
 const SANDBOX_TECH = 99;
-const YEARLY_BUDGET = 40;     // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
+const YEARLY_BUDGET = 20;   // "Ano novo": verba de cada agência no início de cada ano (3 rodadas)
 const TECH_PER_YEAR = 1;      // tecnologia base por ano (+ Laboratório)
 const BAILOUT_FUNDS = 30;     // socorro de emergência (sem eliminação)
 const BAILOUT_TECH_COST = 2;
@@ -611,6 +611,7 @@ function createPlayer(id, name, missionId = null) {
     position: 0,           // casa atual do tabuleiro
     funds: STARTING_FUNDS, // verba disponível
     tech: 0,               // nível de tecnologia (desbloqueia peças); o 1º ano já soma +1
+    unlocked: [],          // ids de peças e lançadores já descobertos (sim/resources.js); o kit do degrau entra ao começar o degrau
     launcherTech: 0,       // ajuste do lado no nível exigido pelos lançadores
     discount: 0,           // % de desconto na próxima compra (evento ou degrau)
     shields: 0,            // proteções contra falha no voo
@@ -911,7 +912,29 @@ const requiredTech = (player, item) => Math.max(1, (item.minTech || 0) + (item.r
 // Peça ou lançador bloqueado pela tecnologia da agência?
 const isLocked = (player, item) => requiredTech(player, item) > (player.tech || 0);
 
-return { CATALOG, itemsOf, totalsFor, effectiveTotals, FACTORY_DISCOUNT_PER_LEVEL, MAX_DISCOUNT, discountFor, priceFor, requiredTech, isLocked };
+// Descoberta (progressão): o jogador só vê e compra o que já descobriu. `player.unlocked` guarda
+// ids de peças e de lançadores. O kit de cada degrau (data/missions.js) é revelado ao começar o degrau;
+// o resto aparece nas casas do tabuleiro, na tecnologia e no Ano novo. O sandbox libera tudo.
+const isDiscovered = (player, item) => (player.unlocked || []).includes(item.id);
+
+// Marca ids como descobertos e devolve só os que eram novos.
+function discover(player, ids) {
+  player.unlocked = player.unlocked || [];
+  const fresh = [...new Set(ids)].filter((id) => !player.unlocked.includes(id));
+  player.unlocked.push(...fresh);
+  return fresh;
+}
+
+// Peças (instrumentos e partes) que o jogador ainda não descobriu.
+const undiscoveredItems = (player) => Object.values(CATALOG).filter((item) => !isDiscovered(player, item));
+
+// Todos os ids descobríveis: peças e lançadores (o sandbox começa com tudo).
+const allDiscoverableIds = () => [...Object.keys(CATALOG), ...Object.keys(LAUNCHERS)];
+
+// Nome legível de uma peça ou lançador, para o diário.
+const nameOf = (id) => (CATALOG[id] || LAUNCHERS[id]).name;
+
+return { CATALOG, itemsOf, totalsFor, effectiveTotals, FACTORY_DISCOUNT_PER_LEVEL, MAX_DISCOUNT, discountFor, priceFor, requiredTech, isLocked, isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf };
 })();
 
 // ---- src/data/missions.js
@@ -926,6 +949,9 @@ __mods["src/data/missions.js"] = (() => {
 //   lifetime    = anos mínimos de operação (vida útil da órbita + bônus de peças)
 // orbit: órbita onde a missão precisa ser executada (define as etapas do voo, ver data/stages.js).
 // extraStages: etapas a mais no fim do voo (ex.: retorno da tripulação).
+// kit: peças e lançador que o degrau revela ao começar (ids de data/parts.js, instruments.js e launchers.js).
+//   É o mínimo para o degrau fechar, para ninguém ficar travado esperando a sorte do tabuleiro.
+//   As casas do tabuleiro, a tecnologia e o Ano novo revelam os extras e as alternativas.
 // Cada jogador cumpre cada missão no máximo uma vez. O primeiro do mundo leva o recorde.
 //
 // Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
@@ -945,6 +971,7 @@ const MISSIONS = {
     orbit: 'leo',
     goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
     needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
+    kit: ['radio_beacon', 'solar_small', 'antenna_basic', 'small'],
     milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
   },
   living_being: {
@@ -954,6 +981,7 @@ const MISSIONS = {
     orbit: 'leo',
     goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
     needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
+    kit: ['life_support', 'solar_large', 'radio_beacon', 'antenna_basic', 'small'],
     milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
   },
   weather_watch: {
@@ -963,6 +991,7 @@ const MISSIONS = {
     orbit: 'geo',
     goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
     needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
+    kit: ['camera', 'radio_beacon', 'antenna_dish', 'solar_large', 'medium'],
     milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
   },
   lunar_probe: {
@@ -972,6 +1001,7 @@ const MISSIONS = {
     orbit: 'moon',
     goal: 'Chegar à Lua e enviar dados científicos de lá.',
     needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
+    kit: ['spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
     milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
   },
   space_station: {
@@ -981,6 +1011,7 @@ const MISSIONS = {
     orbit: 'leo',
     goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
     needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
+    kit: ['life_support', 'camera', 'thruster', 'antenna_basic', 'solar_large', 'medium'],
     milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
   },
   crewed_moon: {
@@ -990,6 +1021,7 @@ const MISSIONS = {
     orbit: 'moon',
     goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
     needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
+    kit: ['life_support', 'spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
     extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
     milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
   },
@@ -1043,7 +1075,7 @@ function checkDesign(player, modifiers = {}) {
 
   add('power', t.powerBalance >= 0,
     `Energia: gera ${t.powerGen}, consome ${t.powerUse}. Sobra ${t.powerBalance}.`,
-    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione painel solar ou bateria, ou remova instrumentos.`);
+    `Energia insuficiente: gera ${t.powerGen}, consome ${t.powerUse}. Adicione geração de energia (painel solar) ou remova instrumentos.`);
 
   add('comms', t.commsEffective >= t.data,
     `Comunicação ${t.commsEffective} dá conta dos ${t.data} de dados gerados.`,
@@ -1063,7 +1095,7 @@ function checkDesign(player, modifiers = {}) {
     const lifetime = t.lifetime + (modifiers.lifetimeDelta || 0);
     add('lifetime', lifetime >= mission.needs.lifetime,
       `Vida útil ${lifetime} ano(s): atende aos ${mission.needs.lifetime} exigidos.`,
-      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} propulsor de manutenção ou bateria estendem a vida.`);
+      `Vida útil ${lifetime} ano(s), abaixo dos ${mission.needs.lifetime} que a missão exige.${orbit && orbit.baseLifetime <= 2 ? ` A ${orbit.name} decai rápido pelo atrito da atmosfera;` : ''} peças como o propulsor de manutenção ou a bateria estendem a vida, se você já as descobriu.`);
   }
 
   // `modifiers.launched`: avaliação depois do voo, o lançamento já foi pago.
@@ -1651,7 +1683,7 @@ __mods["src/sim/actions.js"] = (() => {
 //   3. Passa a vez. No fim de cada rodada confere quem completou a escada e o limite de 1969.
 const { createPlayer, currentPlayer, pushLog, emptySpacecraft, humans, SANDBOX_FUNDS, SANDBOX_TECH, YEARLY_BUDGET, TECH_PER_YEAR, BAILOUT_FUNDS, BAILOUT_TECH_COST, BAILOUT_LIMIT, SPY_COST } = __mods["src/sim/state.js"];
 const { TILES, rollDie, movePlayer, applyTile } = __mods["src/board/board.js"];
-const { CATALOG, priceFor, isLocked, requiredTech } = __mods["src/sim/resources.js"];
+const { CATALOG, priceFor, isLocked, requiredTech, isDiscovered, discover, undiscoveredItems, allDiscoverableIds, nameOf } = __mods["src/sim/resources.js"];
 const { checkDesign, simulate } = __mods["src/sim/simulate.js"];
 const { flightPlan, stageRisk, stageOptions, flyer, describeRisk, pct } = __mods["src/sim/flight.js"];
 const { ladderProgress } = __mods["src/sim/progress.js"];
@@ -1688,7 +1720,7 @@ function startGame(state, setup, options = {}) {
   state.lastRoll = null;
 
   if (state.sandbox) {
-    state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; });
+    state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; p.unlocked = allDiscoverableIds(); });
     state.screen = 'workshop';
     pushLog(state, 'Modo sandbox: verba livre, tecnologia liberada, sem tabuleiro. Explore os trade-offs à vontade.');
     return null;
@@ -1700,6 +1732,7 @@ function startGame(state, setup, options = {}) {
 
   pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
   state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
+  state.players.filter((p) => !p.bot).forEach((p) => setMission(state, p, p.missionId)); // kit do 1º degrau
   startTurn(state);
   state.screen = humans(state).length > 1 ? 'handoff' : 'board';
   return null;
@@ -1711,6 +1744,27 @@ function assignSide(p, sideId) {
   p.launcherTech = side.launcherTech;
   p.funds += side.startFunds;
   p.missionId = side.ladder[0];
+}
+
+// Muda a missão atual (o degrau da escada). No jogo normal revela o kit do degrau (as peças mínimas
+// para fechar o projeto) e já deixa a órbita da missão escolhida, que não é decisão do jogador.
+function setMission(state, p, missionId) {
+  p.missionId = missionId;
+  if (!missionId || state.sandbox) return;
+  const mission = MISSIONS[missionId];
+  const fresh = discover(p, mission.kit || []);
+  p.spacecraft.orbitId = mission.orbit;
+  if (fresh.length) pushLog(state, `${p.name}: o degrau "${mission.name}" liberou ${fresh.map(nameOf).join(', ')}.`, p.id);
+}
+
+// Descobre até `count` peças ainda escondidas que passem em `accept` (sorteadas).
+function revealRandom(state, p, count, rng, accept = () => true) {
+  const pool = undiscoveredItems(p).filter(accept);
+  const picked = [];
+  while (picked.length < count && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  if (!picked.length) return;
+  discover(p, picked.map((item) => item.id));
+  pushLog(state, `${p.name} descobriu: ${picked.map((item) => item.name).join(', ')}.`, p.id);
 }
 
 // Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
@@ -1742,6 +1796,17 @@ function startTurn(state) {
     p.funds += funds;
     p.tech += tech;
     pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+    // A pesquisa libera a peça mais simples que o nível de tecnologia já alcança (ninguém fica travado).
+    // No 1º ano não: o jogador começa só com o kit do 1º degrau, para o turno 1 não ter excesso de opções.
+    const next = state.round > 1
+      ? undiscoveredItems(p)
+        .filter((item) => requiredTech(p, item) <= p.tech)
+        .sort((a, b) => a.minTech - b.minTech || a.cost - b.cost)[0]
+      : null;
+    if (next) {
+      discover(p, [next.id]);
+      pushLog(state, `${p.name}: a pesquisa do ano liberou ${next.name}.`, p.id);
+    }
   }
 }
 
@@ -1848,6 +1913,10 @@ function moveBy(state, index, rng = Math.random) {
   state.lastRoll = steps;
   pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
+
+  // Descoberta de peças: a Feira mostra novidades dos fornecedores; a cooperação científica libera o que o nível alcança.
+  if (tile.type === 'shop') revealRandom(state, p, 3, rng);
+  if (tile.type === 'tech') revealRandom(state, p, 2, rng, (item) => requiredTech(p, item) <= p.tech);
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
@@ -2042,6 +2111,7 @@ function chooseMission(state, missionId) {
 function buyItem(state, itemId) {
   const p = currentPlayer(state);
   const item = CATALOG[itemId];
+  if (!isDiscovered(p, item)) return `${item.name} ainda não foi descoberta: ela aparece nas casas do tabuleiro e a cada Ano novo.`;
   if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
   const price = priceFor(p, itemId);
   if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
@@ -2069,6 +2139,7 @@ function sellItem(state, itemId) {
 function chooseLauncher(state, launcherId) {
   const p = currentPlayer(state);
   const launcher = LAUNCHERS[launcherId];
+  if (!isDiscovered(p, launcher)) return `${launcher.name} ainda não foi descoberto: ele é liberado pelo degrau da missão.`;
   if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
   p.spacecraft.launcherId = launcherId;
   checkMilestones(state, p);
@@ -2134,7 +2205,7 @@ function launch(state, rng = Math.random) {
   };
   // A oficina fica livre para montar a próxima nave (próximo degrau) enquanto esta voa.
   p.spacecraft = { ...emptySpacecraft(), launcherId: p.flight.craft.launcherId, orbitId: p.flight.craft.orbitId };
-  if (!state.sandbox) p.missionId = ladderOf(p)[p.step + 1] || null;
+  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step + 1] || null);
   p.launchedThisTurn = true;
   p.flightAdvanced = true;
   pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`, p.id);
@@ -2226,7 +2297,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
 
 // Depois do voo, a oficina volta a mirar o degrau atual (se falhou) ou o próximo (se cumpriu).
 function retarget(state, p) {
-  if (!state.sandbox) p.missionId = ladderOf(p)[p.step] || null;
+  if (!state.sandbox) setMission(state, p, ladderOf(p)[p.step] || null);
 }
 
 function failMission(state, p, stageId) {
@@ -3019,7 +3090,7 @@ const { icon } = __mods["src/ui/icons.js"];
 const { guideOn } = __mods["src/ui/prefs.js"];
 const { currentPlayer, SPY_COST } = __mods["src/sim/state.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
-const { isLocked, requiredTech } = __mods["src/sim/resources.js"];
+const { isLocked, requiredTech, isDiscovered } = __mods["src/sim/resources.js"];
 const { LAUNCHERS } = __mods["src/data/launchers.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { ORBITS } = __mods["src/data/orbits.js"];
@@ -3039,8 +3110,8 @@ function endTurnBlocker(state) {
 // Sem lançador escolhido e nenhum liberado: explica que falta tecnologia e como ganhar.
 function noLauncherYet(player) {
   if (player.spacecraft.launcherId) return null;
-  const all = Object.values(LAUNCHERS);
-  if (!all.every((l) => isLocked(player, l))) return null;
+  const all = Object.values(LAUNCHERS).filter((l) => isDiscovered(player, l));
+  if (!all.length || !all.every((l) => isLocked(player, l))) return null;
   const need = Math.min(...all.map((l) => requiredTech(player, l)));
   return {
     title: 'Nenhum foguete liberado ainda',
@@ -3068,7 +3139,7 @@ function nextStep(state, screen) {
       return { title: 'Escolha um dos dados', text: 'Olhe as casas à frente do seu peão e escolha o dado que para na melhor casa para você agora.', target: 'die' };
     }
     if (!p.rolled) {
-      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
+      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, peças novas, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
     }
     const pending = state.pendingTile;
     if (pending?.kind === 'build') {
@@ -3096,7 +3167,7 @@ function nextStep(state, screen) {
       const fail = firstHardFailure(p);
       return {
         title: `Monte a nave: ${mission.name}`,
-        text: fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.',
+        text: `${fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.'} Não precisa montar tudo agora: andar pelo tabuleiro rende verba e peças novas.`,
         target: 'workshop',
       };
     }
@@ -3614,7 +3685,7 @@ const { LAUNCHERS } = __mods["src/data/launchers.js"];
 const { ORBITS } = __mods["src/data/orbits.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
-const { priceFor, isLocked, requiredTech, discountFor } = __mods["src/sim/resources.js"];
+const { priceFor, isLocked, requiredTech, discountFor, isDiscovered, undiscoveredItems } = __mods["src/sim/resources.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
 const { missionRisk, describeRisk, pct } = __mods["src/sim/flight.js"];
 
@@ -3705,6 +3776,12 @@ function workshopScreen(state, actions) {
       : !state.sandbox && p.launchedThisTurn ? 'Só um lançamento por turno.'
         : null;
   const discount = discountFor(p);
+  // Só aparece o que o jogador já descobriu (sim/resources.js); o resto é revelado pelo tabuleiro.
+  const known = (items) => Object.values(items).filter((item) => isDiscovered(p, item));
+  const launchers = Object.fromEntries(known(LAUNCHERS).map((l) => [l.id, l]));
+  const instruments = known(INSTRUMENTS);
+  const parts = known(PARTS);
+  const moreToDiscover = !state.sandbox && undiscoveredItems(p).length > 0;
 
   return el('section', { class: 'screen workshop' }, [
     hud(state, p, 'workshop', actions),
@@ -3715,14 +3792,18 @@ function workshopScreen(state, actions) {
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
-        choice('Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
+        choice('Veículo de lançamento', launchers, p.spacecraft.launcherId, actions.chooseLauncher,
           (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
-        choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-          (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit')),
-        el('h2', {}, 'Instrumentos científicos'),
-        el('div', { class: 'cards' }, Object.values(INSTRUMENTS).map((i) => itemCard(p, i, actions))),
-        el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida'),
-        el('div', { class: 'cards' }, Object.values(PARTS).map((i) => itemCard(p, i, actions))),
+        // No jogo normal a órbita é a da missão e já vem escolhida (ver setMission em sim/actions.js).
+        state.sandbox
+          ? choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
+            (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit'))
+          : null,
+        instruments.length ? el('h2', {}, 'Instrumentos científicos') : null,
+        instruments.length ? el('div', { class: 'cards' }, instruments.map((i) => itemCard(p, i, actions))) : null,
+        parts.length ? el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida') : null,
+        parts.length ? el('div', { class: 'cards' }, parts.map((i) => itemCard(p, i, actions))) : null,
+        moreToDiscover ? el('p', { class: 'hint with-icon' }, [icon('cart', { size: 16 }), 'Há mais peças para descobrir: na Feira de fornecedores, no Ano Geofísico Internacional e a cada Ano novo.']) : null,
       ]),
       el('aside', { class: 'side' }, [
         el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
