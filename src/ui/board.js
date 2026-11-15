@@ -2,7 +2,7 @@
 // Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
 // e o "desde o seu último turno" vêm de ui/summary.js.
 import {
-  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS,
+  el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, sidePanel, MISSION_ICONS, simpleUi,
 } from './components.js';
 import { icon, dieFace } from './icons.js';
 import { guideCard, hl } from './guide.js';
@@ -12,6 +12,7 @@ import { currentPlayer, SPY_COST } from '../sim/state.js';
 import { checkDesign } from '../sim/simulate.js';
 import { useFeeFor } from '../sim/actions.js';
 import { MISSIONS } from '../data/missions.js';
+import { ladderOf } from '../data/sides.js';
 import { BUILDINGS, upgradeCost } from '../data/buildings.js';
 import { FLIGHT_EVENTS } from '../data/events.js';
 import { STAGES } from '../data/stages.js';
@@ -21,6 +22,23 @@ const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask'
 // Anel 5×5 no sentido horário a partir do canto superior esquerdo (o miolo 3×3 fica para os dados).
 const RING_POS = ['1/1', '1/2', '1/3', '1/4', '1/5', '2/5', '3/5', '4/5', '5/5', '5/4', '5/3', '5/2', '5/1', '4/1', '3/1', '2/1'];
 let lastRollSeen = null;
+
+// Legenda curta da casa para a interface enxuta do começo. O que decide a escolha do dado (quanto dá)
+// continua; o texto longo vai só para o balão (title), que sempre tem a legenda completa.
+function shortSub(state, t) {
+  switch (t.type) {
+    case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
+    case 'start': return `+${t.funds} ao passar`;
+    case 'event': return 'sorteio';
+    case 'tech': return `+${t.tech} tecnologia`;
+    case 'shop': return 'peças novas';
+    case 'spy': return 'ver um rival';
+    case 'repair': return '+1 proteção';
+    case 'catchup': return 'ajuda a quem está atrás';
+    case 'lot': return state.lots[t.id] ? tileSub(state, t) : 'construir';
+    default: return '';
+  }
+}
 
 function tileSub(state, t) {
   switch (t.type) {
@@ -124,7 +142,7 @@ function centerPanel(state, p, actions, rolling) {
 }
 
 // Bloco "o que fazer agora" (fase 2 do turno), conforme a situação da nave.
-function missionPanel(state, p, actions) {
+function missionPanel(state, p, actions, simple = false) {
   if (p.flight) {
     const f = p.flight;
     const next = STAGES[f.plan[f.stageIndex]];
@@ -143,6 +161,8 @@ function missionPanel(state, p, actions) {
   }
   return sidePanel('mission', MISSION_ICONS[p.missionId] || 'rocket', MISSIONS[p.missionId].name, [
     el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
+    // Interface enxuta: a vitória dita em uma frase, já que a aba da escada só aparece depois.
+    simple ? el('p', { class: 'hint' }, `Objetivo da partida: cumprir os ${ladderOf(p).length} degraus da sua escada antes do rival.`) : null,
     milestoneTrack(p),
   ], { hint: 'Missão atual' });
 }
@@ -171,6 +191,7 @@ export function boardScreen(state, actions) {
   const design = p.missionId ? checkDesign(p) : { ok: false };
   const rolling = state.lastRoll != null && state.lastRoll !== lastRollSeen && p.rolled;
   if (p.rolled) lastRollSeen = state.lastRoll;
+  const simple = simpleUi(state, p);
 
   const tiles = TILES.map((t, i) => {
     const [r, c] = RING_POS[i].split('/');
@@ -178,7 +199,7 @@ export function boardScreen(state, actions) {
     return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: `${t.label}: ${tileSub(state, t)}` }, [
       el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
       el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 20 })),
-      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, tileSub(state, t))]),
+      el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, simple ? shortSub(state, t) : tileSub(state, t))]),
     ]);
   });
 
@@ -192,6 +213,22 @@ export function boardScreen(state, actions) {
     : state.pendingDilemma ? 'Resolva a carta de dilema para poder passar a vez.'
       : mustAdvance ? 'Avance o voo para poder passar a vez.' : '';
 
+  // Interface enxuta: um passo de cada vez. Rolar primeiro; Oficina e Passar a vez só depois de andar;
+  // Lançar só quando o projeto fecha. Com a nave em voo aparece tudo (o jogador já conhece o turno).
+  const showWorkshop = !simple || p.rolled || Boolean(p.flight);
+  const showLaunch = !simple || design.ok || Boolean(p.flight) || p.launchedThisTurn;
+  const showEnd = !simple || p.rolled;
+  const actionBar = [
+    showWorkshop && button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: hl(state, 'board', 'workshop') }),
+    showLaunch && button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: hl(state, 'board', 'launch') }),
+    showEnd && button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `ghost ${hl(state, 'board', 'end')}`, title: blockedReason }),
+  ].filter(Boolean);
+
+  // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.
+  const showLadder = !simple;
+  const showRivals = !simple || Object.keys(p.intel).length > 0 || state.round > 3;
+  const showAgency = !simple || Object.values(p.buildings).some(Boolean);
+
   return el('section', { class: 'screen board-screen' }, [
     hud(state, p, 'board', actions),
     guideCard(state, 'board'),
@@ -200,18 +237,14 @@ export function boardScreen(state, actions) {
         sinceCard(state),
         turnSteps(state, p, design),
         el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
-        el('div', { class: 'row action-bar' }, [
-          button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: hl(state, 'board', 'workshop') }),
-          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: hl(state, 'board', 'launch') }),
-          button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `ghost ${hl(state, 'board', 'end')}`, title: blockedReason }),
-        ]),
-        blocked && blockedReason ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
+        actionBar.length ? el('div', { class: 'row action-bar' }, actionBar) : null,
+        blocked && blockedReason && showEnd ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
       ]),
       el('div', { class: 'side-stack' }, [
-        missionPanel(state, p, actions),
-        ladderPanel(state, p),
-        rivalsPanel(state, p),
-        agencyPanel(state, p, actions),
+        missionPanel(state, p, actions, simple),
+        showLadder ? ladderPanel(state, p) : null,
+        showRivals ? rivalsPanel(state, p) : null,
+        showAgency ? agencyPanel(state, p, actions) : null,
         logPanel(state, p),
       ]),
     ]),

@@ -148,6 +148,13 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
 - **Dica nova para o jogador**: em `nextStep()` (`src/ui/guide.js`), que diz o próximo passo de
   cada tela e qual botão destacar (`hl(state, tela, chave)`). O jogador liga e desliga as dicas
   no topo da tela; a preferência fica no navegador (`src/ui/prefs.js`).
+- **Interface enxuta do começo**: `simpleUi(state, player)` (`src/ui/components.js`) vale enquanto o
+  jogador não cumpriu nenhum degrau, com as dicas ligadas e fora do sandbox. Nela o tabuleiro mostra
+  só a missão e o diário na lateral, legendas curtas nas casas (a completa fica no balão), nenhum botão
+  antes de rolar (depois aparecem Oficina e Passar a vez; Lançar só com o projeto pronto) e o
+  cabeçalho sem a trilha de etapas. Rivais e Sua agência surgem ao usar o espião ou construir. Desligar
+  as dicas ou cumprir o 1º degrau mostra tudo. Só muda o que aparece, nenhuma regra depende disso.
+  Para esconder algo mais no começo, use `simpleUi` na tela; teste em `test/ui-simple.test.mjs`.
 - **Resumos**: `src/ui/summary.js` monta o "Resumo do seu turno" (ao passar a vez) e o "Desde o
   seu último turno" comparando fotos da agência. Só mostra o que é público ou do próprio
   jogador (rival escondido).

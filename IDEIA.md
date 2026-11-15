@@ -559,3 +559,21 @@ medidores) e a verba cobria o primeiro satélite sem esforço. Era informação 
 - Os EUA exigem tecnologia 2 para o foguete pequeno e começam com 1 (a URSS lança no turno 1), e a
   verba menor deixa os EUA com quase o dobro de dinheiro.
 - Se o início ainda ficar fácil, cortar a verba mais (10 inicial e 10 por ano).
+
+## 18. Interface enxuta no começo (Marcus, 15/11)
+Problema: ao abrir o jogo pela primeira vez, o jogador via de uma vez a ordem dos turnos, o tabuleiro com
+16 legendas, o degrau, a escada, o rival, a agência, o diário, 4 botões e a trilha Tabuleiro / Oficina /
+Voo / Relatório. Na tela do tabuleiro eram cerca de 430 palavras e 5 abas laterais.
+
+Decisão: **mostrar a informação quando ela passa a importar**, o mesmo princípio da descoberta de peças.
+- Vale no 1º degrau, com as dicas ligadas. Cumprir o 1º degrau ou desligar as dicas mostra tudo.
+- Lateral: só a missão atual (com o objetivo da partida em uma frase) e o diário. A escada, os rivais
+  e a agência aparecem quando o jogador usa o espião, constrói algo ou avança.
+- Turno: só "Rolar dados" antes de andar; depois Oficina e Passar a vez; Lançar quando o projeto fecha.
+- Casas: legenda curta, mantendo o valor que decide o dado (+10 verba, +1 tecnologia). O texto
+  completo continua no balão.
+- Cabeçalho: sem a trilha de etapas e sem "rodada 1/3" (fica no balão do ano).
+Resultado medido na tela do tabuleiro no turno 1: 5 botões para 2, 5 abas para 2, 429 palavras para 258.
+
+Ainda por avaliar: a oficina (7 medidores e a checagem do projeto) e o relatório. Teste com alguém que
+nunca viu o jogo antes de concluir que está simples o bastante.

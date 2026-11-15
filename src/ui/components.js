@@ -54,9 +54,17 @@ export function avatar(player, size) {
 export const sideLabel = (p) => SIDES[p.side]?.name || '';
 export const sideBadge = (p) => (SIDES[p.side] ? [icon(SIDES[p.side].icon, { size: 15 }), SIDES[p.side].name] : '');
 
+// Interface enxuta no começo (menos informação de uma vez): vale enquanto o jogador ainda não cumpriu
+// nenhum degrau e deixou as dicas ligadas. Cumprir o 1º degrau, desligar as dicas ou jogar o sandbox
+// mostra tudo. Só muda o que aparece; nenhuma regra do jogo depende disso.
+export function simpleUi(state, player) {
+  return !state.sandbox && guideOn() && player.step === 0 && player.completed.length === 0;
+}
+
 // Barra superior: ano, quem joga, lado, degrau, verba, tecnologia e em que etapa do ciclo está.
 // Com `actions`, mostra também o botão que liga e desliga as dicas.
 export function hud(state, player, step, actions = null) {
+  const simple = simpleUi(state, player);
   const mission = MISSIONS[player.flight?.missionId || player.missionId];
   const prog = ladderProgress(player);
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
@@ -64,7 +72,7 @@ export function hud(state, player, step, actions = null) {
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   return el('div', { class: 'hud' }, [
     state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), 'sandbox'])
-      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
+      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), simple ? null : el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
     el('div', { class: 'who' }, [avatar(player), player.name]),
     player.side ? el('span', { class: 'chip' }, sideBadge(player)) : null,
     el('span', { class: 'chip' }, mission
@@ -74,7 +82,7 @@ export function hud(state, player, step, actions = null) {
     state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, [icon('chip', { size: 15, label: 'Tecnologia' }), 'tec', el('span', { class: 'num' }, player.tech)]),
     player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, [icon('shield', { size: 15, label: 'Proteções' }), el('span', { class: 'num' }, player.shields)]) : null,
     el('span', { class: 'spacer' }),
-    el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
+    simple ? null : el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
     actions ? guideToggle(actions) : null,
   ]);
 }
@@ -84,7 +92,7 @@ export function guideToggle(actions) {
   const on = guideOn();
   const b = button([icon('compass', { size: 16 }), on ? 'Dicas: ligadas' : 'Dicas: desligadas'], () => actions.toggleGuide(), {
     class: `small ghost guide-toggle ${on ? 'on' : ''}`,
-    title: on ? 'Desligar as orientações' : 'Ligar as orientações',
+    title: on ? 'Dicas ligadas: orientação passo a passo e interface enxuta no começo. Desligue para ver tudo.' : 'Ligar as orientações e a interface enxuta no começo',
   });
   b.setAttribute('aria-pressed', String(on));
   return b;
