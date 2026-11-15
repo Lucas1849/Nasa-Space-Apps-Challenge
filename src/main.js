@@ -13,6 +13,7 @@ import { workshopScreen } from './ui/workshop.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 import { floatDelta, countUp } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
+import { toggleLang } from './i18n/index.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -196,6 +197,8 @@ const actions = {
   endTurn: netWrap('endTurn'),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
+  // Troca o idioma (pt/en) e redesenha tudo. Puramente local, nunca viaja pela rede.
+  toggleLang: () => { toggleLang(); render(); },
   newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
   // Sala online (ver docs/PLANO-SALAS.md). A tela só chama estas ações; erros viram
   // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
@@ -244,6 +247,7 @@ const spectatorActions = {
   openWorkshop: () => { spectateView = 'workshop'; render(); },
   go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
   toggleGuide: () => { setGuide(!guideOn()); render(); },
+  toggleLang: () => { toggleLang(); render(); },
   buyItem: blockedInSpectate,
   sellItem: blockedInSpectate,
   chooseLauncher: blockedInSpectate,

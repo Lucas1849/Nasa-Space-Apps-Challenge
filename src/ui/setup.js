@@ -5,9 +5,10 @@
 //    queira ler as regras. O cartão escolhe COMO jogar (docs/PLANO-SALAS.md, Fase 2): sozinho contra o bot,
 //    no mesmo aparelho (hot-seat) ou online com link; o online cria a sala na hora e segue para o lobby.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
-import { el, button, themeToggle, openRulesModal } from './components.js';
+import { el, button, themeToggle, langToggle, openRulesModal } from './components.js';
 import { icon } from './icons.js';
 import { guideOn, themeOf, toggleTheme } from './prefs.js';
+import { getLang, setLang } from '../i18n/index.js';
 import { createAsciiCanvas } from './art.js';
 import { START_YEAR, END_YEAR } from '../data/history.js';
 
@@ -369,6 +370,7 @@ function renderConfigView(actions, backToSplash) {
       button([icon('arrowLeft', { size: 15 }), 'Menu'], backToSplash, { class: 'small ghost' }),
       el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
         button([icon('bulb', { size: 15 }), 'Como funciona'], openRulesModal, { class: 'small ghost' }),
+        langToggle(actions),
         themeToggle(),
       ]),
     ]),
@@ -379,7 +381,7 @@ function renderConfigView(actions, backToSplash) {
 }
 
 // Menu principal (entre a capa e a Nova Partida), como nos jogos: jogar, regras, configurações, créditos.
-function renderMainMenu(go) {
+function renderMainMenu(actions, go) {
   // Lista secundária: ícone, nome e uma seta que aparece no foco/hover (o que é clicável fica evidente).
   const item = (iconName, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
     icon(iconName, { size: 18 }),
@@ -390,7 +392,7 @@ function renderMainMenu(go) {
     createSplashStarfield(),
     el('header', { class: 'setup-clean-bar main-menu-bar' }, [
       button([icon('arrowLeft', { size: 15 }), 'Voltar à capa'], () => go('splash'), { class: 'small ghost' }),
-      themeToggle(),
+      el('div', { class: 'row', style: 'margin:0;gap:8px' }, [langToggle(actions), themeToggle()]),
     ]),
     el('div', { class: 'main-menu-box' }, [
       el('div', { class: 'main-menu-head' }, [
@@ -422,12 +424,15 @@ function renderSettings(actions, go) {
   const themeSeg = el('div', {});
   const drawTheme = () => themeSeg.replaceChildren(segmented('Tema', [{ value: 'claro', label: 'Claro' }, { value: 'escuro', label: 'Escuro' }], themeOf(), (v) => { if (v !== themeOf()) toggleTheme(); drawTheme(); }));
   drawTheme();
+  // Idioma: ao trocar, re-monta a tela de configurações já no novo idioma (go re-renderiza a view atual).
+  const langSeg = segmented('Idioma', [{ value: 'pt', label: 'Português' }, { value: 'en', label: 'English' }], getLang(), (v) => { if (v !== getLang()) { setLang(v); go('settings'); } });
   const sw = el('button', {
     type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': 'Dicas passo a passo',
     onclick: () => { const on = !guideOn(); actions.setGuide(on); sw.setAttribute('aria-checked', String(on)); },
   });
   return menuSheet('Configurações', [
     el('div', { class: 'setup-group' }, [
+      el('div', { class: 'setup-row' }, [rowLabel('Idioma', 'Português do Brasil ou inglês'), langSeg]),
       el('div', { class: 'setup-row' }, [rowLabel('Tema', 'Papel claro ou grafite escuro'), themeSeg]),
       el('div', { class: 'setup-row' }, [rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'), sw]),
     ]),
@@ -464,7 +469,7 @@ export function setupScreen(state, actions) {
     else if (view === 'config') host.appendChild(renderConfigView(actions, () => go('menu')));
     else if (view === 'settings') host.appendChild(renderSettings(actions, go));
     else if (view === 'credits') host.appendChild(renderCredits(go));
-    else host.appendChild(renderMainMenu(go));
+    else host.appendChild(renderMainMenu(actions, go));
   };
   mount();
   return host;

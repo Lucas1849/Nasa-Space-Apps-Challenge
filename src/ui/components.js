@@ -15,6 +15,7 @@ import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
 import { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } from './prefs.js';
+import { t, getLang } from '../i18n/index.js';
 
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -128,13 +129,17 @@ function sideRail(state, player, step, actions, steps, names, simple) {
   guide.setAttribute('aria-pressed', String(guideOn()));
   const theme = themeToggle();
   theme.className = 'rail-item theme-toggle';
-  return el('nav', { class: 'side-rail', 'aria-label': 'Navegação da partida' }, [
+  const en = getLang() === 'en';
+  const langItem = item('globe', en ? 'EN' : 'PT', en ? t('lang.switchToPt') : t('lang.switchToEn'), () => actions.toggleLang(), 'lang-toggle');
+  langItem.setAttribute('aria-label', en ? t('lang.switchToPt') : t('lang.switchToEn'));
+  return el('nav', { class: 'side-rail', 'aria-label': t('rail.nav') }, [
     el('span', { class: 'rail-brand', 'aria-hidden': 'true' }, icon('rocket', { size: 20 })),
     // a classe `steps` (trilha de etapas) só entra fora da interface enxuta (test/ui-simple.test.mjs)
     el('div', { class: simple ? 'rail-nav' : 'rail-nav steps' }, nav),
     el('span', { class: 'rail-spacer' }),
     item('bulb', 'Regras', 'Como funciona: regras, lados e glossário', () => openRulesModal()),
     guide,
+    langItem,
     theme,
     item('arrowLeft', 'Sair', 'Sair da partida e voltar à tela inicial', () => openExitDialog(actions), 'rail-exit'),
   ]);
@@ -211,6 +216,18 @@ export function themeToggle() {
     onclick: () => { toggleTheme(); renderContent(b); },
   });
   renderContent(b);
+  return b;
+}
+
+// Botão de idioma: alterna entre português e inglês. Precisa de `actions.toggleLang` (em main.js),
+// porque trocar o idioma redesenha a tela inteira (todo texto muda), não só o botão.
+export function langToggle(actions) {
+  const en = getLang() === 'en';
+  const b = button([icon('globe', { size: 16 }), en ? 'EN' : 'PT'], () => actions.toggleLang(), {
+    class: `small ghost lang-toggle ${en ? 'en' : ''}`,
+    title: en ? t('lang.switchToPt') : t('lang.switchToEn'),
+  });
+  b.setAttribute('aria-label', en ? t('lang.switchToPt') : t('lang.switchToEn'));
   return b;
 }
 
