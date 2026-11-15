@@ -7,7 +7,7 @@ import { setGuide, guideOn } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
 import { createNetworkController } from './net/sync.js';
-import { yearOverlayKey, yearOverlayNode } from './ui/yearOverlay.js';
+import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -173,14 +173,14 @@ function showLaunchOverlay() {
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
 
-// Calendário da virada de ano (ui/yearOverlay.js): ~2,3 s, some sozinho, um clique pula, sem confirmar.
+// Calendário da virada de ano (ui/yearOverlay.js): ~6 s, some sozinho, um clique pula, sem confirmar.
 // Com movimento reduzido mostra só o ano novo e os ganhos, sem o ano antigo saindo.
 function showYearOverlay(yc) {
   document.querySelector('.year-overlay')?.remove();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const node = yearOverlayNode(yc, { reduced });
   document.body.appendChild(node);
-  const timer = setTimeout(() => node.remove(), reduced ? 1800 : 2300);
+  const timer = setTimeout(() => node.remove(), reduced ? YEAR_OVERLAY_REDUCED_MS : YEAR_OVERLAY_MS);
   node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
 

@@ -540,16 +540,17 @@ button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px 
 @media (max-width: 900px) { .building-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- Virada de ano: calendário no meio da tela e os ganhos do ano ---- */
-.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .25s ease, yearFadeOut .35s ease 1.95s forwards; }
-.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .35s ease both; }
+.year-overlay { cursor: pointer; position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(3, 6, 15, .72); animation: fadeIn .3s ease, yearFadeOut .5s ease 5.5s forwards; } /* 5.5s + .5s = YEAR_OVERLAY_MS (ui/yearOverlay.js) */
+.year-card { display: grid; justify-items: center; gap: 12px; padding: 26px 34px; border-radius: var(--radius); background: #0e1530; border: 1px solid var(--line); box-shadow: var(--shadow); animation: yearCardIn .5s ease both; }
+.year-overlay .year-skip { margin-top: 4px; opacity: .8; }
 .year-calendar { width: 190px; border-radius: 14px; overflow: hidden; background: #f4f6ff; color: #0a1030; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .year-calendar .cal-top { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; background: var(--danger); color: #fff; font-size: .8rem; font-weight: 700; letter-spacing: .2em; }
 .year-calendar .cal-digits { position: relative; height: 92px; overflow: hidden; display: grid; place-items: center; font-family: var(--mono); font-size: 3.6rem; font-weight: 800; }
 .year-calendar .year-old, .year-calendar .year-new { position: absolute; }
-.year-calendar .year-old { animation: yearOut .45s ease .55s forwards; }
-.year-calendar .year-new { animation: yearIn .45s ease .55s both; }
+.year-calendar .year-old { animation: yearOut .7s ease .9s forwards; }
+.year-calendar .year-new { animation: yearIn .7s ease .9s both; }
 .year-overlay .gains { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 40px; }
-.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .4s ease both; }
+.year-overlay .gain { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; font-size: .95rem; border: 1px solid var(--line); animation: gainPop .6s ease both; }
 .year-overlay .gain.up { color: var(--ok); border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.1); }
 .year-overlay .gain.down { color: var(--danger); border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.1); }
 .year-overlay .gain.part { color: var(--accent); border-color: rgba(56,189,248,.45); background: rgba(56,189,248,.1); }
@@ -4476,6 +4477,14 @@ __mods["src/ui/yearOverlay.js"] = (() => {
 const { el } = __mods["src/ui/components.js"];
 const { icon } = __mods["src/ui/icons.js"];
 
+// Tempos da animação, devagar o bastante para ler (o calendário vira primeiro e os ganhos entram um a um).
+// Se mudar a duração total, ajuste também o `yearFadeOut` do `.year-overlay` em styles/main.css
+// (o atraso dele = YEAR_OVERLAY_MS menos o tempo de sumir).
+const YEAR_OVERLAY_MS = 6000;         // some sozinho depois disso (um clique pula antes)
+const YEAR_OVERLAY_REDUCED_MS = 4500; // movimento reduzido: sem animação, só o tempo de leitura
+const GAIN_START_S = 1.9;                    // 1º ganho entra depois de o calendário virar
+const GAIN_STEP_S = 0.45;                    // intervalo entre um ganho e o seguinte
+
 // Chave que identifica uma virada ainda não mostrada, ou null se não deve aparecer agora.
 // `shownKey` é a última chave já animada (guardada em main.js).
 function yearOverlayKey(state, shownKey = null) {
@@ -4512,11 +4521,11 @@ function yearOverlayNode(yc, { reduced = false } = {}) {
   const gains = [
     { cls: 'funds', ic: 'coins', label: 'Verba', value: yc.funds, title: fundsOrigin(yc) },
     { cls: 'tech', ic: 'chip', label: 'Tecnologia', value: yc.tech, title: techOrigin(yc) },
-  ].filter((g) => g.value !== 0).map((g, i) => el('span', { class: `gain ${g.cls} ${g.value > 0 ? 'up' : 'down'}`, title: g.title, style: `animation-delay:${0.95 + i * 0.18}s` }, [
+  ].filter((g) => g.value !== 0).map((g, i) => el('span', { class: `gain ${g.cls} ${g.value > 0 ? 'up' : 'down'}`, title: g.title, style: `animation-delay:${GAIN_START_S + i * GAIN_STEP_S}s` }, [
     icon(g.ic, { size: 18 }), `${g.label} `, el('strong', { class: 'num' }, `${g.value > 0 ? '+' : ''}${g.value}`),
   ]));
   if (yc.part) {
-    gains.push(el('span', { class: 'gain part', title: 'A pesquisa do ano liberou uma peça nova na oficina.', style: `animation-delay:${0.95 + gains.length * 0.18}s` }, [
+    gains.push(el('span', { class: 'gain part', title: 'A pesquisa do ano liberou uma peça nova na oficina.', style: `animation-delay:${GAIN_START_S + gains.length * GAIN_STEP_S}s` }, [
       icon('flask', { size: 18 }), 'Peça liberada ', el('strong', {}, yc.part),
     ]));
   }
@@ -4527,11 +4536,12 @@ function yearOverlayNode(yc, { reduced = false } = {}) {
       calendar,
       el('p', { class: 'hint' }, `Nível de tecnologia ${yc.techLevel}`),
       el('div', { class: 'gains' }, gains),
+      el('small', { class: 'hint year-skip' }, 'Clique para continuar'),
     ]),
   ]);
 }
 
-return { yearOverlayKey, yearOverlayNode };
+return { YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS, yearOverlayKey, yearOverlayNode };
 })();
 
 // ---- src/main.js
@@ -4544,7 +4554,7 @@ const { rocketSvg } = __mods["src/ui/icons.js"];
 const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
 const { endTurnBlocker } = __mods["src/ui/guide.js"];
 const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
-const { yearOverlayKey, yearOverlayNode } = __mods["src/ui/yearOverlay.js"];
+const { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } = __mods["src/ui/yearOverlay.js"];
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -4646,14 +4656,14 @@ function showLaunchOverlay() {
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
 
-// Calendário da virada de ano (ui/yearOverlay.js): ~2,3 s, some sozinho, um clique pula, sem confirmar.
+// Calendário da virada de ano (ui/yearOverlay.js): ~6 s, some sozinho, um clique pula, sem confirmar.
 // Com movimento reduzido mostra só o ano novo e os ganhos, sem o ano antigo saindo.
 function showYearOverlay(yc) {
   document.querySelector('.year-overlay')?.remove();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const node = yearOverlayNode(yc, { reduced });
   document.body.appendChild(node);
-  const timer = setTimeout(() => node.remove(), reduced ? 1800 : 2300);
+  const timer = setTimeout(() => node.remove(), reduced ? YEAR_OVERLAY_REDUCED_MS : YEAR_OVERLAY_MS);
   node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
 
