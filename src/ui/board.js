@@ -24,6 +24,7 @@ import { FLIGHT_EVENTS } from '../data/events.js';
 import { STAGES } from '../data/stages.js';
 import { DILEMMAS } from '../data/dilemmas.js';
 import { yearOf, ROUNDS_PER_YEAR } from '../data/history.js';
+import { t } from '../i18n/index.js';
 
 const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask', shop: 'cart', workshop: 'wrench', lot: 'crane', spy: 'eye', repair: 'wrench', catchup: 'lifebuoy' };
 // Anel quadrado no sentido horário a partir do canto superior esquerdo, calculado pelo número de casas
@@ -54,38 +55,38 @@ const lastPositions = {};   // casa de cada jogador no desenho anterior (o peão
 // Nome curto na casa: o que vem antes dos dois-pontos ("Discurso", "Crise diplomática"); o completo fica no balão.
 const shortName = (t) => t.label.split(':')[0];
 
-function shortSub(state, t) {
-  switch (t.type) {
-    case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
-    case 'start': return `+${t.funds} ao passar`;
-    case 'event': return 'sorteio';
-    case 'tech': return `+${t.tech} tecnologia`;
-    case 'shop': return 'blueprints';
-    case 'workshop': return 'montar e lançar';
-    case 'spy': return 'ver um rival';
-    case 'repair': return '+1 proteção';
-    case 'catchup': return `+${t.funds} se atrás`;
-    case 'lot': return state.lots[t.id] ? tileSub(state, t) : 'construir';
+function shortSub(state, tile) {
+  switch (tile.type) {
+    case 'funds': return t('board.sub.funds', { v: `${tile.funds > 0 ? '+' : ''}${tile.funds}` });
+    case 'start': return t('board.sub.start', { n: tile.funds });
+    case 'event': return t('board.sub.eventShort');
+    case 'tech': return t('board.sub.tech', { n: tile.tech });
+    case 'shop': return t('board.sub.shopShort');
+    case 'workshop': return t('board.sub.workshopShort');
+    case 'spy': return t('board.sub.spyShort');
+    case 'repair': return t('board.sub.repair');
+    case 'catchup': return t('board.sub.catchupShort', { n: tile.funds });
+    case 'lot': return state.lots[tile.id] ? tileSub(state, tile) : t('board.sub.build');
     default: return '';
   }
 }
 
-function tileSub(state, t) {
-  switch (t.type) {
-    case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
-    case 'start': return `+${t.funds} ao passar`;
-    case 'event': return 'carta de dilema; em voo, imprevisto';
-    case 'tech': return `+${t.tech} tecnologia`;
-    case 'shop': return 'escolha blueprints e pague (a 1ª é de graça)';
-    case 'workshop': return 'aqui você compra, vende e lança a nave';
-    case 'spy': return `ver um rival: ${SPY_COST} (1 vez por ano)`;
-    case 'repair': return '+1 proteção';
-    case 'catchup': return `+${t.funds} se estiver atrás`;
+function tileSub(state, tile) {
+  switch (tile.type) {
+    case 'funds': return t('board.sub.funds', { v: `${tile.funds > 0 ? '+' : ''}${tile.funds}` });
+    case 'start': return t('board.sub.start', { n: tile.funds });
+    case 'event': return t('board.sub.event');
+    case 'tech': return t('board.sub.tech', { n: tile.tech });
+    case 'shop': return t('board.sub.shop');
+    case 'workshop': return t('board.sub.workshop');
+    case 'spy': return t('board.sub.spy', { cost: SPY_COST });
+    case 'repair': return t('board.sub.repair');
+    case 'catchup': return t('board.sub.catchup', { n: tile.funds });
     case 'lot': {
-      const lot = state.lots[t.id];
-      if (!lot) return `construir: ${upgradeCost(0)}`;
+      const lot = state.lots[tile.id];
+      if (!lot) return t('board.sub.buildCost', { cost: upgradeCost(0) });
       const owner = state.players[lot.ownerId];
-      return `${owner.name}, nível ${owner.buildings[lot.buildingId]}`;
+      return t('board.sub.lotOwned', { owner: owner.name, level: owner.buildings[lot.buildingId] });
     }
     default: return '';
   }
@@ -98,27 +99,27 @@ function tileIcon(state, t) {
 }
 
 // Ilustração vetorial estilo jogo de tabuleiro (Monopoly espacial) para cada casa
-function tileBoardArt(state, t, targetDice) {
-  const lot = state.lots[t.id];
-  const isCorner = CORNER_IDS.has(t.id);
-  const dir = STEP_DIRS[t.id];
-  const num = String(t.id).padStart(2, '0');
+function tileBoardArt(state, tile, targetDice) {
+  const lot = state.lots[tile.id];
+  const isCorner = CORNER_IDS.has(tile.id);
+  const dir = STEP_DIRS[tile.id];
+  const num = String(tile.id).padStart(2, '0');
   // Faixa do topo: o tipo real da casa (o mesmo que decide o efeito), nunca um rótulo de enfeite.
-  const BAND = { start: 'PARTIDA', event: 'DILEMA', tech: 'PESQUISA', shop: 'FORNECEDOR', workshop: 'OFICINA', spy: 'ESPIÃO', repair: 'REPAROS', catchup: 'APOIO' };
-  let bandTitle = BAND[t.type] || `CASA ${num}`;
-  if (t.type === 'funds') bandTitle = t.funds > 0 ? 'VERBA' : 'CRISE';
-  else if (t.type === 'lot') {
+  const BAND = { start: t('board.band.start'), event: t('board.band.event'), tech: t('board.band.tech'), shop: t('board.band.shop'), workshop: t('board.band.workshop'), spy: t('board.band.spy'), repair: t('board.band.repair'), catchup: t('board.band.catchup') };
+  let bandTitle = BAND[tile.type] || t('board.band.tile', { num });
+  if (tile.type === 'funds') bandTitle = tile.funds > 0 ? t('board.band.funds') : t('board.band.crisis');
+  else if (tile.type === 'lot') {
     if (lot) {
       const lvl = state.players[lot.ownerId].buildings[lot.buildingId] || 1;
-      bandTitle = `${'★'.repeat(lvl)} NV.${lvl}`;
-    } else bandTitle = 'TERRENO';
+      bandTitle = `${'★'.repeat(lvl)} ${t('board.band.level', { lvl })}`;
+    } else bandTitle = t('board.band.lot');
   }
 
   // Ícone de traço único (ui/boardArt.js), na cor da tinta da planta. Terreno com prédio mostra o prédio.
-  const art = lot ? BUILDING_ART[lot.buildingId] : TILE_ART[t.type === 'funds' && t.funds < 0 ? 'crisis' : t.type] || '';
+  const art = lot ? BUILDING_ART[lot.buildingId] : TILE_ART[tile.type === 'funds' && tile.funds < 0 ? 'crisis' : tile.type] || '';
 
   const targetBadge = targetDice
-    ? `<span class="t-target-pill">DADO +${targetDice}</span>`
+    ? `<span class="t-target-pill">${t('board.diceTarget', { n: targetDice })}</span>`
     : '';
 
   const wrap = document.createElement('div');
@@ -167,10 +168,10 @@ function boardMapLayer(state, p) {
 // O que uma oferta do fornecedor dá e custa, em uma linha para o balão.
 function offerInfo(id) {
   const it = itemOf(id);
-  if (isLauncherId(id)) return `Foguete: carga ${it.maxMass}, lançar custa ${it.cost}, alcança ${it.reach.join(', ')}. Exige tecnologia ${it.minTech}.`;
-  const gains = [it.powerGen && `+${it.powerGen} energia`, it.commsRate && `+${it.commsRate} comunicação`, it.science && `+${it.science} ciência`, it.lifetimeBonus && `+${it.lifetimeBonus} ano(s)`, it.lifeSupport && 'suporte de vida'].filter(Boolean);
-  const costs = [`${it.mass} massa`, it.power && `${it.power} energia`, it.dataRate && `${it.dataRate} dados`, `peça custa ${it.cost}`].filter(Boolean);
-  return `Ganha: ${gains.join(', ') || 'nada'}. Custa: ${costs.join(', ')}. Exige tecnologia ${it.minTech}.`;
+  if (isLauncherId(id)) return t('board.offer.launcher', { maxMass: it.maxMass, cost: it.cost, reach: it.reach.join(', '), minTech: it.minTech });
+  const gains = [it.powerGen && t('board.offer.power', { n: it.powerGen }), it.commsRate && t('board.offer.comms', { n: it.commsRate }), it.science && t('board.offer.science', { n: it.science }), it.lifetimeBonus && t('board.offer.life', { n: it.lifetimeBonus }), it.lifeSupport && t('board.offer.lifeSupport')].filter(Boolean);
+  const costs = [t('board.offer.mass', { n: it.mass }), it.power && t('board.offer.powerCost', { n: it.power }), it.dataRate && t('board.offer.data', { n: it.dataRate }), t('board.offer.partCost', { n: it.cost })].filter(Boolean);
+  return t('board.offer.info', { gains: gains.join(', ') || t('board.offer.nothing'), costs: costs.join(', '), minTech: it.minTech });
 }
 
 // Cartão de decisão no miolo (dilema, terreno, fornecedor, espião), no estilo do console.
@@ -200,33 +201,31 @@ function tileDecision(state, p, actions) {
   const cls = `tile-decision ${hl(state, 'board', 'tile')}`;
   if (pending.kind === 'build') {
     const options = Object.values(BUILDINGS).filter((b) => !p.buildings[b.id]);
-    if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
+    if (!options.length) return el('p', { class: 'hint' }, t('board.build.all'));
     return el('div', { class: cls }, [
-      el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
+      el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), t('board.build.q', { cost: upgradeCost(0) })]),
       el('div', { class: 'row wrap', style: 'justify-content:center' }, [
         ...options.map((b) => button([icon(b.icon, { size: 16 }), b.name], () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
-        button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
+        button(t('board.build.skip'), () => actions.skipTile(), { class: 'small ghost' }),
       ]),
     ]);
   }
   if (pending.kind === 'supplier') {
     const first = !p.freeBlueprintUsed;
-    return deckCard('shop', 'Fornecedor: escolha uma blueprint', first
-      ? 'A primeira blueprint é de graça. Ela é o projeto da peça (paga uma vez); a peça em si você compra na oficina.'
-      : 'A blueprint é o projeto da peça: paga uma vez, vale para sempre. A peça em si você compra na oficina.', [
+    return deckCard('shop', t('board.supplier.title'), first ? t('board.supplier.hintFirst') : t('board.supplier.hint'), [
       ...pending.offers.map((id) => {
         const price = blueprintCostFor(p, id);
-        return button([el('span', {}, itemOf(id).name), el('span', { class: 'gb-price' }, price ? `${price}` : 'grátis')], () => actions.buyBlueprint(id), { class: 'gb-btn', disabled: p.funds < price, title: `${offerInfo(id)} Blueprint: ${price || 'grátis'} (preço normal ${blueprintPrice(id)}).` });
+        return button([el('span', {}, itemOf(id).name), el('span', { class: 'gb-price' }, price ? `${price}` : t('board.supplier.free'))], () => actions.buyBlueprint(id), { class: 'gb-btn', disabled: p.funds < price, title: `${offerInfo(id)} ${t('board.supplier.bpInfo', { price: price || t('board.supplier.free'), normal: blueprintPrice(id) })}` });
       }),
-      button('Seguir', () => actions.skipTile(), { class: 'gb-btn ghost' }),
+      button(t('board.go'), () => actions.skipTile(), { class: 'gb-btn ghost' }),
     ], cls);
   }
   if (pending.kind === 'spy') {
     const rivals = state.players.filter((r) => r.id !== p.id);
-    return deckCard('spy', 'Espionagem: observar ou sabotar?', `Observar (${SPY_COST}) mostra degraus, missão e quanto a nave do rival está pronta. Sabotar (${SABOTAGE_COST}) atrapalha o rival: contra uma agência, uma interferência na telemetria da etapa final do voo; contra a agência rival do solo, atrasa o degrau dela em 1 ano. Uma ação de espião por ano.`, [
-      ...rivals.map((r) => button([`Observar ${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'gb-btn', disabled: p.funds < SPY_COST })),
-      ...rivals.map((r) => button([`Sabotar ${r.name}, `, ...[].concat(sideBadge(r))], () => actions.sabotage(r.id), { class: 'gb-btn', disabled: p.funds < SABOTAGE_COST || Boolean(r.interference), title: r.bot ? 'Atrasa o próximo degrau dele em 1 ano.' : 'Arma uma interferência na etapa final do voo dele.' })),
-      button('Seguir sem espionar', () => actions.skipTile(), { class: 'gb-btn ghost' }),
+    return deckCard('spy', t('board.spy.title'), t('board.spy.hint', { spy: SPY_COST, sabotage: SABOTAGE_COST }), [
+      ...rivals.map((r) => button([t('board.spy.observe', { name: r.name }) + ' ', ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'gb-btn', disabled: p.funds < SPY_COST })),
+      ...rivals.map((r) => button([t('board.spy.sabotage', { name: r.name }) + ' ', ...[].concat(sideBadge(r))], () => actions.sabotage(r.id), { class: 'gb-btn', disabled: p.funds < SABOTAGE_COST || Boolean(r.interference), title: r.bot ? t('board.spy.sabotageBotTitle') : t('board.spy.sabotageTitle') })),
+      button(t('board.spy.skip'), () => actions.skipTile(), { class: 'gb-btn ghost' }),
     ], cls);
   }
   const lot = state.lots[pending.tileId];
@@ -234,11 +233,11 @@ function tileDecision(state, p, actions) {
   const b = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
   return el('div', { class: cls }, [
-    el('strong', { class: 'decision-title' }, [icon(b.icon, { size: 18 }), `${b.name} de ${owner.name}`]),
-    el('small', { class: 'hint' }, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`),
+    el('strong', { class: 'decision-title' }, [icon(b.icon, { size: 18 }), t('board.rival.of', { building: b.name, owner: owner.name })]),
+    el('small', { class: 'hint' }, t('board.rival.hint', { fee, owner: owner.name, use: b.useText })),
     el('div', { class: 'row', style: 'justify-content:center' }, [
-      button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
-      button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+      button(t('board.rival.use', { fee }), () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
+      button(t('board.go'), () => actions.skipTile(), { class: 'small ghost' }),
     ]),
   ]);
 }
@@ -248,7 +247,7 @@ function tileDecision(state, p, actions) {
 function dilemmaDeck(state, p) {
   if (state.pendingDilemma || state.pendingTile || (state.outcome && state.outcome.playerId === p.id)) return null;
   return el('div', { class: 'center-court-decks', 'aria-hidden': 'true' }, [
-    el('div', { class: 'court-deck deck-dilemma' }, [el('span', { class: 'deck-icon' }, '?'), el('span', { class: 'deck-label' }, 'DILEMAS')]),
+    el('div', { class: 'court-deck deck-dilemma' }, [el('span', { class: 'deck-icon' }, '?'), el('span', { class: 'deck-label' }, t('board.deck.dilemmas'))]),
   ]);
 }
 
@@ -266,27 +265,27 @@ function diceView(state, p, actions, rolling) {
     };
     return el('div', { class: 'dice-choice gb-dice' }, [
       el('div', { class: 'gb-dice-row' }, state.dice.map((d, i) => {
-        const b = button([el('span', { class: `gb-die ${fresh ? 'tumble' : ''}`, style: `--i:${i}`, html: dieSvg(d) }), el('span', {}, `andar ${d}`)],
-          () => actions.moveBy(i), { class: `gb-die-btn ${hl(state, 'board', 'die')}`, title: `Andar ${d} casa${d > 1 ? 's' : ''}` });
+        const b = button([el('span', { class: `gb-die ${fresh ? 'tumble' : ''}`, style: `--i:${i}`, html: dieSvg(d) }), el('span', {}, t('board.walkN', { d }))],
+          () => actions.moveBy(i), { class: `gb-die-btn ${hl(state, 'board', 'die')}`, title: t(d > 1 ? 'board.walkTiles.other' : 'board.walkTiles.one', { d }) });
         b.addEventListener('mouseenter', preview(d, true));
         b.addEventListener('mouseleave', preview(d, false));
         b.addEventListener('focus', preview(d, true));
         b.addEventListener('blur', preview(d, false));
         return b;
       })),
-      el('span', { class: 'label' }, 'Escolha um dado: veja onde cada um para'),
+      el('span', { class: 'label' }, t('board.chooseDie')),
     ]);
   }
   if (!p.rolled) {
     return el('div', { class: 'dice-choice gb-dice' }, [
       button([el('span', { class: 'gb-die idle', html: dieSvg(0) }), el('span', { class: 'gb-die idle', html: dieSvg(0) })],
-        () => actions.rollDice(), { class: 'gb-die-btn pair', title: 'Rolar 2 dados' }),
-      el('span', { class: 'label' }, `Vez de ${p.name}: clique nos dados`),
+        () => actions.rollDice(), { class: 'gb-die-btn pair', title: t('board.roll') }),
+      el('span', { class: 'label' }, t('board.turnClickDice', { name: p.name })),
     ]);
   }
   return el('div', { class: 'dice-choice gb-dice' }, [
     el('span', { class: `gb-die ${rolling ? 'landed' : ''}`, html: dieSvg(state.lastRoll) }),
-    el('span', { class: 'label' }, `${p.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
+    el('span', { class: 'label' }, t(state.lastRoll > 1 ? 'board.walked.other' : 'board.walked.one', { name: p.name, n: state.lastRoll })),
   ]);
 }
 
@@ -294,10 +293,10 @@ function diceView(state, p, actions, rolling) {
 function centerPanel(state, p, actions, rolling) {
   const activeTile = TILES[p.position];
   const bannerText = state.dice
-    ? 'ESCOLHA UM DADO PARA AVANÇAR'
+    ? t('board.banner.chooseDie')
     : !p.rolled
-      ? `VEZ DE ${p.name.toUpperCase()} · ROLE OS DADOS`
-      : `CASA ${String(p.position).padStart(2, '0')} · ${activeTile.label.toUpperCase()}`;
+      ? t('board.banner.turn', { name: p.name.toUpperCase() })
+      : t('board.banner.tile', { num: String(p.position).padStart(2, '0'), label: activeTile.label.toUpperCase() });
   return el('div', { class: 'panel ring-center gb-center' }, [
     el('span', { class: 'center-orbits', 'aria-hidden': 'true', html: ORBIT_ART }),
     dilemmaDeck(state, p),
@@ -315,22 +314,22 @@ function missionPanel(state, p, simple = false) {
     const f = p.flight;
     const next = STAGES[f.plan[f.stageIndex]];
     const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
-    return sidePanel('mission', 'satellite', `Em voo: ${MISSIONS[f.missionId].name}`, [
-      el('p', { class: 'hint' }, `Próxima etapa: ${next.name} (${f.stageIndex + 1} de ${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
-      p.flightAdvanced ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
-        : el('p', { class: 'hint' }, !p.rolled ? 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.' : 'Avance o voo pela barra de baixo.'),
-      el('p', { class: 'hint' }, 'A próxima nave só pode ser montada quando esta cumprir a missão.'),
-    ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
+    return sidePanel('mission', 'satellite', t('board.mission.flying', { name: MISSIONS[f.missionId].name }), [
+      el('p', { class: 'hint' }, t('board.mission.nextStage', { name: next.name, n: f.stageIndex + 1, total: f.plan.length }) + (event ? t('board.mission.tileEvent', { title: event.title }) : '')),
+      p.flightAdvanced ? el('p', { class: 'hint' }, t('board.mission.advanced'))
+        : el('p', { class: 'hint' }, !p.rolled ? t('board.mission.rollFirst') : t('board.mission.advanceDock')),
+      el('p', { class: 'hint' }, t('board.mission.nextShip')),
+    ], { hint: t('board.mission.stageHint', { n: f.stageIndex + 1, total: f.plan.length }) });
   }
   if (!p.missionId) {
-    return sidePanel('mission', 'flag', 'Escada completa', [el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')], { hint: 'Todos os degraus cumpridos' });
+    return sidePanel('mission', 'flag', t('board.mission.ladderDone'), [el('p', { class: 'hint' }, t('board.mission.winnerEnd'))], { hint: t('board.mission.allDone') });
   }
   return sidePanel('mission', MISSION_ICONS[p.missionId] || 'rocket', MISSIONS[p.missionId].name, [
     el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
     // Interface enxuta: a vitória dita em uma frase, já que a aba da escada só aparece depois.
-    simple ? el('p', { class: 'hint' }, `Objetivo da partida: cumprir os ${ladderOf(p).length} degraus da sua escada antes do rival.`) : null,
+    simple ? el('p', { class: 'hint' }, t('board.mission.simpleGoal', { n: ladderOf(p).length })) : null,
     milestoneTrack(p),
-  ], { hint: 'Missão atual' });
+  ], { hint: t('board.mission.current') });
 }
 
 // Passo a passo do turno, sempre visível na barra fixa: o que já foi feito e o que falta.
@@ -339,13 +338,13 @@ function turnSteps(state, p, design) {
   const tileDone = moved && !state.pendingTile && !state.pendingDilemma;
   const shipDone = p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId;
   const steps = [
-    { label: 'Rolar e andar', done: moved },
-    { label: 'Resolver a casa', done: tileDone },
-    { label: p.flight ? 'Avançar o voo' : design.ok ? 'Lançar (opcional)' : 'Montar a nave (casa de Oficina)', done: shipDone, optional: !p.flight },
-    { label: 'Passar a vez', done: false },
+    { label: t('board.step.roll'), done: moved },
+    { label: t('board.step.tile'), done: tileDone },
+    { label: p.flight ? t('board.step.advance') : design.ok ? t('board.step.launchOpt') : t('board.step.build'), done: shipDone, optional: !p.flight },
+    { label: t('board.step.end'), done: false },
   ];
   const current = steps.findIndex((s) => !s.done && !(s.optional && tileDone));
-  return el('ol', { class: 'turn-steps', 'aria-label': 'Etapas do turno' }, steps.map((s, i) =>
+  return el('ol', { class: 'turn-steps', 'aria-label': t('board.turnSteps') }, steps.map((s, i) =>
     el('li', { class: s.done ? 'done' : i === current ? 'now' : '', title: `${i + 1}. ${s.label}` }, [
       el('span', { class: 'n' }, s.done ? icon('check', { size: 14 }) : String(i + 1)),
       el('span', { class: 'lbl' }, s.label),
@@ -357,33 +356,33 @@ function turnSteps(state, p, design) {
 function turnDock(state, p, design, actions, simple) {
   const inShop = atWorkshopTile(p);
   const canLaunch = design.ok && !p.flight && p.rolled && !p.launchedThisTurn && inShop;
-  const launchTitle = p.flight ? 'Você já tem uma nave em voo.'
-    : !p.rolled ? 'Ande no tabuleiro antes de lançar.'
-      : !inShop ? 'Só dá para lançar parado numa casa de Oficina do tabuleiro.'
-      : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
+  const launchTitle = p.flight ? t('board.launch.inFlight')
+    : !p.rolled ? t('board.launch.moveFirst')
+      : !inShop ? t('board.launch.needShop')
+      : design.ok ? t('board.launch.ready') : t('board.launch.fix');
   const mustAdvance = p.flight && !p.flightAdvanced;
   const deciding = Boolean(state.pendingDilemma || state.pendingTile);
   const blocked = !p.rolled || mustAdvance || Boolean(state.pendingDilemma);
-  const blockedReason = !p.rolled ? 'Role os dados para poder passar a vez.'
-    : state.pendingDilemma ? 'Resolva a carta de dilema para poder passar a vez.'
-      : mustAdvance ? 'Avance o voo para poder passar a vez.' : '';
+  const blockedReason = !p.rolled ? t('board.end.roll')
+    : state.pendingDilemma ? t('board.end.dilemma')
+      : mustAdvance ? t('board.end.advance') : '';
 
   let main = [];
   let note = null;
   if (state.dice) {
-    main = state.dice.map((d, i) => button([el('span', { class: 'dock-die', html: dieSvg(d) }), `Andar ${d}`], () => actions.moveBy(i), { class: `primary reveal ${hl(state, 'board', 'die')}` }));
-    note = 'Escolha um dos dados';
+    main = state.dice.map((d, i) => button([el('span', { class: 'dock-die', html: dieSvg(d) }), t('board.walkBtn', { d })], () => actions.moveBy(i), { class: `primary reveal ${hl(state, 'board', 'die')}` }));
+    note = t('board.note.chooseDie');
   } else if (!p.rolled) {
-    main = [button([icon('die', { size: 18 }), 'Rolar 2 dados'], () => actions.rollDice(), { class: `primary ${hl(state, 'board', 'roll')}` })];
+    main = [button([icon('die', { size: 18 }), t('board.roll')], () => actions.rollDice(), { class: `primary ${hl(state, 'board', 'roll')}` })];
   } else if (deciding) {
-    note = 'Decida a carta no meio do tabuleiro';
+    note = t('board.note.decide');
   }
 
   // A Oficina fica SEMPRE na barra: dá para planejar a nave antes de rolar (só o lançamento exige andar).
   // Com a nave em voo ela fecha.
   const showWorkshop = !p.flight;
   const early = showWorkshop && !(p.rolled && !state.dice)
-    ? button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: inShop ? 'Montar a nave: peças, foguete e o que falta para lançar.' : 'Planejar a nave: ver peças e risco. Para comprar e lançar, pare numa casa de Oficina.' })
+    ? button([icon('wrench', { size: 18 }), t('step.workshop')], () => actions.go('workshop'), { class: `ghost ${hl(state, 'board', 'workshop')}`, title: inShop ? t('board.workshop.build') : t('board.workshop.plan') })
     : null;
 
   // Depois de andar: oficina, voo, lançar e passar a vez (interface enxuta: um passo de cada vez).
@@ -393,13 +392,13 @@ function turnDock(state, p, design, actions, simple) {
     // Só UMA ação cheia por vez: a oficina se a nave não fecha, o Lançar se fecha, e o Passar a vez quando
     // não sobrou nada recomendado (voo avançado, lançou ou a escada acabou).
     const turnDone = !blocked && !deciding && (p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId);
-    if (mustAdvance) after.push(button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}` }));
-    if (showWorkshop) after.push(button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: `${!design.ok && !p.launchedThisTurn ? 'primary' : ''} ${hl(state, 'board', 'workshop')}` }));
-    if (showLaunch && !p.flight) after.push(button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: `${canLaunch ? 'primary launch-ready' : ''} ${hl(state, 'board', 'launch')}` }));
-    after.push(button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `${turnDone ? 'primary' : 'ghost'} ${hl(state, 'board', 'end')}`, title: blockedReason }));
+    if (mustAdvance) after.push(button([icon('satellite', { size: 18 }), t('board.advanceFlight')], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}` }));
+    if (showWorkshop) after.push(button([icon('wrench', { size: 18 }), t('step.workshop')], () => actions.go('workshop'), { class: `${!design.ok && !p.launchedThisTurn ? 'primary' : ''} ${hl(state, 'board', 'workshop')}` }));
+    if (showLaunch && !p.flight) after.push(button([icon('rocket', { size: 18 }), t('board.launchBtn')], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: `${canLaunch ? 'primary launch-ready' : ''} ${hl(state, 'board', 'launch')}` }));
+    after.push(button([t('board.endTurn'), icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `${turnDone ? 'primary' : 'ghost'} ${hl(state, 'board', 'end')}`, title: blockedReason }));
   }
 
-  return el('div', { class: 'turn-dock', role: 'region', 'aria-label': 'Ações do turno' }, [
+  return el('div', { class: 'turn-dock', role: 'region', 'aria-label': t('board.turnActions') }, [
     turnSteps(state, p, design),
     el('div', { class: 'dock-actions' }, [
       note ? el('span', { class: 'dock-note' }, note) : null,
@@ -415,9 +414,9 @@ function gadgetTopBar(state, p) {
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   return el('div', { class: 'gadget-top', 'aria-hidden': 'true' }, [
     el('div', { class: 'gadget-lcd-bezel' }, [
-      el('div', { class: 'gadget-lcd-screen' }, `${yearOf(state.round)} · RODADA ${roundInYear}/${ROUNDS_PER_YEAR}`),
+      el('div', { class: 'gadget-lcd-screen' }, t('board.lcd', { year: yearOf(state.round), n: roundInYear, total: ROUNDS_PER_YEAR })),
     ]),
-    el('span', { class: 'g-chip coral' }, `CASA ${String(p.position).padStart(2, '0')} · ${TILES[p.position].label.toUpperCase()}`),
+    el('span', { class: 'g-chip coral' }, t('board.banner.tile', { num: String(p.position).padStart(2, '0'), label: TILES[p.position].label.toUpperCase() })),
   ]);
 }
 
