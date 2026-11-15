@@ -132,6 +132,16 @@ sucesso, ciência e **uso eficiente de recursos**, como o desafio pede.
 - **Regra nova**: função em `simulate.js` que faz `add(id, ok, okText, failText)` + teste em `test/simulate.test.mjs`.
 - **Casa nova no tabuleiro**: entrada em `TILES` e um `case` em `applyTile`.
 - **Tela nova**: arquivo em `src/ui/`, registrar em `screens.js`.
+- **Ícone novo**: entrada em `ICONS` (`src/ui/icons.js`) com o miolo de um SVG 24×24 de traço
+  (sem preenchimento, `currentColor`). Use `icon('nome')` na UI. Nos dados (`icon:` em
+  `buildings.js`, `sides.js`, `stages.js`) vai só o nome do ícone. **Sem emojis**: renderizam
+  diferente em cada sistema e não seguem o tema.
+- **Dica nova para o jogador**: em `nextStep()` (`src/ui/guide.js`), que diz o próximo passo de
+  cada tela e qual botão destacar (`hl(state, tela, chave)`). O jogador liga e desliga as dicas
+  no topo da tela; a preferência fica no navegador (`src/ui/prefs.js`).
+- **Resumos**: `src/ui/summary.js` monta o "Resumo do seu turno" (ao passar a vez) e o "Desde o
+  seu último turno" comparando fotos da agência. Só mostra o que é público ou do próprio
+  jogador (rival escondido).
 
 ## Convenções
 - Código em inglês, comentários e textos do jogo em português (a submissão é em inglês; ver `SUBMISSION.md`).

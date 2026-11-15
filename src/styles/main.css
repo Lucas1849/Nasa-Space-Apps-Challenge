@@ -362,3 +362,118 @@ select option { background: #0f1736; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* =========================================================
+   Ícones SVG, orientações, resumos de turno (UI/UX)
+   Ícones herdam a cor do texto (currentColor). Cores vêm das variáveis do topo.
+   ========================================================= */
+.ic { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 0; }
+.ic svg { display: block; }
+button .ic, .chip .ic, .with-icon .ic { margin-right: 2px; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.with-icon { display: inline-flex; align-items: center; gap: 7px; }
+p.with-icon, small.with-icon { display: flex; align-items: flex-start; }
+p.with-icon .ic, small.with-icon .ic { margin-top: 2px; }
+.panel-title { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.panel-title .ic { color: var(--accent); }
+.hud .chip .ic { color: var(--accent); }
+.hud .chip.year small { color: var(--muted); }
+.card .icon .ic, .mission-card .icon .ic { color: var(--accent); }
+.tile .t-icon { color: var(--fg); opacity: .9; }
+.tile-funds .t-icon, .tile-shop .t-icon { color: var(--ok); }
+.tile-event .t-icon { color: var(--amber); }
+.tile-tech .t-icon, .tile-spy .t-icon { color: #c4b5fd; }
+.tile-repair .t-icon, .tile-catchup .t-icon { color: var(--accent); }
+.avatar .ic { color: #06101f; }
+.buildings .b-icon { color: var(--accent); }
+.buildings li.not-built .b-icon { color: var(--muted); }
+.ladder-name { display: inline-flex; align-items: center; gap: 7px; }
+.ladder li.done .ladder-name .ic { color: var(--ok); }
+.checklist li .ic { margin-top: 1px; }
+.checklist li.ok .ic { color: var(--ok); }
+.gauge .g-label { display: inline-flex; align-items: center; gap: 6px; }
+.stage-track .s-icon { display: inline-flex; }
+.glossary summary { display: flex; align-items: center; gap: 7px; }
+.decision-title { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.lock { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Dados em SVG */
+.die-face { color: var(--fg); filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.die-face.rolling { animation: shake .5s ease; }
+.dice-pair { display: inline-flex; gap: 10px; }
+button .die-face { filter: none; color: inherit; }
+
+/* Ícones grandes (voo, relatório, fim de jogo, lançamento) */
+.flight .alarm { color: var(--amber); }
+.flight .alarm.calm { color: var(--ok); }
+.report-head .stamp { line-height: 0; }
+.report.success .report-head .stamp { color: var(--ok); }
+.report.failure .report-head .stamp { color: var(--danger); }
+.gameover .report-head .stamp { color: var(--amber); }
+.ic.winner { color: var(--amber); }
+.launch-overlay .rocket { color: var(--fg); line-height: 0; }
+
+/* Botão de dicas no HUD */
+.guide-toggle { color: var(--muted); }
+.guide-toggle.on { color: var(--accent); border-color: rgba(56,189,248,.45); }
+
+/* Cartão "Próximo passo" */
+.guide-card { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; margin: 0 0 16px;
+  padding: 12px 16px; border-radius: var(--radius); background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.4); }
+.guide-card .guide-icon { color: var(--accent); margin-top: 1px; }
+.guide-card strong { display: block; }
+.guide-card p { margin: 2px 0 0; color: #c9d3f5; max-width: 80ch; }
+.guide-tips { margin-top: 6px; font-size: .86rem; }
+.guide-tips summary { cursor: pointer; color: var(--accent); }
+.guide-tips ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+
+/* Botão ou bloco recomendado pelas orientações: anel pulsante discreto */
+.guide-target { position: relative; box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(56,189,248,.35); animation: guidePulse 1.8s ease-in-out infinite; }
+button.guide-target:disabled { animation: none; box-shadow: none; }
+@keyframes guidePulse { 0%,100% { box-shadow: 0 0 0 2px var(--accent), 0 0 10px rgba(56,189,248,.2); } 50% { box-shadow: 0 0 0 3px var(--accent), 0 0 22px rgba(56,189,248,.45); } }
+
+/* Passo a passo do turno */
+.turn-steps { list-style: none; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; counter-reset: none; }
+.turn-steps li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: .82rem; line-height: 1.2; }
+.turn-steps .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-family: var(--mono); font-size: .75rem; border: 1px solid var(--line); }
+.turn-steps li.done { color: var(--ok); border-color: rgba(52,211,153,.35); }
+.turn-steps li.done .n { background: rgba(52,211,153,.15); border-color: rgba(52,211,153,.5); }
+.turn-steps li.now { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.1); }
+.turn-steps li.now .n { background: var(--accent); color: #06101f; border-color: var(--accent); font-weight: 700; }
+.action-bar { margin-bottom: 4px; }
+.action-hint { margin-top: 0; }
+
+/* "Desde o seu último turno" e resumo do turno */
+.since-card { margin-bottom: 12px; border-color: rgba(251,191,36,.35); }
+.since-head { display: flex; align-items: center; gap: 8px; }
+.since-head .ic { color: var(--amber); }
+.new-year { display: flex; align-items: center; gap: 7px; color: var(--amber); font-weight: 600; }
+.delta-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.delta { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: .85rem; border: 1px solid var(--line); }
+.delta.up { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+.delta.down { color: var(--danger); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
+.summary-log { margin: 6px 0 0; padding-left: 20px; font-size: .88rem; color: #c9d3f5; display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+.status-lines { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; font-size: .9rem; }
+.status-lines li { display: flex; align-items: flex-start; gap: 8px; }
+.status-lines .ic { color: var(--accent); margin-top: 2px; }
+.tip-line { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(56,189,248,.08); color: #c9d3f5; }
+.tip-line .ic { color: var(--accent); margin-top: 2px; }
+
+/* Janela (modal) */
+.modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: rgba(3, 6, 15, .72); animation: fadeIn .2s ease; }
+.modal { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 22px 24px; background: #0e1530; box-shadow: var(--shadow); }
+.modal-head { display: flex; align-items: center; gap: 12px; }
+.modal-title { margin: 0; font-size: 1.3rem; color: var(--fg); text-transform: none; letter-spacing: -0.01em; font-weight: 700; }
+.modal h3 { margin: 18px 0 4px; font-size: .9rem; color: var(--muted); font-weight: 600; }
+.modal-actions { margin-top: 18px; }
+
+/* Foco visível para teclado */
+button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .turn-steps { grid-template-columns: repeat(2, 1fr); }
+  .guide-card { padding: 10px 12px; }
+  .hud .guide-toggle { order: 10; }
+}
+.choice.guide-target, .panel.guide-target { border-radius: var(--radius); }
+.choice.guide-target { padding: 2px 12px 10px; }

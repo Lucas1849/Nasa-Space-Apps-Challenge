@@ -1,6 +1,7 @@
 // Fim da partida: o estado de todos é revelado. Vencedor pela escada (ou pelo maior progresso em 1969),
 // classificação e comparação com a história real de cada lado.
-import { el, button, avatar, progressBar, sideLabel } from './components.js';
+import { el, button, avatar, progressBar, sideLabel, sideBadge, panelTitle } from './components.js';
+import { icon } from './icons.js';
 import { ladderProgress } from '../sim/progress.js';
 import { MISSIONS } from '../data/missions.js';
 import { REAL_HISTORY, EPILOGUE, yearOf } from '../data/history.js';
@@ -16,7 +17,7 @@ export function gameoverScreen(state, actions) {
 
   return el('section', { class: 'screen gameover' }, [
     el('div', { class: 'panel report-head' }, [
-      el('span', { class: 'stamp' }, '🏆'),
+      el('span', { class: 'stamp' }, icon('trophy', { size: 150 })),
       el('div', {}, [
         el('p', { class: 'eyebrow' }, `Fim da corrida · ${yearOf(state.round)}`),
         el('h1', {}, `${names} ${state.winners.length > 1 ? 'venceram' : 'venceu'}`),
@@ -31,8 +32,8 @@ export function gameoverScreen(state, actions) {
       const prog = ladderProgress(p);
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? '🏆' : null,
-          el('span', { class: 'chip small' }, sideLabel(p)),
+          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: 'Vencedor', className: 'winner' }) : null,
+          el('span', { class: 'chip small' }, sideBadge(p)),
           el('span', { class: 'spacer' }),
           el('span', { class: 'num' }, `${prog.steps}/${prog.total} degraus`),
         ]),
@@ -50,7 +51,7 @@ export function gameoverScreen(state, actions) {
       return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year} (${sideLabel(p)} na história real: ${real}, ${diff === 0 ? 'mesmo ano' : diff < 0 ? `${-diff} ano(s) antes` : `${diff} ano(s) depois`}).`);
     }))),
     state.players.some((p) => !p.bot && p.completed.length) ? null : el('p', { class: 'hint' }, 'Nenhum degrau cumprido nesta partida.'),
-    el('div', { class: 'panel lesson' }, [el('strong', {}, '🤝 Epílogo'), el('p', {}, EPILOGUE)]),
-    el('div', { class: 'row' }, [button('Nova partida', () => actions.newGame(), { class: 'primary' })]),
+    el('div', { class: 'panel lesson' }, [panelTitle('coop', 'Epílogo'), el('p', {}, EPILOGUE)]),
+    el('div', { class: 'row' }, [button([icon('refresh', { size: 18 }), 'Nova partida'], () => actions.newGame(), { class: 'primary' })]),
   ]);
 }

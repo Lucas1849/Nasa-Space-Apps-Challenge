@@ -12,22 +12,22 @@ export const USE_FEE = 6;              // taxa paga ao dono para usar o prédio 
 
 export const BUILDINGS = {
   lab: {
-    id: 'lab', name: 'Laboratório', icon: '🧪',
+    id: 'lab', name: 'Laboratório', icon: 'flask',
     effect: '+1 de tecnologia a cada Ano novo, por nível.',
     useEffect: { tech: 1 }, useText: '+1 de tecnologia',
   },
   factory: {
-    id: 'factory', name: 'Fábrica', icon: '🏭',
+    id: 'factory', name: 'Fábrica', icon: 'factory',
     effect: '−10% no preço das peças, por nível.',
     useEffect: { discount: 20 }, useText: '20% de desconto na próxima compra',
   },
   control: {
-    id: 'control', name: 'Controle de missão', icon: '🎛️',
+    id: 'control', name: 'Controle de missão', icon: 'console',
     effect: '−3% de risco em cada etapa do voo, por nível.',
     useEffect: { shield: 1 }, useText: '1 proteção contra falha',
   },
   sponsor: {
-    id: 'sponsor', name: 'Patrocinador', icon: '🤝',
+    id: 'sponsor', name: 'Patrocinador', icon: 'briefcase',
     effect: '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
     useEffect: { funds: 8 }, useText: '+8 de verba',
   },

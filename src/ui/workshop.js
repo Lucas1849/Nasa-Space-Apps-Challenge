@@ -1,7 +1,9 @@
 // Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
 // e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
-import { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS } from './components.js';
+import { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle } from './components.js';
+import { icon } from './icons.js';
+import { guideCard, hl } from './guide.js';
 import { spacecraftSvg } from './spacecraft.js';
 import { INSTRUMENTS } from '../data/instruments.js';
 import { PARTS } from '../data/parts.js';
@@ -31,7 +33,7 @@ function itemCard(player, item, actions) {
   ].filter(Boolean);
   return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''}` }, [
     el('div', { class: 'card-head' }, [
-      el('span', { class: 'icon' }, ITEM_ICONS[item.visual] || '🔩'),
+      el('span', { class: 'icon' }, icon(ITEM_ICONS[item.visual] || 'hexnut', { size: 22 })),
       el('strong', {}, item.name),
       owned ? el('span', { class: 'badge' }, `×${owned}`) : null,
     ]),
@@ -41,19 +43,19 @@ function itemCard(player, item, actions) {
     ]),
     el('div', { class: 'row' }, [
       locked
-        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, `🔒 exige tecnologia ${requiredTech(player, item)}`)
-        : button([el('span', { class: 'price' }, `💰 ${price}`), ' Comprar'], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
+        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, [icon('lock', { size: 14 }), `exige tecnologia ${requiredTech(player, item)}`])
+        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
       button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
     ]),
   ]);
 }
 
-function choice(label, options, selectedId, onPick, describe, player) {
-  return el('div', { class: 'choice' }, [
+function choice(label, options, selectedId, onPick, describe, player, cls = '') {
+  return el('div', { class: `choice ${cls}` }, [
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
-      return button(locked ? `🔒 ${o.name} · exige tecnologia ${requiredTech(player, o)}` : describe(o), () => onPick(o.id), {
+      return button(locked ? [icon('lock', { size: 14 }), `${o.name}: exige tecnologia ${requiredTech(player, o)}`] : describe(o), () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
         disabled: locked,
       });
@@ -65,20 +67,20 @@ function choice(label, options, selectedId, onPick, describe, player) {
 function riskPanel(player) {
   const risk = missionRisk(player);
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, `🎲 Risco do voo: ${pct(risk.total)}`),
+    panelTitle('die', `Risco do voo: ${pct(risk.total)}`),
     el('ul', { class: 'risk-list' }, risk.stages.map((s) => el('li', {}, [el('strong', {}, s.name), el('small', {}, describeRisk(s.risk))]))),
-    el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Proteções 🛡️ salvam uma etapa.'),
+    el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Cada proteção salva uma etapa que falharia.'),
   ]);
 }
 
 export function workshopScreen(state, actions) {
   const p = currentPlayer(state);
-  const back = state.sandbox ? button('Nova partida', () => actions.newGame(), { class: 'ghost' }) : button('← Tabuleiro', () => actions.go('board'), { class: 'ghost' });
+  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back')}` });
 
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
-      hud(state, p, 'workshop'),
-      state.sandbox ? el('h2', {}, '🎯 Escolha a missão antes de projetar a nave') : el('h2', {}, '🏁 Sua escada está completa'),
+      hud(state, p, 'workshop', actions),
+      state.sandbox ? el('h2', {}, 'Escolha a missão antes de projetar a nave') : el('h2', {}, 'Sua escada está completa'),
       el('p', { class: 'hint' }, state.sandbox
         ? 'O desafio começa pelos requisitos: cada missão exige uma órbita, ciência, comunicação e vida útil diferentes.'
         : 'Não há mais degraus para projetar. O vencedor é revelado no fim da rodada.'),
@@ -102,29 +104,30 @@ export function workshopScreen(state, actions) {
   const discount = discountFor(p);
 
   return el('section', { class: 'screen workshop' }, [
-    hud(state, p, 'workshop'),
-    p.flight ? el('p', { class: 'banner' }, `🛰️ Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
+    hud(state, p, 'workshop', actions),
+    guideCard(state, 'workshop'),
+    p.flight ? el('p', { class: 'banner' }, `Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
-        discount ? el('p', { class: 'hint' }, `🏷️ Desconto ativo: ${discount}% (Fábrica e eventos).`) : null,
-        el('h2', {}, '🔬 Instrumentos científicos'),
+        discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
+        choice('Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
+        choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
+          (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit')),
+        el('h2', {}, 'Instrumentos científicos'),
         el('div', { class: 'cards' }, Object.values(INSTRUMENTS).map((i) => itemCard(p, i, actions))),
-        el('h2', {}, '⚙️ Energia, comunicação, propulsão e suporte de vida'),
+        el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida'),
         el('div', { class: 'cards' }, Object.values(PARTS).map((i) => itemCard(p, i, actions))),
-        choice('🚀 Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name} · carga ${l.maxMass} · 💰 ${l.cost} · ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p),
-        choice('🪐 Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-          (o) => `${o.name} · ${o.baseLifetime} anos de vida · sinal −${o.commsPenalty * 100}%${o.scienceBonus ? ` · ciência +${o.scienceBonus}` : ''}`),
       ]),
       el('aside', { class: 'side' }, [
-        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '📊 Painel de recursos'), gauges(p)]),
-        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '✅ Checagem do projeto'), designChecklist(p)]),
+        el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
         design.ok ? riskPanel(p) : null,
         blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
         el('div', { class: 'row', style: 'margin:0' }, [
-          button('🚀 Lançar', () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: 'primary', title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
           back,
         ]),
         glossary(),

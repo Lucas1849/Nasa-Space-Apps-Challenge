@@ -11,7 +11,7 @@ export const SIDES = {
   usa: {
     id: 'usa',
     name: 'EUA',
-    icon: '🦅',
+    icon: 'wings',
     ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
     focus: 'Foguete pesado e suporte de vida',
     advantage: 'Mais verba: +20 no início e +5 por ano.',
@@ -23,7 +23,7 @@ export const SIDES = {
   ussr: {
     id: 'ussr',
     name: 'URSS',
-    icon: '⭐',
+    icon: 'star',
     ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
     focus: 'Vida no espaço e energia contínua',
     advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',

@@ -1,6 +1,8 @@
 // Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
-import { el, button, glossary, MISSION_ICONS } from './components.js';
+import { el, button, glossary, missionIcon } from './components.js';
+import { icon } from './icons.js';
+import { guideOn } from './prefs.js';
 import { spacecraftSvg } from './spacecraft.js';
 import { createPlayer } from '../sim/state.js';
 import { SIDES } from '../data/sides.js';
@@ -27,7 +29,7 @@ export function setupScreen(state, actions) {
       playersBox.appendChild(el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]));
     });
     soloNote.textContent = players.length === 1
-      ? '🤖 Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
+      ? 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
       : players.length === 2
         ? '2 agências: lados diferentes, sorteados. Cada uma joga escondida: use espionagem e boatos.'
         : `${players.length} agências: lados sorteados de forma equilibrada. Quem é do mesmo lado disputa os mesmos degraus.`;
@@ -42,7 +44,11 @@ export function setupScreen(state, actions) {
   };
   const countBox = el('div', { class: 'row count-btns' }, ['Agências:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
 
-  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), '🧪 Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+
+  // Orientações: liga/desliga as dicas de próximo passo durante a partida (salvo no navegador).
+  const guideBox = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox', checked: guideOn() ? 'checked' : null }), 'Mostrar orientações durante a partida: o que fazer a cada passo e o botão recomendado. Dá para mudar a qualquer momento no topo da tela.']);
+  guideBox.querySelector('input').addEventListener('change', (e) => actions.setGuide(e.target.checked));
   toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
   return el('section', { class: 'screen setup' }, [
@@ -56,15 +62,15 @@ export function setupScreen(state, actions) {
     ]),
     el('h2', {}, 'Como funciona'),
     el('div', { class: 'steps-grid' }, [
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', {}, '🎲 Tabuleiro'), el('p', {}, `Role 2 dados e escolha um. Cartas de dilema, prédios, espionagem. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', {}, '🔧 Oficina'), el('p', {}, 'Monte a nave do próximo degrau. Veja os limites e o risco do voo antes de lançar.')]),
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', {}, '🚀 Voo em etapas'), el('p', {}, 'Uma etapa por turno, com imprevistos. Se falhar no meio, ainda sobra uma missão de consolação.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 18 }), 'Tabuleiro']), el('p', {}, `Role 2 dados e escolha um. Cartas de dilema, prédios, espionagem. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 18 }), 'Oficina']), el('p', {}, 'Monte a nave do próximo degrau. Veja os limites e o risco do voo antes de lançar.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 18 }), 'Voo em etapas']), el('p', {}, 'Uma etapa por turno, com imprevistos. Se falhar no meio, ainda sobra uma missão de consolação.')]),
     ]),
     el('h2', {}, 'Lados e escadas de missões'),
     el('p', { class: 'hint' }, 'Vence quem completar primeiro a escada do próprio lado. Cada degrau é uma nave nova. As agências são suas; o lado define a escada, uma vantagem e uma fraqueza.'),
     el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
-      el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, s.icon), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
-      el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`))),
+      el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, icon(s.icon, { size: 22 })), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
+      el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', { class: 'with-icon' }, [missionIcon(m, { size: 16 }), MISSIONS[m].name]))),
       el('small', { class: 'gain-text' }, `+ ${s.advantage}`),
       el('small', { class: 'lose-text' }, `− ${s.weakness}`),
     ]))),
@@ -73,7 +79,8 @@ export function setupScreen(state, actions) {
     playersBox,
     soloNote,
     toggle,
-    el('div', { class: 'row' }, [button('🚀 Começar', () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
+    guideBox,
+    el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
     glossary(),
     el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
   ]);

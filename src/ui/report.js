@@ -1,7 +1,9 @@
 // Relatório da missão: sucesso ou falha (com missão de consolação), pontuação e, principalmente, o PORQUÊ.
 // Mostra cada etapa do voo com o risco e a decisão, os dados de falha (passo Verify) e,
 // no sucesso, o cartão "Na história real".
-import { el, button, hud, checklist, stageTrack } from './components.js';
+import { el, button, hud, checklist, stageTrack, panelTitle } from './components.js';
+import { icon } from './icons.js';
+import { guideCard, hl } from './guide.js';
 import { spacecraftSvg } from './spacecraft.js';
 import { currentPlayer } from '../sim/state.js';
 import { pct } from '../sim/flight.js';
@@ -10,10 +12,10 @@ import { REAL_HISTORY } from '../data/history.js';
 
 function stageLog(stages) {
   return el('ol', { class: 'stage-log' }, stages.map((s) => el('li', { class: s.success ? 'ok' : 'bad' }, [
-    el('strong', {}, `${s.success ? '✓' : '✕'} ${s.name} · risco ${pct(s.risk)}${s.usedShield ? ' · salva pela proteção 🛡️' : ''}`),
+    el('strong', { class: 'with-icon' }, [icon(s.success ? 'check' : 'x', { size: 16 }), `${s.name}: risco de ${pct(s.risk)}${s.usedShield ? ', salva pela proteção' : ''}`]),
     s.eventTitle ? el('small', {}, `Imprevisto: ${s.eventTitle}. Decisão: "${s.choice}".`) : null,
     el('small', { class: 'hint' }, s.riskText),
-    s.lesson ? el('small', { class: 'hint' }, `💡 ${s.lesson}`) : null,
+    s.lesson ? el('small', { class: 'hint with-icon' }, [icon('bulb', { size: 14 }), s.lesson]) : null,
   ])));
 }
 
@@ -27,14 +29,15 @@ export function reportScreen(state, actions) {
   const title = r.success ? 'Missão cumprida' : 'Missão falhou';
 
   return el('section', { class: `screen report ${r.success ? 'success' : 'failure'}` }, [
-    hud(state, p, 'report'),
+    hud(state, p, 'report', actions),
+    guideCard(state, 'report'),
     el('div', { class: 'panel report-head' }, [
-      el('span', { class: 'stamp' }, r.success ? '✓' : '✕'),
+      el('span', { class: 'stamp' }, icon(r.success ? 'check' : 'x', { size: 150 })),
       el('div', {}, [
-        el('p', { class: 'eyebrow' }, `Relatório de missão · ${mission.name}`),
+        el('p', { class: 'eyebrow' }, `Relatório da missão ${mission.name}`),
         el('h1', {}, title),
         el('p', { class: 'hint' }, r.success
-          ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' 🏆 Primeira agência do mundo a cumprir esta missão!' : ''}`
+          ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' Recorde: primeira agência do mundo a cumprir esta missão.' : ''}`
           : 'Cada falha ensina algo: veja os dados de falha abaixo.'),
       ]),
       el('div', { class: 'score' }, [el('div', { class: 'big' }, r.score), el('div', { class: 'label' }, 'pontos')]),
@@ -43,10 +46,10 @@ export function reportScreen(state, actions) {
       el('div', {}, [
         el('h2', {}, 'Por quê'),
         el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
-        r.consolation ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🎖️ Missão de consolação'), el('p', {}, r.consolation)]) : null,
-        r.failureLesson ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🧪 Dados de falha'), el('p', {}, r.failureLesson)]) : null,
+        r.consolation ? el('div', { class: 'panel lesson' }, [panelTitle('medal', 'Missão de consolação'), el('p', {}, r.consolation)]) : null,
+        r.failureLesson ? el('div', { class: 'panel lesson' }, [panelTitle('testTube', 'Dados de falha'), el('p', {}, r.failureLesson)]) : null,
         r.stepBonus ? el('div', { class: 'panel lesson' }, [
-          el('strong', {}, `🪜 Degrau cumprido: +${r.stepBonus.bonus} de verba`),
+          panelTitle('ladder', `Degrau cumprido: +${r.stepBonus.bonus} de verba`),
           el('p', {}, r.stepBonus.first ? 'Você foi a primeira agência do seu lado a cumprir este degrau.' : 'Outra agência do seu lado chegou antes, por isso o bônus é menor.'),
         ]) : null,
         r.stages?.length ? el('div', {}, [el('h2', {}, 'O voo, etapa por etapa'), stageLog(r.stages)]) : null,
@@ -55,7 +58,7 @@ export function reportScreen(state, actions) {
           el('ul', { class: 'reasons' }, failed.map((c) => el('li', {}, c.text))),
         ]) : null,
         r.success && history ? el('div', { class: 'panel lesson history' }, [
-          el('strong', {}, `📜 Na história real (${history.year})`),
+          panelTitle('scroll', `Na história real (${history.year})`),
           el('p', {}, history.text),
           state.sandbox || !p.side ? null : el('p', { class: 'hint' }, `Você cumpriu em ${r.year}. ${history.sides[p.side] ? `Seu lado, na história real: ${history.sides[p.side]}. ${compareYear(r.year, history.sides[p.side])}` : 'Na história real, seu lado nunca cumpriu esta missão.'}`),
           el('a', { href: history.source, target: '_blank', rel: 'noopener' }, 'Fonte: NASA History'),
@@ -71,9 +74,9 @@ export function reportScreen(state, actions) {
       ? 'Pontuação = ciência entregue ×10 + verba poupada + margem de massa não usada. Projetos enxutos pontuam mais.'
       : 'A nave foi perdida. Monte outra na oficina: tecnologia, prédios e dados de falha continuam com você.'),
     el('div', { class: 'row' }, [
-      button(state.sandbox ? '🔧 Voltar à oficina' : 'Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
-      state.sandbox ? null : button('🔧 Oficina', () => actions.go('workshop')),
-      button('Nova partida', () => actions.newGame(), { class: 'ghost' }),
+      button(state.sandbox ? [icon('wrench', { size: 18 }), 'Voltar à oficina'] : ['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { class: `primary ${hl(state, 'report', 'end')}` }),
+      state.sandbox ? null : button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop')),
+      button([icon('refresh', { size: 18 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }),
     ]),
   ]);
 }

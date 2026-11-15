@@ -375,6 +375,121 @@ select option { background: #0f1736; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* =========================================================
+   Ícones SVG, orientações, resumos de turno (UI/UX)
+   Ícones herdam a cor do texto (currentColor). Cores vêm das variáveis do topo.
+   ========================================================= */
+.ic { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 0; }
+.ic svg { display: block; }
+button .ic, .chip .ic, .with-icon .ic { margin-right: 2px; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.with-icon { display: inline-flex; align-items: center; gap: 7px; }
+p.with-icon, small.with-icon { display: flex; align-items: flex-start; }
+p.with-icon .ic, small.with-icon .ic { margin-top: 2px; }
+.panel-title { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.panel-title .ic { color: var(--accent); }
+.hud .chip .ic { color: var(--accent); }
+.hud .chip.year small { color: var(--muted); }
+.card .icon .ic, .mission-card .icon .ic { color: var(--accent); }
+.tile .t-icon { color: var(--fg); opacity: .9; }
+.tile-funds .t-icon, .tile-shop .t-icon { color: var(--ok); }
+.tile-event .t-icon { color: var(--amber); }
+.tile-tech .t-icon, .tile-spy .t-icon { color: #c4b5fd; }
+.tile-repair .t-icon, .tile-catchup .t-icon { color: var(--accent); }
+.avatar .ic { color: #06101f; }
+.buildings .b-icon { color: var(--accent); }
+.buildings li.not-built .b-icon { color: var(--muted); }
+.ladder-name { display: inline-flex; align-items: center; gap: 7px; }
+.ladder li.done .ladder-name .ic { color: var(--ok); }
+.checklist li .ic { margin-top: 1px; }
+.checklist li.ok .ic { color: var(--ok); }
+.gauge .g-label { display: inline-flex; align-items: center; gap: 6px; }
+.stage-track .s-icon { display: inline-flex; }
+.glossary summary { display: flex; align-items: center; gap: 7px; }
+.decision-title { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.lock { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Dados em SVG */
+.die-face { color: var(--fg); filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+.die-face.rolling { animation: shake .5s ease; }
+.dice-pair { display: inline-flex; gap: 10px; }
+button .die-face { filter: none; color: inherit; }
+
+/* Ícones grandes (voo, relatório, fim de jogo, lançamento) */
+.flight .alarm { color: var(--amber); }
+.flight .alarm.calm { color: var(--ok); }
+.report-head .stamp { line-height: 0; }
+.report.success .report-head .stamp { color: var(--ok); }
+.report.failure .report-head .stamp { color: var(--danger); }
+.gameover .report-head .stamp { color: var(--amber); }
+.ic.winner { color: var(--amber); }
+.launch-overlay .rocket { color: var(--fg); line-height: 0; }
+
+/* Botão de dicas no HUD */
+.guide-toggle { color: var(--muted); }
+.guide-toggle.on { color: var(--accent); border-color: rgba(56,189,248,.45); }
+
+/* Cartão "Próximo passo" */
+.guide-card { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; margin: 0 0 16px;
+  padding: 12px 16px; border-radius: var(--radius); background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.4); }
+.guide-card .guide-icon { color: var(--accent); margin-top: 1px; }
+.guide-card strong { display: block; }
+.guide-card p { margin: 2px 0 0; color: #c9d3f5; max-width: 80ch; }
+.guide-tips { margin-top: 6px; font-size: .86rem; }
+.guide-tips summary { cursor: pointer; color: var(--accent); }
+.guide-tips ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+
+/* Botão ou bloco recomendado pelas orientações: anel pulsante discreto */
+.guide-target { position: relative; box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(56,189,248,.35); animation: guidePulse 1.8s ease-in-out infinite; }
+button.guide-target:disabled { animation: none; box-shadow: none; }
+@keyframes guidePulse { 0%,100% { box-shadow: 0 0 0 2px var(--accent), 0 0 10px rgba(56,189,248,.2); } 50% { box-shadow: 0 0 0 3px var(--accent), 0 0 22px rgba(56,189,248,.45); } }
+
+/* Passo a passo do turno */
+.turn-steps { list-style: none; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; counter-reset: none; }
+.turn-steps li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: .82rem; line-height: 1.2; }
+.turn-steps .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-family: var(--mono); font-size: .75rem; border: 1px solid var(--line); }
+.turn-steps li.done { color: var(--ok); border-color: rgba(52,211,153,.35); }
+.turn-steps li.done .n { background: rgba(52,211,153,.15); border-color: rgba(52,211,153,.5); }
+.turn-steps li.now { color: var(--fg); border-color: var(--accent); background: rgba(56,189,248,.1); }
+.turn-steps li.now .n { background: var(--accent); color: #06101f; border-color: var(--accent); font-weight: 700; }
+.action-bar { margin-bottom: 4px; }
+.action-hint { margin-top: 0; }
+
+/* "Desde o seu último turno" e resumo do turno */
+.since-card { margin-bottom: 12px; border-color: rgba(251,191,36,.35); }
+.since-head { display: flex; align-items: center; gap: 8px; }
+.since-head .ic { color: var(--amber); }
+.new-year { display: flex; align-items: center; gap: 7px; color: var(--amber); font-weight: 600; }
+.delta-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.delta { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: .85rem; border: 1px solid var(--line); }
+.delta.up { color: var(--ok); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+.delta.down { color: var(--danger); border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.08); }
+.summary-log { margin: 6px 0 0; padding-left: 20px; font-size: .88rem; color: #c9d3f5; display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+.status-lines { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; font-size: .9rem; }
+.status-lines li { display: flex; align-items: flex-start; gap: 8px; }
+.status-lines .ic { color: var(--accent); margin-top: 2px; }
+.tip-line { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: var(--radius-sm); background: rgba(56,189,248,.08); color: #c9d3f5; }
+.tip-line .ic { color: var(--accent); margin-top: 2px; }
+
+/* Janela (modal) */
+.modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: rgba(3, 6, 15, .72); animation: fadeIn .2s ease; }
+.modal { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 22px 24px; background: #0e1530; box-shadow: var(--shadow); }
+.modal-head { display: flex; align-items: center; gap: 12px; }
+.modal-title { margin: 0; font-size: 1.3rem; color: var(--fg); text-transform: none; letter-spacing: -0.01em; font-weight: 700; }
+.modal h3 { margin: 18px 0 4px; font-size: .9rem; color: var(--muted); font-weight: 600; }
+.modal-actions { margin-top: 18px; }
+
+/* Foco visível para teclado */
+button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .turn-steps { grid-template-columns: repeat(2, 1fr); }
+  .guide-card { padding: 10px 12px; }
+  .hud .guide-toggle { order: 10; }
+}
+.choice.guide-target, .panel.guide-target { border-radius: var(--radius); }
+.choice.guide-target { padding: 2px 12px 10px; }
+
 </style>
 </head>
 <body>
@@ -1118,16 +1233,16 @@ __mods["src/data/stages.js"] = (() => {
 //               objetivo menor e dá crédito parcial. Não existe "abortar".
 
 const STAGES = {
-  ascent: { id: 'ascent', name: 'Subida', system: 'launch', baseRisk: 0.08, icon: '🚀', text: 'O foguete atravessa a atmosfera com a carga no topo.' },
-  orbit_insertion: { id: 'orbit_insertion', name: 'Entrada em órbita', system: 'power', baseRisk: 0.05, icon: '🛰️', text: 'A espaçonave abre os painéis e liga os sistemas.',
+  ascent: { id: 'ascent', name: 'Subida', system: 'launch', baseRisk: 0.08, icon: 'rocket', text: 'O foguete atravessa a atmosfera com a carga no topo.' },
+  orbit_insertion: { id: 'orbit_insertion', name: 'Entrada em órbita', system: 'power', baseRisk: 0.05, icon: 'satellite', text: 'A espaçonave abre os painéis e liga os sistemas.',
     consolation: 'A nave ficou numa órbita baixa demais, mas transmitiu dados de engenharia por alguns dias antes de reentrar.' },
-  transfer: { id: 'transfer', name: 'Transferência', system: 'power', baseRisk: 0.07, icon: '🌀', text: 'Longa viagem até o destino, dependendo de energia o tempo todo.',
+  transfer: { id: 'transfer', name: 'Transferência', system: 'power', baseRisk: 0.07, icon: 'orbit', text: 'Longa viagem até o destino, dependendo de energia o tempo todo.',
     consolation: 'A nave ficou presa em órbita da Terra, mas testou os sistemas por semanas: dados preciosos para a próxima.' },
-  geo_arrival: { id: 'geo_arrival', name: 'Chegada à GEO', system: 'comms', baseRisk: 0.06, icon: '📡', text: 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.', guaranteedEvent: true,
+  geo_arrival: { id: 'geo_arrival', name: 'Chegada à GEO', system: 'comms', baseRisk: 0.06, icon: 'dish', text: 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.', guaranteedEvent: true,
     consolation: 'A nave parou numa órbita alta errada, mas mediu a radiação dos cinturões de Van Allen.' },
-  lunar_arrival: { id: 'lunar_arrival', name: 'Chegada à Lua', system: 'comms', baseRisk: 0.10, icon: '🌙', text: 'Entrar em órbita lunar e falar com a Terra a 384 mil km.', guaranteedEvent: true,
+  lunar_arrival: { id: 'lunar_arrival', name: 'Chegada à Lua', system: 'comms', baseRisk: 0.10, icon: 'moon', text: 'Entrar em órbita lunar e falar com a Terra a 384 mil km.', guaranteedEvent: true,
     consolation: 'A nave não entrou em órbita lunar, mas fez um sobrevoo e mandou fotos de perto da Lua.' },
-  crew_return: { id: 'crew_return', name: 'Retorno da tripulação', system: 'life', baseRisk: 0.10, icon: '🪂', text: 'Trazer a tripulação viva de volta à Terra.', guaranteedEvent: true,
+  crew_return: { id: 'crew_return', name: 'Retorno da tripulação', system: 'life', baseRisk: 0.10, icon: 'parachute', text: 'Trazer a tripulação viva de volta à Terra.', guaranteedEvent: true,
     consolation: 'A cápsula fez um pouso de emergência longe da área prevista. A tripulação foi resgatada, mas a missão não conta.' },
 };
 
@@ -1291,7 +1406,7 @@ const SIDES = {
   usa: {
     id: 'usa',
     name: 'EUA',
-    icon: '🦅',
+    icon: 'wings',
     ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
     focus: 'Foguete pesado e suporte de vida',
     advantage: 'Mais verba: +20 no início e +5 por ano.',
@@ -1303,7 +1418,7 @@ const SIDES = {
   ussr: {
     id: 'ussr',
     name: 'URSS',
-    icon: '⭐',
+    icon: 'star',
     ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
     focus: 'Vida no espaço e energia contínua',
     advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
@@ -1474,22 +1589,22 @@ const USE_FEE = 6;              // taxa paga ao dono para usar o prédio dele
 
 const BUILDINGS = {
   lab: {
-    id: 'lab', name: 'Laboratório', icon: '🧪',
+    id: 'lab', name: 'Laboratório', icon: 'flask',
     effect: '+1 de tecnologia a cada Ano novo, por nível.',
     useEffect: { tech: 1 }, useText: '+1 de tecnologia',
   },
   factory: {
-    id: 'factory', name: 'Fábrica', icon: '🏭',
+    id: 'factory', name: 'Fábrica', icon: 'factory',
     effect: '−10% no preço das peças, por nível.',
     useEffect: { discount: 20 }, useText: '20% de desconto na próxima compra',
   },
   control: {
-    id: 'control', name: 'Controle de missão', icon: '🎛️',
+    id: 'control', name: 'Controle de missão', icon: 'console',
     effect: '−3% de risco em cada etapa do voo, por nível.',
     useEffect: { shield: 1 }, useText: '1 proteção contra falha',
   },
   sponsor: {
-    id: 'sponsor', name: 'Patrocinador', icon: '🤝',
+    id: 'sponsor', name: 'Patrocinador', icon: 'briefcase',
     effect: '+10 de verba a cada Ano novo, por nível (fraco de propósito).',
     useEffect: { funds: 8 }, useText: '+8 de verba',
   },
@@ -2185,6 +2300,178 @@ const GLOSSARY = [
 return { GLOSSARY };
 })();
 
+// ---- src/ui/icons.js
+__mods["src/ui/icons.js"] = (() => {
+// Ícones do jogo: SVG próprios, desenhados para este projeto (sem emojis, sem bibliotecas externas).
+// Estilo único: grade 24×24, traço 1.8 com pontas arredondadas, sem preenchimento, cor = currentColor.
+// Assim o ícone herda a cor do texto e muda com o tema pelo CSS.
+//
+// Uso: icon('rocket') devolve um <span class="ic"> com o SVG. icon('rocket', { size: 32, label: 'Foguete' }).
+// Para adicionar um ícone: acrescente uma entrada em ICONS com o miolo do SVG (paths, circles...).
+
+const F = 'fill="currentColor" stroke="none"'; // pontos cheios (olhos, pips de dado)
+
+const ICONS = {
+  // ---- tabuleiro
+  flag: '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  coins: '<ellipse cx="9" cy="7" rx="5.5" ry="2.6"/><path d="M3.5 7v4c0 1.4 2.5 2.6 5.5 2.6"/><path d="M3.5 11v4c0 1.4 2.5 2.6 5.5 2.6"/><ellipse cx="15" cy="13" rx="5.5" ry="2.6"/><path d="M9.5 13v4.4c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6V13"/>',
+  trendDown: '<path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/>',
+  card: '<rect x="4" y="3" width="13" height="18" rx="2"/><path d="M17 6.5l3 .8-3.6 13.5-5-1.3"/><path d="M8.3 9.6a2.2 2.2 0 1 1 3 2c-.7.3-1 .8-1 1.4v.5"/><circle cx="10.3" cy="16.6" r=".9" ' + F + '/>',
+  flask: '<path d="M9 3h6"/><path d="M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.2V3"/><path d="M7.2 15h9.6"/>',
+  cart: '<path d="M2.5 4h2.3l2.4 10.6a1 1 0 0 0 1 .8h9a1 1 0 0 0 1-.8L20.5 8H6"/><circle cx="9.5" cy="19.2" r="1.5"/><circle cx="17" cy="19.2" r="1.5"/>',
+  crane: '<path d="M6 21V5h14"/><path d="M6 5l4-2.5M6 9l4-4M6 13l4-4"/><path d="M17 5v5"/><rect x="15" y="10" width="4" height="3" rx=".5"/><path d="M3 21h7"/>',
+  eye: '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  wrench: '<path d="M14.6 6.4a4.2 4.2 0 0 1 5.2-1.6l-2.7 2.7.2 2.2 2.2.2 2.7-2.7a4.2 4.2 0 0 1-5.6 5.3l-7.1 7.1a2 2 0 0 1-2.9-2.9l7.1-7.1a4.2 4.2 0 0 1 .9-3.2z"/>',
+  lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',
+  scissors: '<circle cx="6" cy="7" r="2.8"/><circle cx="6" cy="17" r="2.8"/><path d="M8.3 8.6L20 19M8.3 15.4L20 5"/>',
+
+  // ---- prédios
+  factory: '<path d="M3 21V11l5 3v-3l5 3v-3l5 3V4h3v17z"/><path d="M7 18h2M12 18h2"/>',
+  console: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M6.5 12.5l3-3 3 2 4-4.5"/>',
+  briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M3 13h18"/>',
+
+  // ---- etapas do voo e missões
+  rocket: '<path d="M12 2.5c3 2.5 4.5 6 4.5 10v3.5h-9v-3.5c0-4 1.5-7.5 4.5-10z"/><circle cx="12" cy="9.5" r="1.6"/><path d="M7.5 12.5l-3 3v3.5l3-1.5M16.5 12.5l3 3v3.5l-3-1.5"/><path d="M10 19.2l2 2.3 2-2.3"/>',
+  satellite: '<rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 12H6.5M15 12h2.5"/><rect x="2" y="9" width="4.5" height="6" rx=".6"/><rect x="17.5" y="9" width="4.5" height="6" rx=".6"/><path d="M12 9V6"/><circle cx="12" cy="4.8" r="1.2"/>',
+  orbit: '<circle cx="12" cy="12" r="2.6"/><ellipse cx="12" cy="12" rx="10" ry="4.4" transform="rotate(-25 12 12)"/><circle cx="20.4" cy="8.6" r="1.3" ' + F + '/>',
+  dish: '<path d="M4 9.5a8.5 8.5 0 0 0 10.5 10.5z"/><path d="M9.2 14.8l4.6-4.6"/><circle cx="14.6" cy="9.4" r="1.2"/><path d="M16.6 4.2a5 5 0 0 1 3.2 3.2M16.8 1.4a8 8 0 0 1 5.8 5.8"/><path d="M7.5 17.5L5.5 21h6"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.6 6.6 0 0 0 10.5 10.5z"/>',
+  parachute: '<path d="M3 11a9 7.5 0 0 1 18 0z"/><path d="M3 11l8 7.5M21 11l-8 7.5M12 11v7.5"/><rect x="10.3" y="18.5" width="3.4" height="3" rx=".6"/>',
+  paw: '<circle cx="6.6" cy="10.4" r="1.8"/><circle cx="10.2" cy="6.6" r="1.8"/><circle cx="14.6" cy="6.6" r="1.8"/><circle cx="18.2" cy="10.4" r="1.8"/><path d="M12.4 12.2c-2.6 0-5.1 3.5-5.1 5.6 0 1.6 1.5 2.3 2.9 1.8a6.4 6.4 0 0 1 4.4 0c1.4.5 2.9-.2 2.9-1.8 0-2.1-2.5-5.6-5.1-5.6z"/>',
+  cloud: '<path d="M7 18.5a4.2 4.2 0 0 1-.6-8.4A5.6 5.6 0 0 1 17 8.8a4.9 4.9 0 0 1 0 9.7z"/><path d="M9 21.5l1-1.5M13 21.5l1-1.5"/>',
+  station: '<rect x="10" y="9" width="4" height="6" rx="1"/><path d="M10 12H7.2M14 12h2.8"/><rect x="2.2" y="8" width="5" height="8" rx=".6"/><rect x="16.8" y="8" width="5" height="8" rx=".6"/><path d="M12 9V5M12 15v4M10 5h4M10 19h4"/>',
+  helmet: '<path d="M5 16v-4a7 7 0 0 1 14 0v4a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/><path d="M8 11.8a4 4 0 0 1 8 0V14H8z"/><path d="M9 21.5h6"/>',
+
+  // ---- peças e instrumentos
+  camera: '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  telescope: '<path d="M3.5 12.6l12.6-5.8 2 4.4-12.6 5.8z"/><path d="M16.1 6.8l3-1.4 2 4.4-3 1.4"/><path d="M11 14.6L8 21.5M12.2 14l3.2 7.5"/>',
+  prism: '<path d="M12 4l7.5 13.5h-15z"/><path d="M1.5 12.5l8-1.2"/><path d="M15.2 11.4l6.8-1.9M15.8 13l6.2.7M16.4 14.6l4.8 3.4"/>',
+  magnet: '<path d="M6 3h4v9a2 2 0 0 0 4 0V3h4v9a6 6 0 0 1-12 0z"/><path d="M6 7h4M14 7h4"/>',
+  beacon: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>',
+  solar: '<rect x="3" y="4" width="18" height="11" rx="1"/><path d="M3 9.5h18M9 4v11M15 4v11"/><path d="M12 15v4M8 21h8"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+  battery: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3"/><path d="M6 10v4M9.5 10v4"/>',
+  signal: '<path d="M5 20v-3M10 20v-7M15 20V9M20 20V5"/>',
+  flame: '<path d="M12 22c4 0 6.5-2.6 6.5-6.3 0-3.8-3-6.2-4-9.7-2 1.5-3 3.6-3 5.6-1.2-.8-1.8-2-2-3.3-2 2-3 4.5-3 7.4 0 3.7 2 6.3 5.5 6.3z"/>',
+  capsule: '<path d="M8.5 4h7l3.5 14H5z"/><path d="M4 18h16v2.5H4z"/><circle cx="12" cy="10.5" r="2"/>',
+  hexnut: '<path d="M12 2.5l8.2 4.8v9.4L12 21.5l-8.2-4.8V7.3z"/><circle cx="12" cy="12" r="3"/>',
+
+  // ---- recursos (HUD e medidores)
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+  shield: '<path d="M12 3l8 3v5.5c0 5-3.4 8.4-8 9.5-4.6-1.1-8-4.5-8-9.5V6z"/>',
+  shieldCheck: '<path d="M12 3l8 3v5.5c0 5-3.4 8.4-8 9.5-4.6-1.1-8-4.5-8-9.5V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" ' + F + '/>',
+  atom: '<circle cx="12" cy="12" r="1.6" ' + F + '/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>',
+  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  weight: '<path d="M6.5 8h11l2.5 13H4z"/><circle cx="12" cy="5" r="2.5"/>',
+  hourglass: '<path d="M7 3h10v3.2a5 5 0 0 1-5 5 5 5 0 0 1 5 5V21H7v-4.8a5 5 0 0 1 5-5 5 5 0 0 1-5-5z"/>',
+  planet: '<circle cx="12" cy="12" r="5.5"/><path d="M5.2 14.6C2.6 17 2.6 19 4.6 19.5s6.3-1.2 10.4-4.3 6.6-7.1 5.8-8.9c-.5-1.2-2.2-1.3-4.3-.4"/>',
+  gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M3 18h18"/>',
+  clipboard: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4"/><path d="M8.5 12.5l2.2 2.2 4.3-4.4"/>',
+  die: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.2" ' + F + '/><circle cx="12" cy="12" r="1.2" ' + F + '/><circle cx="15" cy="15" r="1.2" ' + F + '/>',
+
+  // ---- eventos do voo
+  comet: '<circle cx="16" cy="8" r="4"/><path d="M13.2 10.8L4 20M12.2 7.4L5.5 14.1M16.6 12L10 18.6"/>',
+
+  // ---- pessoas, lados e agência
+  wings: '<path d="M2 8.5c3.5 0 6.5 1.8 10 6.5 3.5-4.7 6.5-6.5 10-6.5"/><path d="M5 12.5c2.5 0 4.6 1.2 7 4.3 2.4-3.1 4.5-4.3 7-4.3"/><circle cx="12" cy="6" r="1.8"/>',
+  star: '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6l-5.4 2.9 1.2-6-4.5-4.2 6.1-.7z"/>',
+  robot: '<rect x="5" y="8" width="14" height="11" rx="2.5"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><circle cx="9.3" cy="13" r="1.3" ' + F + '/><circle cx="14.7" cy="13" r="1.3" ' + F + '/><path d="M9.5 16.5h5M3 12v3M21 12v3"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
+  building: '<path d="M4 21V5l8-2v18M12 8l8 2.2V21"/><path d="M2 21h20M7 8h2M7 12h2M7 16h2M15 13h2M15 17h2"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5.2a3 3 0 0 0 3 4.2M16 6h2.8a3 3 0 0 1-3 4.2"/><path d="M12 13v4"/><path d="M8 21h8l-1-4H9z"/>',
+  ladder: '<path d="M7 3v18M17 3v18M7 7h10M7 12h10M7 17h10"/>',
+  medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.6 10.6L6 3h4l2 5 2-5h4l-2.6 7.6"/><path d="M12 12.6l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z"/>',
+  coop: '<circle cx="9" cy="12" r="5.5"/><circle cx="15" cy="12" r="5.5"/>',
+
+  // ---- interface
+  book: '<path d="M5 4h10a3 3 0 0 1 3 3v14H8a3 3 0 0 1-3-3z"/><path d="M5 18a3 3 0 0 1 3-3h10"/>',
+  bookOpen: '<path d="M3 5h6a3 3 0 0 1 3 3v12a2.5 2.5 0 0 0-2.5-2.5H3z"/><path d="M21 5h-6a3 3 0 0 0-3 3v12a2.5 2.5 0 0 1 2.5-2.5H21z"/>',
+  scroll: '<path d="M6 3h12v14.5a3.5 3.5 0 0 1-3.5 3.5H6a3 3 0 0 1-3-3v-1h12"/><path d="M6 3v13M9 8h6M9 12h6"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  alert: '<path d="M12 3.5l9.5 17h-19z"/><path d="M12 10v5"/><circle cx="12" cy="17.8" r=".9" ' + F + '/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8v.3h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/>',
+  testTube: '<path d="M14.5 3l6.5 6.5M16 4.5L6.2 14.3a3.5 3.5 0 1 0 5 5L21 9.5"/><path d="M8.7 11.8h6.6"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+  arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.8" r=".9" ' + F + '/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.1" ' + F + '/><circle cx="4.5" cy="12" r="1.1" ' + F + '/><circle cx="4.5" cy="18" r="1.1" ' + F + '/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20.5V16h-4.5"/>',
+};
+
+// Faces do dado (pips cheios). Posições na grade 24×24.
+const PIPS = {
+  1: [[12, 12]],
+  2: [[8, 8], [16, 16]],
+  3: [[7.5, 7.5], [12, 12], [16.5, 16.5]],
+  4: [[8, 8], [16, 8], [8, 16], [16, 16]],
+  5: [[7.5, 7.5], [16.5, 7.5], [12, 12], [7.5, 16.5], [16.5, 16.5]],
+  6: [[8, 7], [16, 7], [8, 12], [16, 12], [8, 17], [16, 17]],
+};
+
+function svgMarkup(inner, size) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+
+// Devolve um <span class="ic"> com o ícone. `label` vira texto acessível (senão o ícone é decorativo).
+function icon(name, { size = 18, label = null, className = '' } = {}) {
+  const inner = ICONS[name] || ICONS.hexnut;
+  const span = document.createElement('span');
+  span.className = `ic ${className}`.trim();
+  span.innerHTML = svgMarkup(inner, size);
+  if (label) {
+    span.setAttribute('role', 'img');
+    span.setAttribute('aria-label', label);
+    span.title = label;
+  }
+  return span;
+}
+
+// Face do dado como SVG (1 a 6).
+function dieFace(n, { size = 48, className = '' } = {}) {
+  const pips = (PIPS[n] || []).map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.7" ${F}/>`).join('');
+  const span = document.createElement('span');
+  span.className = `ic die-face ${className}`.trim();
+  span.setAttribute('role', 'img');
+  span.setAttribute('aria-label', `dado ${n}`);
+  span.innerHTML = svgMarkup(`<rect x="3" y="3" width="18" height="18" rx="4"/>${pips}`, size);
+  return span;
+}
+
+// Ícone grande para a animação de lançamento (string, usada fora do DOM do jogo).
+const rocketSvg = (size) => svgMarkup(ICONS.rocket, size);
+
+return { ICONS, icon, dieFace, rocketSvg };
+})();
+
+// ---- src/ui/prefs.js
+__mods["src/ui/prefs.js"] = (() => {
+// Preferências da interface guardadas no navegador. Sem imports, para qualquer módulo de UI usar.
+// Se o navegador bloquear o armazenamento (aba anônima, prévia), vale o padrão e o jogo segue.
+
+const GUIDE_KEY = 'smdg.guide';
+let guide = true;
+try {
+  const saved = localStorage.getItem(GUIDE_KEY);
+  if (saved != null) guide = saved === 'on';
+} catch { /* sem armazenamento: dicas ligadas */ }
+
+const guideOn = () => guide;
+
+function setGuide(on) {
+  guide = Boolean(on);
+  try { localStorage.setItem(GUIDE_KEY, guide ? 'on' : 'off'); } catch { /* ignora */ }
+}
+
+return { guideOn, setGuide };
+})();
+
 // ---- src/ui/components.js
 __mods["src/ui/components.js"] = (() => {
 // Componentes de UI reutilizáveis. Só montam DOM a partir do estado; não contêm regra de jogo.
@@ -2200,6 +2487,8 @@ const { SIDES, ladderOf } = __mods["src/data/sides.js"];
 const { REAL_HISTORY, ROUNDS_PER_YEAR, yearOf } = __mods["src/data/history.js"];
 const { BUILDINGS, MAX_LEVEL, upgradeCost } = __mods["src/data/buildings.js"];
 const { STAGES } = __mods["src/data/stages.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideOn } = __mods["src/ui/prefs.js"];
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -2224,41 +2513,61 @@ function button(label, onclick, opts = {}) {
 }
 
 // Ícones por tipo visual de peça (ver campo `visual` em data/parts.js e data/instruments.js).
+// Os nomes são chaves de ICONS em ui/icons.js.
 const ITEM_ICONS = {
-  camera: '📷', camera_large: '🔭', spectro: '🌈', boom: '🧲', beacon: '📻',
-  panel: '☀️', panel_large: '🔆', battery: '🔋', antenna: '📶', dish: '📡', thruster: '🔥', capsule: '🧑‍🚀',
+  camera: 'camera', camera_large: 'telescope', spectro: 'prism', boom: 'magnet', beacon: 'beacon',
+  panel: 'solar', panel_large: 'sun', battery: 'battery', antenna: 'signal', dish: 'dish', thruster: 'flame', capsule: 'capsule',
 };
-const MISSION_ICONS = { first_satellite: '🛰️', living_being: '🐕', weather_watch: '🌦️', lunar_probe: '🌙', space_station: '🏠', crewed_moon: '👩‍🚀' };
-const DIE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const MISSION_ICONS = { first_satellite: 'satellite', living_being: 'paw', weather_watch: 'cloud', lunar_probe: 'moon', space_station: 'station', crewed_moon: 'helmet' };
+const missionIcon = (id, opts) => icon(MISSION_ICONS[id] || 'rocket', opts);
 
 function avatar(player, size) {
-  return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null }, player.bot ? '🤖' : player.name[0].toUpperCase());
+  return el('span', { class: `avatar c${player.id % 4}`, style: size ? `width:${size}px;height:${size}px` : null },
+    player.bot ? icon('robot', { size: size ? Math.round(size * 0.6) : 20, label: 'Bot' }) : player.name[0].toUpperCase());
 }
 
-const sideLabel = (p) => (SIDES[p.side] ? `${SIDES[p.side].icon} ${SIDES[p.side].name}` : '');
+// Nome do lado como texto (para frases) e como selo com ícone (para a interface).
+const sideLabel = (p) => SIDES[p.side]?.name || '';
+const sideBadge = (p) => (SIDES[p.side] ? [icon(SIDES[p.side].icon, { size: 15 }), SIDES[p.side].name] : '');
 
 // Barra superior: ano, quem joga, lado, degrau, verba, tecnologia e em que etapa do ciclo está.
-function hud(state, player, step) {
+// Com `actions`, mostra também o botão que liga e desliga as dicas.
+function hud(state, player, step, actions = null) {
   const mission = MISSIONS[player.flight?.missionId || player.missionId];
   const prog = ladderProgress(player);
   const steps = state.sandbox ? ['workshop', 'flight', 'report'] : ['board', 'workshop', 'flight', 'report'];
   const names = { board: 'Tabuleiro', workshop: 'Oficina', flight: 'Voo', report: 'Relatório' };
   const roundInYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   return el('div', { class: 'hud' }, [
-    state.sandbox ? el('span', { class: 'chip' }, '🧪 sandbox')
-      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, ['📅 ', el('span', { class: 'num' }, yearOf(state.round)), el('small', {}, ` · ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
+    state.sandbox ? el('span', { class: 'chip' }, [icon('flask', { size: 15 }), 'sandbox'])
+      : el('span', { class: 'chip year', title: `Rodada ${roundInYear} de ${ROUNDS_PER_YEAR} deste ano` }, [icon('calendar', { size: 15 }), el('span', { class: 'num' }, yearOf(state.round)), el('small', {}, `rodada ${roundInYear}/${ROUNDS_PER_YEAR}`)]),
     el('div', { class: 'who' }, [avatar(player), player.name]),
-    player.side ? el('span', { class: 'chip' }, sideLabel(player)) : null,
+    player.side ? el('span', { class: 'chip' }, sideBadge(player)) : null,
     el('span', { class: 'chip' }, mission
-      ? [MISSION_ICONS[mission.id] || '🚀', ' ', state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ' · em voo' : '']
-      : state.sandbox ? '🎯 escolhendo missão' : '🏁 escada completa'),
-    el('span', { class: 'chip', title: 'Verba' }, ['💰 ', el('span', { class: 'num' }, player.funds)]),
-    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, ['🔧 tec ', el('span', { class: 'num' }, player.tech)]),
-    player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, ['🛡️ ', el('span', { class: 'num' }, player.shields)]) : null,
+      ? [missionIcon(mission.id, { size: 15 }), state.sandbox ? mission.name : `Degrau ${Math.min(prog.steps + 1, prog.total)}/${prog.total}: ${mission.name}`, player.flight ? ', em voo' : '']
+      : state.sandbox ? [icon('target', { size: 15 }), 'escolhendo missão'] : [icon('flag', { size: 15 }), 'escada completa']),
+    el('span', { class: 'chip', title: 'Verba' }, [icon('coins', { size: 15, label: 'Verba' }), el('span', { class: 'num' }, player.funds)]),
+    state.sandbox ? null : el('span', { class: 'chip', title: 'Tecnologia: desbloqueia peças e foguetes melhores' }, [icon('chip', { size: 15, label: 'Tecnologia' }), 'tec', el('span', { class: 'num' }, player.tech)]),
+    player.shields ? el('span', { class: 'chip', title: 'Proteções contra falha' }, [icon('shield', { size: 15, label: 'Proteções' }), el('span', { class: 'num' }, player.shields)]) : null,
     el('span', { class: 'spacer' }),
     el('div', { class: 'steps' }, steps.map((s) => el('span', { class: s === step ? 'on' : '' }, names[s]))),
+    actions ? guideToggle(actions) : null,
   ]);
 }
+
+// Botão que liga e desliga as orientações (preferência salva no navegador).
+function guideToggle(actions) {
+  const on = guideOn();
+  const b = button([icon('compass', { size: 16 }), on ? 'Dicas: ligadas' : 'Dicas: desligadas'], () => actions.toggleGuide(), {
+    class: `small ghost guide-toggle ${on ? 'on' : ''}`,
+    title: on ? 'Desligar as orientações' : 'Ligar as orientações',
+  });
+  b.setAttribute('aria-pressed', String(on));
+  return b;
+}
+
+// Título de painel com ícone.
+const panelTitle = (iconName, text) => el('h3', { class: 'panel-title' }, [icon(iconName, { size: 18 }), text]);
 
 function progressBar(fraction, status = 'ok') {
   return el('div', { class: `pbar ${status}` }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%` })]);
@@ -2269,19 +2578,17 @@ function ladderPanel(state, player) {
   const ladder = ladderOf(player);
   const prog = ladderProgress(player);
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, `🪜 Escada ${sideLabel(player)}`),
+    panelTitle(SIDES[player.side]?.icon || 'ladder', `Escada ${sideLabel(player)}`),
     progressBar(prog.pct, prog.done ? 'done' : 'ok'),
     el('ol', { class: 'ladder' }, ladder.map((m, i) => {
       const done = player.completed.find((c) => c.missionId === m);
       const real = REAL_HISTORY[m].sides[player.side];
       const flying = player.flight?.missionId === m;
       const cls = i < player.step ? 'done' : i === player.step ? 'now' : '';
+      const status = done ? `cumprida em ${done.year}` : flying ? `em voo, etapa ${player.flight.stageIndex + 1}/${player.flight.plan.length}` : i === player.step ? 'degrau atual' : '';
       return el('li', { class: cls }, [
-        el('span', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`),
-        el('small', { class: 'hint' }, [
-          done ? `✓ ${done.year}` : flying ? `🛰️ em voo, etapa ${player.flight.stageIndex + 1}/${player.flight.plan.length}` : i === player.step ? 'degrau atual' : '',
-          ` · história real: ${real ?? 'nunca'}`,
-        ]),
+        el('span', { class: 'ladder-name' }, [done ? icon('check', { size: 16 }) : missionIcon(m, { size: 16 }), MISSIONS[m].name]),
+        el('small', { class: 'hint' }, [status, status ? '. ' : '', `História real: ${real ?? 'nunca'}`]),
       ]);
     })),
     el('p', { class: 'hint' }, 'Cada degrau é uma nave nova. Tecnologia, prédios e verba continuam.'),
@@ -2293,7 +2600,7 @@ function rivalsPanel(state, player) {
   const rivals = state.players.filter((r) => r.id !== player.id);
   if (!rivals.length) return null;
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, '🕵️ Rivais'),
+    panelTitle('eye', 'Rivais'),
     ...rivals.map((r) => {
       const info = player.intel[r.id];
       let text = 'Estado desconhecido. Caia na Espionagem ou invista em boatos.';
@@ -2304,7 +2611,7 @@ function rivalsPanel(state, player) {
         text = `Espião em ${info.year}: ${info.steps}/${info.total} degraus${info.mission ? `, mirando "${info.mission}"` : ''}; ${ship}.`;
       }
       return el('div', { class: 'race-row' }, [
-        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideLabel(r))]),
+        el('div', { class: 'row', style: 'margin:0;gap:8px' }, [avatar(r, 26), el('strong', {}, r.name), el('span', { class: 'chip small' }, sideBadge(r))]),
         el('small', { class: `hint ${info && !info.rumor ? 'intel' : ''}` }, text),
       ]);
     }),
@@ -2314,23 +2621,23 @@ function rivalsPanel(state, player) {
 // Painel da agência: prédios (upgrade de qualquer lugar) e socorro de emergência.
 function agencyPanel(state, player, actions) {
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, '🏢 Sua agência'),
+    panelTitle('building', 'Sua agência'),
     el('ul', { class: 'buildings' }, Object.values(BUILDINGS).map((b) => {
       const level = player.buildings[b.id];
       const cost = level ? upgradeCostFor(state, player, b.id) : null;
-      return el('li', {}, [
-        el('span', { class: 'b-icon' }, b.icon),
+      return el('li', { class: level ? '' : 'not-built' }, [
+        el('span', { class: 'b-icon' }, icon(b.icon, { size: 20 })),
         el('div', {}, [
-          el('strong', {}, `${b.name} ${level ? `nível ${level}/${MAX_LEVEL}` : ''}`),
-          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre (🏗️) por ${upgradeCost(0)}. ${b.effect}`),
+          el('strong', {}, `${b.name}${level ? `, nível ${level}/${MAX_LEVEL}` : ''}`),
+          el('small', { class: 'hint' }, level ? b.effect : `Construa num terreno livre por ${upgradeCost(0)}. ${b.effect}`),
         ]),
         level && level < MAX_LEVEL
-          ? button(`⬆ ${cost}`, () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: 'Subir de nível' })
+          ? button([icon('arrowUp', { size: 14 }), el('span', { class: 'num' }, cost)], () => actions.upgradeBuilding(b.id), { class: 'small', disabled: player.funds < cost, title: `Subir para o nível ${level + 1} por ${cost}` })
           : null,
       ]);
     })),
     player.funds < BAILOUT_LIMIT
-      ? button(`🆘 Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`, () => actions.requestBailout(), { class: 'small ghost' })
+      ? button([icon('lifebuoy', { size: 16 }), `Socorro de emergência (+${BAILOUT_FUNDS} verba, −${BAILOUT_TECH_COST} tec)`], () => actions.requestBailout(), { class: 'small ghost' })
       : null,
   ]);
 }
@@ -2338,7 +2645,7 @@ function agencyPanel(state, player, actions) {
 // Escolha de missão: só no modo sandbox (no jogo normal a missão é o degrau da escada).
 function missionPicker(state, player, actions) {
   return el('div', { class: 'mission-grid' }, Object.values(MISSIONS).map((m) => button([
-    el('span', { class: 'icon' }, MISSION_ICONS[m.id] || '🚀'),
+    el('span', { class: 'icon' }, missionIcon(m.id, { size: 26 })),
     el('strong', {}, m.name),
     el('span', { class: 'diff' }, `${m.difficulty} · ${flightPlan(m.id).length} etapas de voo`),
     el('span', { class: 'goal' }, m.goal),
@@ -2350,7 +2657,8 @@ function stageTrack(plan, stages, currentIndex) {
   return el('ol', { class: 'stage-track' }, plan.map((id, i) => {
     const rec = stages[i];
     const cls = rec ? (rec.success ? 'done' : 'fail') : i === currentIndex ? 'now' : '';
-    return el('li', { class: cls }, [el('span', { class: 's-icon' }, STAGES[id].icon), el('span', {}, STAGES[id].name)]);
+    const glyph = rec ? (rec.success ? 'check' : 'x') : STAGES[id].icon;
+    return el('li', { class: cls }, [el('span', { class: 's-icon' }, icon(glyph, { size: 15 })), el('span', {}, STAGES[id].name)]);
   }));
 }
 
@@ -2358,9 +2666,9 @@ function stageTrack(plan, stages, currentIndex) {
 function gauges(player) {
   const t = effectiveTotals(player);
   const m = MISSIONS[player.missionId];
-  const g = (label, value, limit, status, fill, hint) =>
+  const g = ([iconName, label], value, limit, status, fill, hint) =>
     el('div', { class: `gauge ${status}`, title: hint }, [
-      el('span', { class: 'g-label' }, label),
+      el('span', { class: 'g-label' }, [icon(iconName, { size: 15 }), label]),
       el('span', { class: 'g-value' }, limit == null ? `${value}` : `${value} / ${limit}`),
       el('div', { class: 'bar' }, [el('div', { class: 'fill', style: `width:${Math.round(Math.max(0, Math.min(1, fill)) * 100)}%` })]),
     ]);
@@ -2368,26 +2676,26 @@ function gauges(player) {
   const hasLauncher = t.maxMass != null;
 
   return el('div', { class: 'gauges' }, [
-    g('💰 Verba p/ lançar', player.funds, hasLauncher ? t.launchCost : '—', hasLauncher && player.funds < t.launchCost ? 'bad' : 'ok',
+    g(['coins', 'Verba para lançar'], player.funds, hasLauncher ? t.launchCost : '—', hasLauncher && player.funds < t.launchCost ? 'bad' : 'ok',
       hasLauncher ? ratio(player.funds, t.launchCost) : 1, 'Verba disponível contra o custo do lançador escolhido.'),
-    g('⚖️ Massa', t.mass, hasLauncher ? t.maxMass : '—', hasLauncher && t.mass > t.maxMass ? 'bad' : 'ok',
+    g(['weight', 'Massa'], t.mass, hasLauncher ? t.maxMass : '—', hasLauncher && t.mass > t.maxMass ? 'bad' : 'ok',
       hasLauncher ? ratio(t.mass, t.maxMass) : 0, 'Massa total contra a capacidade do lançador. Barra cheia = no limite.'),
-    g('⚡ Energia usada', t.powerUse, t.powerGen, t.powerUse > t.powerGen ? 'bad' : 'ok',
+    g(['bolt', 'Energia usada'], t.powerUse, t.powerGen, t.powerUse > t.powerGen ? 'bad' : 'ok',
       ratio(t.powerUse, t.powerGen), 'Energia consumida contra a gerada. Precisa sobrar.'),
-    g('📡 Dados → comunicação', t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
+    g(['dish', 'Dados e transmissão'], t.data, t.commsEffective, t.data > t.commsEffective ? 'warn' : 'ok',
       ratio(t.data, t.commsEffective), 'Dados gerados contra o que a antena transmite (já com a penalidade da órbita). Se passar, metade da ciência se perde.'),
-    g('🔬 Ciência', t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
+    g(['atom', 'Ciência'], t.scienceEffective, m.needs.science, t.scienceEffective < m.needs.science ? 'bad' : 'ok',
       ratio(t.scienceEffective, m.needs.science), 'Valor científico contra o mínimo da missão.'),
-    g('📶 Comunicação', t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
+    g(['signal', 'Comunicação'], t.commsEffective, m.needs.comms, t.commsEffective < m.needs.comms ? 'bad' : 'ok',
       ratio(t.commsEffective, m.needs.comms), 'Comunicação efetiva contra o mínimo da missão.'),
-    g('⏳ Vida útil (anos)', t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
+    g(['hourglass', 'Vida útil (anos)'], t.lifetime, m.needs.lifetime, t.lifetime < m.needs.lifetime ? 'bad' : 'ok',
       ratio(t.lifetime, m.needs.lifetime), 'Anos de operação (órbita + propulsor/bateria) contra o mínimo da missão.'),
   ]);
 }
 
 function checklist(checks) {
   return el('ul', { class: 'checklist' }, checks.map((c) =>
-    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [el('span', {}, c.ok ? '✓' : c.hard ? '✕' : '!'), el('span', {}, c.text)])));
+    el('li', { class: c.ok ? 'ok' : c.hard ? 'bad' : 'warn' }, [icon(c.ok ? 'check' : c.hard ? 'x' : 'alert', { size: 15, label: c.ok ? 'ok' : c.hard ? 'impede o lançamento' : 'atenção' }), el('span', {}, c.text)])));
 }
 const designChecklist = (player) => checklist(checkDesign(player).checks);
 
@@ -2403,19 +2711,19 @@ function milestoneTrack(player, missionId = player.missionId) {
 // Diário: só mostra mensagens públicas e as do jogador da vez (rival escondido).
 function logPanel(state, viewer) {
   const entries = state.log.filter((l) => l.who == null || l.who === viewer.id).slice(0, 14);
-  return el('div', { class: 'panel log' }, [el('h3', { style: 'margin-top:0' }, '📓 Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
+  return el('div', { class: 'panel log' }, [panelTitle('book', 'Diário da agência'), el('ul', {}, entries.map((l) => el('li', {}, l.text)))]);
 }
 
 function glossary(open = false) {
   const d = el('details', { class: 'panel glossary' }, [
-    el('summary', {}, '📘 O que significam os recursos?'),
+    el('summary', {}, [icon('bookOpen', { size: 16 }), 'O que significam os recursos?']),
     el('dl', {}, GLOSSARY.flatMap((g) => [el('dt', {}, g.term), el('dd', {}, g.text)])),
   ]);
   if (open) d.open = true;
   return d;
 }
 
-return { el, button, ITEM_ICONS, MISSION_ICONS, DIE_FACES, avatar, sideLabel, hud, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
+return { el, button, ITEM_ICONS, MISSION_ICONS, missionIcon, avatar, sideLabel, sideBadge, hud, guideToggle, panelTitle, progressBar, ladderPanel, rivalsPanel, agencyPanel, missionPicker, stageTrack, gauges, checklist, designChecklist, milestoneTrack, logPanel, glossary };
 })();
 
 // ---- src/ui/spacecraft.js
@@ -2560,7 +2868,9 @@ return { spacecraftSvg };
 __mods["src/ui/setup.js"] = (() => {
 // Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
-const { el, button, glossary, MISSION_ICONS } = __mods["src/ui/components.js"];
+const { el, button, glossary, missionIcon } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideOn } = __mods["src/ui/prefs.js"];
 const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
 const { createPlayer } = __mods["src/sim/state.js"];
 const { SIDES } = __mods["src/data/sides.js"];
@@ -2587,7 +2897,7 @@ function setupScreen(state, actions) {
       playersBox.appendChild(el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]));
     });
     soloNote.textContent = players.length === 1
-      ? '🤖 Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
+      ? 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
       : players.length === 2
         ? '2 agências: lados diferentes, sorteados. Cada uma joga escondida: use espionagem e boatos.'
         : `${players.length} agências: lados sorteados de forma equilibrada. Quem é do mesmo lado disputa os mesmos degraus.`;
@@ -2602,7 +2912,11 @@ function setupScreen(state, actions) {
   };
   const countBox = el('div', { class: 'row count-btns' }, ['Agências:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
 
-  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), '🧪 Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+
+  // Orientações: liga/desliga as dicas de próximo passo durante a partida (salvo no navegador).
+  const guideBox = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox', checked: guideOn() ? 'checked' : null }), 'Mostrar orientações durante a partida: o que fazer a cada passo e o botão recomendado. Dá para mudar a qualquer momento no topo da tela.']);
+  guideBox.querySelector('input').addEventListener('change', (e) => actions.setGuide(e.target.checked));
   toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
   return el('section', { class: 'screen setup' }, [
@@ -2616,15 +2930,15 @@ function setupScreen(state, actions) {
     ]),
     el('h2', {}, 'Como funciona'),
     el('div', { class: 'steps-grid' }, [
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', {}, '🎲 Tabuleiro'), el('p', {}, `Role 2 dados e escolha um. Cartas de dilema, prédios, espionagem. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', {}, '🔧 Oficina'), el('p', {}, 'Monte a nave do próximo degrau. Veja os limites e o risco do voo antes de lançar.')]),
-      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', {}, '🚀 Voo em etapas'), el('p', {}, 'Uma etapa por turno, com imprevistos. Se falhar no meio, ainda sobra uma missão de consolação.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 18 }), 'Tabuleiro']), el('p', {}, `Role 2 dados e escolha um. Cartas de dilema, prédios, espionagem. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 18 }), 'Oficina']), el('p', {}, 'Monte a nave do próximo degrau. Veja os limites e o risco do voo antes de lançar.')]),
+      el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 18 }), 'Voo em etapas']), el('p', {}, 'Uma etapa por turno, com imprevistos. Se falhar no meio, ainda sobra uma missão de consolação.')]),
     ]),
     el('h2', {}, 'Lados e escadas de missões'),
     el('p', { class: 'hint' }, 'Vence quem completar primeiro a escada do próprio lado. Cada degrau é uma nave nova. As agências são suas; o lado define a escada, uma vantagem e uma fraqueza.'),
     el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
-      el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, s.icon), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
-      el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', {}, `${MISSION_ICONS[m] || '🚀'} ${MISSIONS[m].name}`))),
+      el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, icon(s.icon, { size: 22 })), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
+      el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', { class: 'with-icon' }, [missionIcon(m, { size: 16 }), MISSIONS[m].name]))),
       el('small', { class: 'gain-text' }, `+ ${s.advantage}`),
       el('small', { class: 'lose-text' }, `− ${s.weakness}`),
     ]))),
@@ -2633,7 +2947,8 @@ function setupScreen(state, actions) {
     playersBox,
     soloNote,
     toggle,
-    el('div', { class: 'row' }, [button('🚀 Começar', () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
+    guideBox,
+    el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
     glossary(),
     el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
   ]);
@@ -2642,10 +2957,352 @@ function setupScreen(state, actions) {
 return { setupScreen };
 })();
 
+// ---- src/ui/guide.js
+__mods["src/ui/guide.js"] = (() => {
+// Orientações para o jogador: "o que fazer agora" em cada tela, com o botão recomendado destacado.
+// O jogador liga e desliga as dicas (no HUD ou na tela inicial). A preferência fica no navegador
+// (localStorage) e o jogo funciona normalmente se o navegador bloquear o armazenamento.
+// Só lê o estado; nenhuma regra de jogo mora aqui.
+const { el } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideOn } = __mods["src/ui/prefs.js"];
+const { currentPlayer, SPY_COST } = __mods["src/sim/state.js"];
+const { checkDesign } = __mods["src/sim/simulate.js"];
+const { isLocked, requiredTech } = __mods["src/sim/resources.js"];
+const { LAUNCHERS } = __mods["src/data/launchers.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { ORBITS } = __mods["src/data/orbits.js"];
+const { STAGES } = __mods["src/data/stages.js"];
+
+
+// Mesmo que o motor de jogo exige para passar a vez (ver endTurn em sim/actions.js).
+function endTurnBlocker(state) {
+  const p = currentPlayer(state);
+  if (!p.rolled) return 'Role os dados e ande antes de passar a vez.';
+  if (state.pendingDilemma) return 'Resolva a carta de dilema antes de passar a vez.';
+  if (p.flight?.pending) return 'Decida o imprevisto do voo antes de passar a vez.';
+  if (p.flight && !p.flightAdvanced) return 'Sua nave está em voo: avance uma etapa antes de passar a vez.';
+  return null;
+}
+
+// Sem lançador escolhido e nenhum liberado: explica que falta tecnologia e como ganhar.
+function noLauncherYet(player) {
+  if (player.spacecraft.launcherId) return null;
+  const all = Object.values(LAUNCHERS);
+  if (!all.every((l) => isLocked(player, l))) return null;
+  const need = Math.min(...all.map((l) => requiredTech(player, l)));
+  return {
+    title: 'Nenhum foguete liberado ainda',
+    text: `O foguete mais simples exige tecnologia ${need} e você tem ${player.tech}. Ganhe tecnologia a cada Ano novo, na casa Ano Geofísico Internacional ou construindo um Laboratório. Enquanto isso, compre as peças da nave.`,
+  };
+}
+
+// Primeiro item vermelho da checagem do projeto (o que impede o lançamento).
+function firstHardFailure(player) {
+  return checkDesign(player).checks.find((c) => !c.ok && c.hard);
+}
+
+// Próximo passo recomendado: { title, text, target, tips[] }.
+// `target` é a chave do botão que a tela destaca (ver hl() abaixo).
+function nextStep(state, screen) {
+  const p = currentPlayer(state);
+  if (!p) return null;
+  const mission = MISSIONS[p.missionId];
+
+  if (screen === 'board') {
+    if (state.pendingDilemma) {
+      return { title: 'Resolva a carta de dilema', text: 'No centro do tabuleiro, escolha uma das opções. Não existe resposta certa: cada uma ganha algo e perde outra coisa.', target: 'dilemma' };
+    }
+    if (state.dice) {
+      return { title: 'Escolha um dos dados', text: 'Olhe as casas à frente do seu peão e escolha o dado que para na melhor casa para você agora.', target: 'die' };
+    }
+    if (!p.rolled) {
+      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, desconto, uma carta de dilema ou um prédio.', target: 'roll' };
+    }
+    const pending = state.pendingTile;
+    if (pending?.kind === 'build') {
+      return { title: 'Terreno livre: construir?', text: 'Um prédio dá vantagem até o fim da partida. Laboratório acelera a tecnologia, Fábrica dá desconto, Controle de missão reduz o risco do voo e Patrocinador rende um pouco de verba. Ou clique em Seguir.', target: 'tile' };
+    }
+    if (pending?.kind === 'spy') {
+      return { title: 'Espionagem', text: `Por ${SPY_COST} de verba você vê em que degrau um rival está e quão pronta está a nave dele. Útil para decidir se lança agora ou se pode esperar.`, target: 'tile' };
+    }
+    if (pending) {
+      return { title: 'Prédio de um rival', text: 'Você pode pagar para usar o prédio. Você ganha o benefício, mas o dono recebe a taxa.', target: 'tile' };
+    }
+    if (p.flight && !p.flightAdvanced) {
+      return { title: 'Sua nave está em voo', text: `Avance o voo para resolver a próxima etapa: ${STAGES[p.flight.plan[p.flight.stageIndex]].name}. Uma etapa por turno.`, target: 'advance' };
+    }
+    if (!mission) {
+      return { title: 'Escada completa', text: 'Você cumpriu todos os degraus. Passe a vez: o vencedor é revelado no fim da rodada.', target: 'end' };
+    }
+    const design = checkDesign(p);
+    if (design.ok && !p.flight && !p.launchedThisTurn) {
+      return { title: 'Nave pronta para lançar', text: 'Lance agora ou espere melhorar. Esperar rende tecnologia e peças melhores, mas um rival pode cumprir o degrau antes.', target: 'launch' };
+    }
+    if (!p.flight && !p.launchedThisTurn) {
+      const locked = noLauncherYet(p);
+      if (locked) return { ...locked, target: 'workshop' };
+      const fail = firstHardFailure(p);
+      return {
+        title: `Monte a nave: ${mission.name}`,
+        text: fail ? `Vá à oficina. Falta resolver: ${fail.text}` : 'Vá à oficina e monte a nave do degrau atual.',
+        target: 'workshop',
+      };
+    }
+    return { title: 'Turno concluído', text: 'Você já fez o principal. Passe a vez para ver o resumo do turno.', target: 'end' };
+  }
+
+  if (screen === 'workshop') {
+    if (!mission) return null;
+    const tips = [
+      'Etiquetas verdes mostram o que a peça dá. As amarelas, o que ela custa.',
+      'Barra vermelha no painel de recursos impede o lançamento. Amarela só reduz a ciência.',
+      'Passe o mouse sobre um medidor para ver o que ele significa.',
+    ];
+    const locked = noLauncherYet(p);
+    if (locked) return { ...locked, target: 'launcher', tips };
+    if (!p.spacecraft.launcherId) {
+      return { title: 'Escolha o foguete', text: 'Comece pelo veículo de lançamento: ele define quanta massa cabe na nave e até que órbita ela chega.', target: 'launcher', tips };
+    }
+    if (!p.spacecraft.orbitId) {
+      return { title: 'Escolha a órbita', text: `A missão "${mission.name}" exige a ${ORBITS[mission.orbit].name}.`, target: 'orbit', tips };
+    }
+    const fail = firstHardFailure(p);
+    if (fail) return { title: 'Resolva os itens em vermelho', text: fail.text, target: 'checks', tips };
+    if (p.flight || p.launchedThisTurn) {
+      return { title: 'Nave montada', text: 'O projeto fecha. Você poderá lançar quando a nave atual terminar o voo, ou no próximo turno.', target: 'back', tips };
+    }
+    if (!state.sandbox && !p.rolled) {
+      return { title: 'Projeto pronto', text: 'Ande no tabuleiro antes de lançar: volte e role os dados.', target: 'back', tips };
+    }
+    return { title: 'Projeto pronto', text: 'Veja o risco de cada etapa ao lado. Lançar agora é mais rápido. Peças reservas e margem de energia deixam o voo mais seguro.', target: 'launch', tips };
+  }
+
+  if (screen === 'flight') {
+    if (p.flight?.pending) {
+      return { title: 'Escolha como reagir', text: 'Compare o risco de cada opção. O número vem da sua nave: margem de massa e energia, peças reservas, dados de falha e o Controle de missão.', target: 'option' };
+    }
+    return { title: 'Etapa superada', text: state.sandbox ? 'Siga para a próxima etapa.' : 'A próxima etapa acontece no seu próximo turno. Enquanto isso, você já pode montar a próxima nave.', target: state.sandbox ? 'next' : 'end' };
+  }
+
+  if (screen === 'report') {
+    const r = p.lastResult;
+    if (!r) return null;
+    return r.success
+      ? { title: 'Degrau cumprido', text: 'Leia o "Por quê" para entender o que funcionou. A próxima missão da escada já está esperando na oficina.', target: 'end' }
+      : { title: 'Toda falha ensina', text: 'Leia o "Por quê" e os dados de falha. O sistema que falhou fica mais seguro na próxima tentativa.', target: 'end' };
+  }
+  return null;
+}
+
+// Cartão "Próximo passo" exibido sob o HUD quando as dicas estão ligadas.
+function guideCard(state, screen) {
+  if (!guideOn()) return null;
+  const step = nextStep(state, screen);
+  if (!step) return null;
+  return el('div', { class: 'guide-card', role: 'status' }, [
+    icon('compass', { size: 22, className: 'guide-icon' }),
+    el('div', {}, [
+      el('strong', {}, step.title),
+      el('p', {}, step.text),
+      step.tips?.length ? el('details', { class: 'guide-tips' }, [
+        el('summary', {}, 'Mais dicas desta tela'),
+        el('ul', {}, step.tips.map((t) => el('li', {}, t))),
+      ]) : null,
+    ]),
+  ]);
+}
+
+// Classe que destaca o botão recomendado (só com as dicas ligadas).
+function hl(state, screen, key) {
+  if (!guideOn()) return '';
+  return nextStep(state, screen)?.target === key ? 'guide-target' : '';
+}
+
+return { endTurnBlocker, nextStep, guideCard, hl };
+})();
+
+// ---- src/ui/summary.js
+__mods["src/ui/summary.js"] = (() => {
+// Resumos para o jogador: "Resumo do turno" (ao passar a vez) e "Desde o seu último turno"
+// (no começo da vez seguinte). Só observa o estado: tira uma foto da agência no início e no fim
+// de cada turno e compara. Respeita o rival escondido: só mostra entradas públicas do diário
+// ou do próprio jogador.
+const { el, button, avatar } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { nextStep } = __mods["src/ui/guide.js"];
+const { guideOn } = __mods["src/ui/prefs.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { checkDesign } = __mods["src/sim/simulate.js"];
+const { ladderProgress } = __mods["src/sim/progress.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { STAGES } = __mods["src/data/stages.js"];
+const { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } = __mods["src/data/history.js"];
+
+let tracker = freshTracker();
+function freshTracker() {
+  return { key: null, starts: {}, ends: {}, since: {} };
+}
+
+function resetSummaries() {
+  tracker = freshTracker();
+}
+
+function snapshot(state, p) {
+  return {
+    funds: p.funds,
+    tech: p.tech,
+    shields: p.shields,
+    steps: ladderProgress(p).steps,
+    logHead: state.log[0] || null,
+    year: yearOf(state.round),
+  };
+}
+
+// Entradas do diário desde `head` (em ordem cronológica), visíveis para `viewerId`.
+function logSince(state, head, viewerId) {
+  let idx = head ? state.log.indexOf(head) : state.log.length;
+  if (idx === -1) idx = Math.min(state.log.length, 10); // o diário é limitado: mostra as mais recentes
+  return state.log.slice(0, idx).filter((l) => l.who == null || l.who === viewerId).map((l) => l.text).reverse();
+}
+
+function deltas(from, to) {
+  return [
+    { key: 'funds', label: 'Verba', icon: 'coins', value: to.funds - from.funds },
+    { key: 'tech', label: 'Tecnologia', icon: 'chip', value: to.tech - from.tech },
+    { key: 'shields', label: 'Proteções', icon: 'shield', value: to.shields - from.shields },
+    { key: 'steps', label: 'Degraus', icon: 'ladder', value: to.steps - from.steps },
+  ].filter((d) => d.value !== 0);
+}
+
+// Chamado a cada render: detecta o começo de um turno de jogador humano e tira a foto inicial.
+function trackTurn(state) {
+  if (state.sandbox || !state.players.length || state.gameOver) return;
+  const p = currentPlayer(state);
+  if (!p || p.bot) return;
+  const key = `${state.round}:${state.turn}`;
+  if (tracker.key === key) return;
+  tracker.key = key;
+  const now = snapshot(state, p);
+  const end = tracker.ends[p.id];
+  tracker.since[p.id] = end
+    ? { changes: deltas(end, now), entries: logSince(state, end.logHead, p.id) }
+    : { changes: [], entries: logSince(state, null, p.id), first: true };
+  tracker.starts[p.id] = now;
+}
+
+// Chamado logo antes de passar a vez: guarda a foto final para o próximo "desde o seu último turno".
+function markTurnEnd(state) {
+  const p = currentPlayer(state);
+  if (p && !p.bot) tracker.ends[p.id] = snapshot(state, p);
+}
+
+function changeChips(changes) {
+  if (!changes.length) return el('p', { class: 'hint' }, 'Nenhuma mudança na verba, na tecnologia ou nos degraus.');
+  return el('div', { class: 'delta-row' }, changes.map((d) => el('span', { class: `delta ${d.value > 0 ? 'up' : 'down'}` }, [
+    icon(d.icon, { size: 16 }), `${d.label} `, el('strong', { class: 'num' }, `${d.value > 0 ? '+' : ''}${d.value}`),
+  ])));
+}
+
+// Onde a agência está agora: degrau, nave e o que falta.
+function statusLines(state, p) {
+  const prog = ladderProgress(p);
+  const lines = [];
+  lines.push({ icon: 'ladder', text: prog.done ? 'Escada completa.' : `Degrau ${prog.steps + 1} de ${prog.total}: ${MISSIONS[prog.current]?.name ?? ''}.` });
+  if (p.flight) {
+    const f = p.flight;
+    lines.push({ icon: 'satellite', text: `Nave em voo (${MISSIONS[f.missionId].name}). Próxima etapa: ${STAGES[f.plan[f.stageIndex]].name}, ${f.stageIndex + 1} de ${f.plan.length}.` });
+  }
+  if (p.missionId && !p.flight) {
+    const design = checkDesign(p);
+    const missing = design.checks.filter((c) => !c.ok && c.hard).length;
+    lines.push(design.ok
+      ? { icon: 'rocket', text: 'Nave pronta para lançar.' }
+      : { icon: 'wrench', text: `Nave em montagem: ${missing} pendência(s) na oficina.` });
+  }
+  return el('ul', { class: 'status-lines' }, lines.map((l) => el('li', {}, [icon(l.icon, { size: 16 }), l.text])));
+}
+
+function entriesList(entries, empty) {
+  if (!entries.length) return el('p', { class: 'hint' }, empty);
+  return el('ol', { class: 'summary-log' }, entries.map((t) => el('li', {}, t)));
+}
+
+// Texto da rodada: ano, rodada dentro do ano e tempo que resta até 1969.
+function roundLine(state) {
+  const year = yearOf(state.round);
+  const inYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
+  const yearsLeft = END_YEAR - year;
+  return `${year}, rodada ${inYear} de ${ROUNDS_PER_YEAR} · ${yearsLeft > 0 ? `faltam ${yearsLeft} ano(s) até ${END_YEAR}` : `último ano da corrida`}`;
+}
+
+// Modal "Resumo do turno", aberto pelo botão Passar a vez.
+function turnSummaryModal(state, actions) {
+  const p = currentPlayer(state);
+  const start = tracker.starts[p.id] || snapshot(state, p);
+  const now = snapshot(state, p);
+  const entries = logSince(state, start.logHead, p.id);
+  const humans = state.players.filter((x) => !x.bot).length;
+  const next = guideOn() ? nextStep(state, 'board') : null;
+  const tip = !p.flight && p.missionId && !checkDesign(p).ok
+    ? 'No próximo turno, continue montando a nave na oficina.'
+    : p.flight ? 'No próximo turno, avance o voo para a etapa seguinte.'
+      : next?.target === 'launch' ? 'Sua nave está pronta: no próximo turno você pode lançar.' : null;
+
+  return el('div', { class: 'modal-backdrop', onclick: (e) => { if (e.target === e.currentTarget) actions.closeModal(); } }, [
+    el('div', { class: 'modal panel', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'turn-summary-title' }, [
+      el('div', { class: 'modal-head' }, [
+        avatar(p, 40),
+        el('div', {}, [
+          el('h2', { id: 'turn-summary-title', class: 'modal-title' }, 'Resumo do seu turno'),
+          el('p', { class: 'hint' }, `${p.name} · ${roundLine(state)}`),
+        ]),
+      ]),
+      el('h3', {}, 'O que mudou'),
+      changeChips(deltas(start, now)),
+      el('h3', {}, 'O que aconteceu'),
+      entriesList(entries, 'Nada registrado neste turno.'),
+      el('h3', {}, 'Onde sua agência está'),
+      statusLines(state, p),
+      tip ? el('p', { class: 'tip-line' }, [icon('bulb', { size: 16 }), tip]) : null,
+      el('div', { class: 'row modal-actions' }, [
+        button([icon('arrowRight'), 'Passar a vez'], () => actions.confirmEndTurn(), { class: 'primary' }),
+        button('Continuar meu turno', () => actions.closeModal(), { class: 'ghost' }),
+      ]),
+      humans > 1 ? el('p', { class: 'hint' }, 'Depois, passe o dispositivo para a próxima agência. O resumo some antes que ela veja.') : null,
+    ]),
+  ]);
+}
+
+// Cartão "Desde o seu último turno", no tabuleiro, até o jogador rolar os dados.
+function sinceCard(state) {
+  const p = currentPlayer(state);
+  const since = tracker.since[p.id];
+  if (!since || p.rolled) return null;
+  const newYear = isNewYear(state.round);
+  if (since.first) {
+    return el('div', { class: 'panel since-card' }, [
+      el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
+      el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
+    ]);
+  }
+  return el('div', { class: 'panel since-card' }, [
+    el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, 'Desde o seu último turno')]),
+    el('p', { class: 'hint' }, roundLine(state)),
+    newYear ? el('p', { class: 'new-year' }, [icon('calendar', { size: 16 }), `Ano novo: ${yearOf(state.round)}. Orçamento e tecnologia do ano entraram.`]) : null,
+    changeChips(since.changes),
+    since.entries.length ? entriesList(since.entries, '') : null,
+  ]);
+}
+
+return { resetSummaries, trackTurn, markTurnEnd, roundLine, turnSummaryModal, sinceCard };
+})();
+
 // ---- src/ui/handoff.js
 __mods["src/ui/handoff.js"] = (() => {
 // Tela de troca (IDEIA.md v3 seção 9): no mesmo computador, esconde o estado de cada agência entre turnos.
-const { el, button, avatar, sideLabel } = __mods["src/ui/components.js"];
+const { el, button, avatar, sideBadge } = __mods["src/ui/components.js"];
+const { roundLine } = __mods["src/ui/summary.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
 const { yearOf, isNewYear } = __mods["src/data/history.js"];
 
@@ -2656,7 +3313,9 @@ function handoffScreen(state, actions) {
       el('p', { class: 'eyebrow' }, `${yearOf(state.round)}${isNewYear(state.round) ? ' · Ano novo' : ''}`),
       avatar(p, 64),
       el('h1', {}, `Vez de ${p.name}`),
-      el('p', { class: 'hint' }, `${sideLabel(p)} · Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto.`),
+      el('p', { class: 'chip' }, sideBadge(p)),
+      el('p', { class: 'hint' }, roundLine(state)),
+      el('p', { class: 'hint' }, 'Passe o dispositivo. As outras agências não devem olhar: o estado de cada uma é secreto. Ao começar, você verá o que mudou desde o seu último turno.'),
       button('Sou eu: começar meu turno', () => actions.go('board'), { class: 'primary' }),
     ]),
   ]);
@@ -2668,7 +3327,12 @@ return { handoffScreen };
 // ---- src/ui/board.js
 __mods["src/ui/board.js"] = (() => {
 // Tela do tabuleiro: anel de 16 casas com os dados no centro, decisões da casa, escada, rivais e diário.
-const { el, button, hud, milestoneTrack, logPanel, DIE_FACES, ladderPanel, rivalsPanel, agencyPanel, sideLabel } = __mods["src/ui/components.js"];
+// Orientações (ui/guide.js) dizem o próximo passo e destacam o botão recomendado; o resumo do turno
+// e o "desde o seu último turno" vêm de ui/summary.js.
+const { el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyPanel, sideBadge, panelTitle, missionIcon } = __mods["src/ui/components.js"];
+const { icon, dieFace } = __mods["src/ui/icons.js"];
+const { guideCard, hl } = __mods["src/ui/guide.js"];
+const { sinceCard } = __mods["src/ui/summary.js"];
 const { TILES } = __mods["src/board/board.js"];
 const { currentPlayer, SPY_COST } = __mods["src/sim/state.js"];
 const { checkDesign } = __mods["src/sim/simulate.js"];
@@ -2679,7 +3343,7 @@ const { FLIGHT_EVENTS } = __mods["src/data/events.js"];
 const { STAGES } = __mods["src/data/stages.js"];
 const { DILEMMAS } = __mods["src/data/dilemmas.js"];
 
-const TILE_ICONS = { start: '🏁', funds: '💰', event: '🃏', tech: '🔬', shop: '🛒', lot: '🏗️', spy: '🕵️', repair: '🔧', catchup: '🚨' };
+const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask', shop: 'cart', lot: 'crane', spy: 'eye', repair: 'wrench', catchup: 'lifebuoy' };
 // Anel 5×5 no sentido horário a partir do canto superior esquerdo (o miolo 3×3 fica para os dados).
 const RING_POS = ['1/1', '1/2', '1/3', '1/4', '1/5', '2/5', '3/5', '4/5', '5/5', '5/4', '5/3', '5/2', '5/1', '4/1', '3/1', '2/1'];
 let lastRollSeen = null;
@@ -2688,17 +3352,17 @@ function tileSub(state, t) {
   switch (t.type) {
     case 'funds': return `${t.funds > 0 ? '+' : ''}${t.funds} verba`;
     case 'start': return `+${t.funds} ao passar`;
-    case 'event': return 'carta de dilema · em voo: imprevisto';
+    case 'event': return 'carta de dilema; em voo, imprevisto';
     case 'tech': return `+${t.tech} tecnologia`;
     case 'shop': return `−${t.discount}% na próxima compra`;
-    case 'spy': return `ver um rival: ${SPY_COST} (1×/ano)`;
+    case 'spy': return `ver um rival: ${SPY_COST} (1 vez por ano)`;
     case 'repair': return '+1 proteção';
     case 'catchup': return `+${t.funds} se estiver atrás`;
     case 'lot': {
       const lot = state.lots[t.id];
       if (!lot) return `construir: ${upgradeCost(0)}`;
       const owner = state.players[lot.ownerId];
-      return `${owner.name} · nível ${owner.buildings[lot.buildingId]}`;
+      return `${owner.name}, nível ${owner.buildings[lot.buildingId]}`;
     }
     default: return '';
   }
@@ -2706,7 +3370,7 @@ function tileSub(state, t) {
 
 function tileIcon(state, t) {
   if (t.type === 'lot' && state.lots[t.id]) return BUILDINGS[state.lots[t.id].buildingId].icon;
-  if (t.type === 'funds' && t.funds < 0) return '📉';
+  if (t.type === 'funds' && t.funds < 0) return 'trendDown';
   return TILE_ICONS[t.type];
 }
 
@@ -2714,8 +3378,8 @@ function tileIcon(state, t) {
 function dilemmaDecision(state, actions) {
   const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
   if (!card) return null;
-  return el('div', { class: 'tile-decision dilemma' }, [
-    el('strong', {}, `🃏 ${card.title}`),
+  return el('div', { class: `tile-decision dilemma ${hl(state, 'board', 'dilemma')}` }, [
+    el('strong', { class: 'decision-title' }, [icon('card', { size: 18 }), card.title]),
     el('small', { class: 'hint' }, card.text),
     el('div', { class: 'row wrap', style: 'justify-content:center' }, card.options.map((o, i) => button(o.label, () => actions.chooseDilemma(i), { class: 'small' }))),
   ]);
@@ -2725,24 +3389,25 @@ function dilemmaDecision(state, actions) {
 function tileDecision(state, p, actions) {
   const pending = state.pendingTile;
   if (!pending) return null;
+  const cls = `tile-decision ${hl(state, 'board', 'tile')}`;
   if (pending.kind === 'build') {
     const options = Object.values(BUILDINGS).filter((b) => !p.buildings[b.id]);
     if (!options.length) return el('p', { class: 'hint' }, 'Você já tem todos os prédios. Suba o nível no painel da agência.');
-    return el('div', { class: 'tile-decision' }, [
-      el('strong', {}, `🏗️ Terreno livre: construir por ${upgradeCost(0)}?`),
+    return el('div', { class: cls }, [
+      el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), `Terreno livre: construir por ${upgradeCost(0)}?`]),
       el('div', { class: 'row wrap', style: 'justify-content:center' }, [
-        ...options.map((b) => button(`${b.icon} ${b.name}`, () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
-        button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+        ...options.map((b) => button([icon(b.icon, { size: 16 }), b.name], () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
+        button('Seguir sem construir', () => actions.skipTile(), { class: 'small ghost' }),
       ]),
     ]);
   }
   if (pending.kind === 'spy') {
     const rivals = state.players.filter((r) => r.id !== p.id);
-    return el('div', { class: 'tile-decision' }, [
-      el('strong', {}, `🕵️ Espionagem: ver o estado real de um rival por ${SPY_COST}?`),
+    return el('div', { class: cls }, [
+      el('strong', { class: 'decision-title' }, [icon('eye', { size: 18 }), `Espionagem: ver o estado real de um rival por ${SPY_COST}?`]),
       el('div', { class: 'row wrap', style: 'justify-content:center' }, [
-        ...rivals.map((r) => button(`${r.name} (${sideLabel(r)})`, () => actions.spyOn(r.id), { class: 'small', disabled: p.funds < SPY_COST })),
-        button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
+        ...rivals.map((r) => button([`${r.name}, `, ...[].concat(sideBadge(r))], () => actions.spyOn(r.id), { class: 'small', disabled: p.funds < SPY_COST })),
+        button('Seguir sem espionar', () => actions.skipTile(), { class: 'small ghost' }),
       ]),
     ]);
   }
@@ -2750,11 +3415,11 @@ function tileDecision(state, p, actions) {
   const owner = state.players[lot.ownerId];
   const b = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
-  return el('div', { class: 'tile-decision' }, [
-    el('strong', {}, `${b.icon} ${b.name} de ${owner.name}`),
+  return el('div', { class: cls }, [
+    el('strong', { class: 'decision-title' }, [icon(b.icon, { size: 18 }), `${b.name} de ${owner.name}`]),
     el('small', { class: 'hint' }, `Pague ${fee} a ${owner.name} e ganhe ${b.useText}. Os dois saem ganhando, mas você ajuda um rival.`),
     el('div', { class: 'row', style: 'justify-content:center' }, [
-      button(`Usar (${fee})`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
+      button(`Usar por ${fee}`, () => actions.useRivalBuilding(), { class: 'small', disabled: p.funds < fee }),
       button('Seguir', () => actions.skipTile(), { class: 'small ghost' }),
     ]),
   ]);
@@ -2765,20 +3430,20 @@ function centerPanel(state, p, actions, rolling) {
   let dice;
   if (state.dice) {
     dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, 'escolha um dado'),
+      el('span', { class: 'label' }, 'Escolha um dado'),
       el('div', { class: 'row', style: 'justify-content:center' }, state.dice.map((d, i) =>
-        button([el('span', { class: 'die small' }, DIE_FACES[d - 1]), ` andar ${d}`], () => actions.moveBy(i), { class: 'primary' }))),
+        button([dieFace(d, { size: 26 }), `Andar ${d}`], () => actions.moveBy(i), { class: `primary ${hl(state, 'board', 'die')}` }))),
     ]);
   } else if (!p.rolled) {
     dice = el('div', { class: 'dice-choice' }, [
-      el('span', { class: 'label' }, `vez de ${p.name}`),
-      el('span', { class: 'die' }, '🎲🎲'),
-      button('Rolar 2 dados', () => actions.rollDice(), { class: 'primary' }),
+      el('span', { class: 'label' }, `Vez de ${p.name}`),
+      el('span', { class: 'dice-pair' }, [dieFace(5, { size: 46 }), dieFace(2, { size: 46 })]),
+      button([icon('die', { size: 18 }), 'Rolar 2 dados'], () => actions.rollDice(), { class: `primary ${hl(state, 'board', 'roll')}` }),
     ]);
   } else {
     dice = el('div', { class: 'dice-choice' }, [
       el('span', { class: 'label' }, `${p.name} andou ${state.lastRoll}`),
-      el('span', { class: `die ${rolling ? 'rolling' : ''}` }, DIE_FACES[state.lastRoll - 1]),
+      dieFace(state.lastRoll, { size: 54, className: rolling ? 'rolling' : '' }),
     ]);
   }
   return el('div', { class: 'panel ring-center' }, [dice, dilemmaDecision(state, actions), tileDecision(state, p, actions)]);
@@ -2791,20 +3456,40 @@ function missionPanel(state, p, actions) {
     const next = STAGES[f.plan[f.stageIndex]];
     const event = f.tileEvent ? FLIGHT_EVENTS[f.tileEvent] : null;
     return el('div', { class: 'panel' }, [
-      el('h3', { style: 'margin-top:0' }, `🛰️ Em voo: ${MISSIONS[f.missionId].name}`),
-      el('p', { class: 'hint' }, `Próxima etapa: ${next.icon} ${next.name} (${f.stageIndex + 1}/${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
+      panelTitle('satellite', `Em voo: ${MISSIONS[f.missionId].name}`),
+      el('p', { class: 'hint' }, `Próxima etapa: ${next.name} (${f.stageIndex + 1} de ${f.plan.length}).${event ? ` Imprevisto vindo do tabuleiro: ${event.title}.` : ''}`),
       p.flightAdvanced
         ? el('p', { class: 'hint' }, 'O voo já avançou neste turno.')
-        : button('🛰️ Avançar o voo', () => actions.advanceFlight(), { class: 'primary', disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
+        : button([icon('satellite', { size: 18 }), 'Avançar o voo'], () => actions.advanceFlight(), { class: `primary ${hl(state, 'board', 'advance')}`, disabled: !p.rolled, title: p.rolled ? '' : 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto.' }),
+      !p.rolled ? el('p', { class: 'hint' }, 'Role os dados antes: uma casa de evento pode trazer um imprevisto para o voo.') : null,
       el('p', { class: 'hint' }, 'Enquanto a nave voa, você já pode montar a próxima na oficina.'),
     ]);
   }
-  if (!p.missionId) return el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '🏁 Escada completa!'), el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')]);
+  if (!p.missionId) return el('div', { class: 'panel' }, [panelTitle('flag', 'Escada completa'), el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.')]);
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, `🎯 ${MISSIONS[p.missionId].name}`),
+    el('h3', { class: 'panel-title' }, [missionIcon(p.missionId, { size: 18 }), MISSIONS[p.missionId].name]),
     el('p', { class: 'hint' }, MISSIONS[p.missionId].goal),
     milestoneTrack(p),
   ]);
+}
+
+// Passo a passo do turno, sempre visível: o que já foi feito e o que falta.
+function turnSteps(state, p, design) {
+  const moved = p.rolled && !state.dice;
+  const tileDone = moved && !state.pendingTile && !state.pendingDilemma;
+  const shipDone = p.flight ? p.flightAdvanced : p.launchedThisTurn || !p.missionId;
+  const steps = [
+    { label: 'Rolar e andar', done: moved },
+    { label: 'Resolver a casa', done: tileDone },
+    { label: p.flight ? 'Avançar o voo' : design.ok ? 'Lançar (opcional)' : 'Montar a nave', done: shipDone, optional: !p.flight },
+    { label: 'Passar a vez', done: false },
+  ];
+  const current = steps.findIndex((s) => !s.done && !(s.optional && tileDone));
+  return el('ol', { class: 'turn-steps', 'aria-label': 'Etapas do turno' }, steps.map((s, i) =>
+    el('li', { class: s.done ? 'done' : i === current ? 'now' : '' }, [
+      el('span', { class: 'n' }, s.done ? icon('check', { size: 14 }) : String(i + 1)),
+      s.label,
+    ])));
 }
 
 function boardScreen(state, actions) {
@@ -2816,9 +3501,9 @@ function boardScreen(state, actions) {
   const tiles = TILES.map((t, i) => {
     const [r, c] = RING_POS[i].split('/');
     const lot = state.lots[t.id];
-    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: t.label }, [
+    return el('div', { class: `tile tile-${t.type} ${p.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`, style: `grid-row:${r};grid-column:${c}`, title: `${t.label}: ${tileSub(state, t)}` }, [
       el('div', { class: 'pawns' }, state.players.filter((pl) => !pl.bot && pl.position === t.id).map((pl) => el('span', { class: `pawn c${pl.id % 4}`, title: pl.name }, pl.name[0].toUpperCase()))),
-      el('span', { class: 't-icon' }, tileIcon(state, t)),
+      el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 20 })),
       el('div', {}, [el('div', { class: 't-label' }, t.label), el('div', { class: 't-sub' }, tileSub(state, t))]),
     ]);
   });
@@ -2829,18 +3514,24 @@ function boardScreen(state, actions) {
       : design.ok ? 'Projeto pronto e verba suficiente.' : 'Resolva as pendências na oficina antes de lançar.';
   const mustAdvance = p.flight && !p.flightAdvanced;
   const blocked = !p.rolled || mustAdvance || Boolean(state.pendingDilemma);
+  const blockedReason = !p.rolled ? 'Role os dados para poder passar a vez.'
+    : state.pendingDilemma ? 'Resolva a carta de dilema para poder passar a vez.'
+      : mustAdvance ? 'Avance o voo para poder passar a vez.' : '';
 
   return el('section', { class: 'screen board-screen' }, [
-    hud(state, p, 'board'),
+    hud(state, p, 'board', actions),
+    guideCard(state, 'board'),
     el('div', { class: 'board-layout' }, [
       el('div', {}, [
+        sinceCard(state),
+        turnSteps(state, p, design),
         el('div', { class: 'ring ring-16' }, [...tiles, centerPanel(state, p, actions, rolling)]),
-        el('div', { class: 'row' }, [
-          button('🔧 Oficina', () => actions.go('workshop')),
-          button('🚀 Lançar', () => actions.launch(), { disabled: !canLaunch, title: launchTitle }),
-          button('Passar a vez →', () => actions.endTurn(), { disabled: blocked, class: 'ghost', title: mustAdvance ? 'Avance o voo antes de passar a vez.' : state.pendingDilemma ? 'Resolva a carta de dilema.' : '' }),
+        el('div', { class: 'row action-bar' }, [
+          button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop'), { class: hl(state, 'board', 'workshop') }),
+          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !canLaunch, title: launchTitle, class: hl(state, 'board', 'launch') }),
+          button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { disabled: blocked, class: `ghost ${hl(state, 'board', 'end')}`, title: blockedReason }),
         ]),
-        el('p', { class: 'hint' }, 'Turno: 1) role 2 dados e escolha um · 2) monte e lance, ou avance o voo · 3) passe a vez. Esperar rende tecnologia, mas você não sabe onde o rival está.'),
+        blocked && blockedReason ? el('p', { class: 'hint action-hint' }, blockedReason) : null,
       ]),
       el('div', { class: 'side-stack' }, [
         missionPanel(state, p, actions),
@@ -2853,6 +3544,7 @@ function boardScreen(state, actions) {
   ]);
 }
 
+
 return { boardScreen };
 })();
 
@@ -2861,7 +3553,9 @@ __mods["src/ui/workshop.js"] = (() => {
 // Oficina de engenharia: o centro do jogo. Comprar/vender peças, escolher lançador e órbita,
 // e ver em tempo real se o projeto fecha (massa, energia, dados, ciência, vida útil, verba)
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
-const { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS } = __mods["src/ui/components.js"];
+const { el, button, hud, gauges, designChecklist, glossary, missionPicker, ITEM_ICONS, panelTitle } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
 const { INSTRUMENTS } = __mods["src/data/instruments.js"];
 const { PARTS } = __mods["src/data/parts.js"];
@@ -2891,7 +3585,7 @@ function itemCard(player, item, actions) {
   ].filter(Boolean);
   return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''}` }, [
     el('div', { class: 'card-head' }, [
-      el('span', { class: 'icon' }, ITEM_ICONS[item.visual] || '🔩'),
+      el('span', { class: 'icon' }, icon(ITEM_ICONS[item.visual] || 'hexnut', { size: 22 })),
       el('strong', {}, item.name),
       owned ? el('span', { class: 'badge' }, `×${owned}`) : null,
     ]),
@@ -2901,19 +3595,19 @@ function itemCard(player, item, actions) {
     ]),
     el('div', { class: 'row' }, [
       locked
-        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, `🔒 exige tecnologia ${requiredTech(player, item)}`)
-        : button([el('span', { class: 'price' }, `💰 ${price}`), ' Comprar'], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
+        ? el('span', { class: 'lock', title: 'Ganhe tecnologia esperando, no Laboratório ou nas casas de cooperação científica.' }, [icon('lock', { size: 14 }), `exige tecnologia ${requiredTech(player, item)}`])
+        : button(['Comprar por', el('span', { class: 'price' }, price)], () => actions.buyItem(item.id), { disabled: player.funds < price, class: 'small' }),
       button('Vender', () => actions.sellItem(item.id), { disabled: !owned, class: 'small ghost' }),
     ]),
   ]);
 }
 
-function choice(label, options, selectedId, onPick, describe, player) {
-  return el('div', { class: 'choice' }, [
+function choice(label, options, selectedId, onPick, describe, player, cls = '') {
+  return el('div', { class: `choice ${cls}` }, [
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
-      return button(locked ? `🔒 ${o.name} · exige tecnologia ${requiredTech(player, o)}` : describe(o), () => onPick(o.id), {
+      return button(locked ? [icon('lock', { size: 14 }), `${o.name}: exige tecnologia ${requiredTech(player, o)}`] : describe(o), () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
         disabled: locked,
       });
@@ -2925,20 +3619,20 @@ function choice(label, options, selectedId, onPick, describe, player) {
 function riskPanel(player) {
   const risk = missionRisk(player);
   return el('div', { class: 'panel' }, [
-    el('h3', { style: 'margin-top:0' }, `🎲 Risco do voo: ${pct(risk.total)}`),
+    panelTitle('die', `Risco do voo: ${pct(risk.total)}`),
     el('ul', { class: 'risk-list' }, risk.stages.map((s) => el('li', {}, [el('strong', {}, s.name), el('small', {}, describeRisk(s.risk))]))),
-    el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Proteções 🛡️ salvam uma etapa.'),
+    el('p', { class: 'hint' }, 'Sem contar imprevistos das casas. Margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão reduzem o risco. Cada proteção salva uma etapa que falharia.'),
   ]);
 }
 
 function workshopScreen(state, actions) {
   const p = currentPlayer(state);
-  const back = state.sandbox ? button('Nova partida', () => actions.newGame(), { class: 'ghost' }) : button('← Tabuleiro', () => actions.go('board'), { class: 'ghost' });
+  const back = state.sandbox ? button([icon('refresh', { size: 16 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }) : button([icon('arrowLeft', { size: 16 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: `ghost ${hl(state, 'workshop', 'back')}` });
 
   if (!p.missionId) {
     return el('section', { class: 'screen workshop' }, [
-      hud(state, p, 'workshop'),
-      state.sandbox ? el('h2', {}, '🎯 Escolha a missão antes de projetar a nave') : el('h2', {}, '🏁 Sua escada está completa'),
+      hud(state, p, 'workshop', actions),
+      state.sandbox ? el('h2', {}, 'Escolha a missão antes de projetar a nave') : el('h2', {}, 'Sua escada está completa'),
       el('p', { class: 'hint' }, state.sandbox
         ? 'O desafio começa pelos requisitos: cada missão exige uma órbita, ciência, comunicação e vida útil diferentes.'
         : 'Não há mais degraus para projetar. O vencedor é revelado no fim da rodada.'),
@@ -2962,29 +3656,30 @@ function workshopScreen(state, actions) {
   const discount = discountFor(p);
 
   return el('section', { class: 'screen workshop' }, [
-    hud(state, p, 'workshop'),
-    p.flight ? el('p', { class: 'banner' }, `🛰️ Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
+    hud(state, p, 'workshop', actions),
+    guideCard(state, 'workshop'),
+    p.flight ? el('p', { class: 'banner' }, `Sua nave da missão "${MISSIONS[p.flight.missionId].name}" está em voo. Você já pode montar a do próximo degrau: "${mission.name}". Se o voo falhar, a oficina volta para o degrau atual.`) : null,
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, 'Trocar de missão'), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(p), el('span', { class: 'caption' }, `${mission.name} · ${ORBITS[mission.orbit].name} · precisa: ${needs}`)]),
-        discount ? el('p', { class: 'hint' }, `🏷️ Desconto ativo: ${discount}% (Fábrica e eventos).`) : null,
-        el('h2', {}, '🔬 Instrumentos científicos'),
+        discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), `Desconto ativo: ${discount}% (Fábrica e eventos).`]) : null,
+        choice('Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
+          (l) => `${l.name}: carga ${l.maxMass}, custa ${l.cost}, alcança ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p, hl(state, 'workshop', 'launcher')),
+        choice('Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
+          (o) => `${o.name}: ${o.baseLifetime} anos de vida, sinal −${o.commsPenalty * 100}%${o.scienceBonus ? `, ciência +${o.scienceBonus}` : ''}${o.id === mission.orbit ? ' (exigida pela missão)' : ''}`, null, hl(state, 'workshop', 'orbit')),
+        el('h2', {}, 'Instrumentos científicos'),
         el('div', { class: 'cards' }, Object.values(INSTRUMENTS).map((i) => itemCard(p, i, actions))),
-        el('h2', {}, '⚙️ Energia, comunicação, propulsão e suporte de vida'),
+        el('h2', {}, 'Energia, comunicação, propulsão e suporte de vida'),
         el('div', { class: 'cards' }, Object.values(PARTS).map((i) => itemCard(p, i, actions))),
-        choice('🚀 Veículo de lançamento', LAUNCHERS, p.spacecraft.launcherId, actions.chooseLauncher,
-          (l) => `${l.name} · carga ${l.maxMass} · 💰 ${l.cost} · ${l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ')}`, p),
-        choice('🪐 Órbita', ORBITS, p.spacecraft.orbitId, actions.chooseOrbit,
-          (o) => `${o.name} · ${o.baseLifetime} anos de vida · sinal −${o.commsPenalty * 100}%${o.scienceBonus ? ` · ciência +${o.scienceBonus}` : ''}`),
       ]),
       el('aside', { class: 'side' }, [
-        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '📊 Painel de recursos'), gauges(p)]),
-        el('div', { class: 'panel' }, [el('h3', { style: 'margin-top:0' }, '✅ Checagem do projeto'), designChecklist(p)]),
+        el('div', { class: 'panel' }, [panelTitle('gauge', 'Painel de recursos'), gauges(p)]),
+        el('div', { class: `panel ${hl(state, 'workshop', 'checks')}` }, [panelTitle('clipboard', 'Checagem do projeto'), designChecklist(p)]),
         design.ok ? riskPanel(p) : null,
         blocked && design.ok ? el('p', { class: 'hint' }, blocked) : null,
         el('div', { class: 'row', style: 'margin:0' }, [
-          button('🚀 Lançar', () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: 'primary', title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
+          button([icon('rocket', { size: 18 }), 'Lançar'], () => actions.launch(), { disabled: !design.ok || Boolean(blocked), class: `primary ${hl(state, 'workshop', 'launch')}`, title: blocked || (design.ok ? 'Tudo pronto.' : 'Resolva os itens em vermelho. Os amarelos só reduzem a ciência.') }),
           back,
         ]),
         glossary(),
@@ -3002,13 +3697,15 @@ __mods["src/ui/flight.js"] = (() => {
 // nos pontos-chave) e, em cada opção, o risco calculado e o porquê ANTES da escolha.
 // Depois da escolha, mostra o resultado da etapa.
 const { el, button, hud, stageTrack } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
 const { stageOptions, describeRisk, pct } = __mods["src/sim/flight.js"];
 const { FLIGHT_EVENTS } = __mods["src/data/events.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { STAGES } = __mods["src/data/stages.js"];
 
-const EVENT_ICONS = { solar_storm: '🌞', debris: '☄️', budget_cut: '💸', antenna_stuck: '📡' };
+const EVENT_ICONS = { solar_storm: 'sun', debris: 'comet', budget_cut: 'scissors', antenna_stuck: 'dish' };
 
 function describeEffect(effect = {}) {
   const parts = [];
@@ -3025,8 +3722,8 @@ function decisionView(state, p, actions) {
   const event = eventId ? FLIGHT_EVENTS[eventId] : null;
   const options = stageOptions(p, p.flight.pending);
   return [
-    el('span', { class: 'alarm' }, event ? EVENT_ICONS[event.id] || '⚠️' : stage.icon),
-    el('p', { class: 'eyebrow' }, `Etapa ${p.flight.stageIndex + 1}/${p.flight.plan.length} · ${stage.name}`),
+    el('span', { class: 'alarm' }, icon(event ? EVENT_ICONS[event.id] || 'alert' : stage.icon, { size: 64 })),
+    el('p', { class: 'eyebrow' }, `Etapa ${p.flight.stageIndex + 1} de ${p.flight.plan.length}: ${stage.name}`),
     el('h1', {}, event ? event.title : `${stage.name}: tudo nominal`),
     el('p', { class: 'event-text' }, event ? event.text : `${stage.text} Nenhum imprevisto à vista, mas o risco existe.`),
     el('div', { class: 'options' }, options.map((opt, i) => {
@@ -3035,11 +3732,11 @@ function decisionView(state, p, actions) {
         el('strong', {}, opt.label),
         el('span', { class: 'risk-big' }, `risco ${pct(opt.risk.total)}`),
         el('small', { class: 'consequence' }, describeRisk(opt.risk)),
-        effectText ? el('small', { class: 'consequence' }, `→ ${effectText}`) : null,
-        button('Escolher', (e) => { e.stopPropagation(); actions.chooseStageOption(i); }, { class: 'primary small', disabled: opt.disabled }),
+        effectText ? el('small', { class: 'consequence' }, `Efeito: ${effectText}`) : null,
+        button('Escolher esta opção', (e) => { e.stopPropagation(); actions.chooseStageOption(i); }, { class: 'primary small', disabled: opt.disabled }),
       ]);
     })),
-    el('p', { class: 'hint', style: 'margin-top:18px' }, 'O risco vem da sua nave: margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão. Uma proteção 🛡️ salva a etapa se ela falhar. Se falhar, a nave ainda tenta uma missão de consolação.'),
+    el('p', { class: 'hint', style: 'margin-top:18px' }, 'O risco vem da sua nave: margem de massa e energia, antenas e bateria reservas, dados de falha e o Controle de missão. Uma proteção salva a etapa se ela falhar. Se falhar, a nave ainda tenta uma missão de consolação.'),
   ];
 }
 
@@ -3047,20 +3744,20 @@ function resultView(state, p, actions) {
   const rec = p.flight.last;
   const next = STAGES[p.flight.plan[p.flight.stageIndex]];
   return [
-    el('span', { class: 'alarm calm' }, '✅'),
-    el('p', { class: 'eyebrow' }, `Etapa superada · risco era ${pct(rec.risk)}`),
+    el('span', { class: 'alarm calm' }, icon('check', { size: 64 })),
+    el('p', { class: 'eyebrow' }, `Etapa superada. O risco era de ${pct(rec.risk)}.`),
     el('h1', { class: 'ok' }, `${rec.name}: sucesso`),
-    rec.usedShield ? el('p', { class: 'event-text' }, 'Algo falhou, mas a proteção 🛡️ salvou a etapa.') : null,
+    rec.usedShield ? el('p', { class: 'event-text' }, 'Algo falhou, mas a proteção salvou a etapa.') : null,
     rec.eventTitle ? el('p', { class: 'event-text' }, `Imprevisto: ${rec.eventTitle}. Você escolheu: "${rec.choice}".`) : null,
-    rec.lesson ? el('p', { class: 'hint' }, `💡 ${rec.lesson}`) : null,
+    rec.lesson ? el('p', { class: 'hint with-icon' }, [icon('bulb', { size: 16 }), rec.lesson]) : null,
     rec.bonus ? el('p', { class: 'hint' }, `+${rec.bonus} de verba: cada etapa superada rende prestígio.`) : null,
-    el('p', { class: 'event-text' }, `Próxima etapa: ${next.icon} ${next.name}${state.sandbox ? '.' : ', no seu próximo turno.'}`),
+    el('p', { class: 'event-text' }, `Próxima etapa: ${next.name}${state.sandbox ? '.' : ', no seu próximo turno.'}`),
     el('div', { class: 'row', style: 'justify-content:center' }, state.sandbox
-      ? [button('Próxima etapa →', () => actions.advanceFlight(), { class: 'primary' })]
+      ? [button(['Próxima etapa', icon('arrowRight', { size: 18 })], () => actions.advanceFlight(), { class: `primary ${hl(state, 'flight', 'next')}` })]
       : [
-        button('Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
-        button('🔧 Montar a próxima nave', () => actions.go('workshop')),
-        button('← Tabuleiro', () => actions.go('board'), { class: 'ghost' }),
+        button(['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { class: `primary ${hl(state, 'flight', 'end')}` }),
+        button([icon('wrench', { size: 18 }), 'Montar a próxima nave'], () => actions.go('workshop')),
+        button([icon('arrowLeft', { size: 18 }), 'Voltar ao tabuleiro'], () => actions.go('board'), { class: 'ghost' }),
       ]),
   ];
 }
@@ -3068,11 +3765,12 @@ function resultView(state, p, actions) {
 function flightScreen(state, actions) {
   const p = currentPlayer(state);
   if (!p.flight) {
-    return el('section', { class: 'screen' }, [hud(state, p, 'flight'), el('p', { class: 'hint' }, 'Nenhuma nave em voo.'), button('← Voltar', () => actions.go(state.sandbox ? 'workshop' : 'board'))]);
+    return el('section', { class: 'screen' }, [hud(state, p, 'flight', actions), el('p', { class: 'hint' }, 'Nenhuma nave em voo.'), button('Voltar', () => actions.go(state.sandbox ? 'workshop' : 'board'))]);
   }
   const f = p.flight;
   return el('section', { class: 'screen' }, [
-    hud(state, p, 'flight'),
+    hud(state, p, 'flight', actions),
+    guideCard(state, 'flight'),
     el('div', { class: 'flight' }, [
       el('p', { class: 'eyebrow' }, `Missão ${MISSIONS[f.missionId].name}`),
       stageTrack(f.plan, f.stages, f.stageIndex),
@@ -3089,7 +3787,9 @@ __mods["src/ui/report.js"] = (() => {
 // Relatório da missão: sucesso ou falha (com missão de consolação), pontuação e, principalmente, o PORQUÊ.
 // Mostra cada etapa do voo com o risco e a decisão, os dados de falha (passo Verify) e,
 // no sucesso, o cartão "Na história real".
-const { el, button, hud, checklist, stageTrack } = __mods["src/ui/components.js"];
+const { el, button, hud, checklist, stageTrack, panelTitle } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+const { guideCard, hl } = __mods["src/ui/guide.js"];
 const { spacecraftSvg } = __mods["src/ui/spacecraft.js"];
 const { currentPlayer } = __mods["src/sim/state.js"];
 const { pct } = __mods["src/sim/flight.js"];
@@ -3098,10 +3798,10 @@ const { REAL_HISTORY } = __mods["src/data/history.js"];
 
 function stageLog(stages) {
   return el('ol', { class: 'stage-log' }, stages.map((s) => el('li', { class: s.success ? 'ok' : 'bad' }, [
-    el('strong', {}, `${s.success ? '✓' : '✕'} ${s.name} · risco ${pct(s.risk)}${s.usedShield ? ' · salva pela proteção 🛡️' : ''}`),
+    el('strong', { class: 'with-icon' }, [icon(s.success ? 'check' : 'x', { size: 16 }), `${s.name}: risco de ${pct(s.risk)}${s.usedShield ? ', salva pela proteção' : ''}`]),
     s.eventTitle ? el('small', {}, `Imprevisto: ${s.eventTitle}. Decisão: "${s.choice}".`) : null,
     el('small', { class: 'hint' }, s.riskText),
-    s.lesson ? el('small', { class: 'hint' }, `💡 ${s.lesson}`) : null,
+    s.lesson ? el('small', { class: 'hint with-icon' }, [icon('bulb', { size: 14 }), s.lesson]) : null,
   ])));
 }
 
@@ -3115,14 +3815,15 @@ function reportScreen(state, actions) {
   const title = r.success ? 'Missão cumprida' : 'Missão falhou';
 
   return el('section', { class: `screen report ${r.success ? 'success' : 'failure'}` }, [
-    hud(state, p, 'report'),
+    hud(state, p, 'report', actions),
+    guideCard(state, 'report'),
     el('div', { class: 'panel report-head' }, [
-      el('span', { class: 'stamp' }, r.success ? '✓' : '✕'),
+      el('span', { class: 'stamp' }, icon(r.success ? 'check' : 'x', { size: 150 })),
       el('div', {}, [
-        el('p', { class: 'eyebrow' }, `Relatório de missão · ${mission.name}`),
+        el('p', { class: 'eyebrow' }, `Relatório da missão ${mission.name}`),
         el('h1', {}, title),
         el('p', { class: 'hint' }, r.success
-          ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' 🏆 Primeira agência do mundo a cumprir esta missão!' : ''}`
+          ? `${r.scienceDelivered} de ciência entregue.${r.record ? ' Recorde: primeira agência do mundo a cumprir esta missão.' : ''}`
           : 'Cada falha ensina algo: veja os dados de falha abaixo.'),
       ]),
       el('div', { class: 'score' }, [el('div', { class: 'big' }, r.score), el('div', { class: 'label' }, 'pontos')]),
@@ -3131,10 +3832,10 @@ function reportScreen(state, actions) {
       el('div', {}, [
         el('h2', {}, 'Por quê'),
         el('ul', { class: 'reasons' }, r.reasons.map((t) => el('li', {}, t))),
-        r.consolation ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🎖️ Missão de consolação'), el('p', {}, r.consolation)]) : null,
-        r.failureLesson ? el('div', { class: 'panel lesson' }, [el('strong', {}, '🧪 Dados de falha'), el('p', {}, r.failureLesson)]) : null,
+        r.consolation ? el('div', { class: 'panel lesson' }, [panelTitle('medal', 'Missão de consolação'), el('p', {}, r.consolation)]) : null,
+        r.failureLesson ? el('div', { class: 'panel lesson' }, [panelTitle('testTube', 'Dados de falha'), el('p', {}, r.failureLesson)]) : null,
         r.stepBonus ? el('div', { class: 'panel lesson' }, [
-          el('strong', {}, `🪜 Degrau cumprido: +${r.stepBonus.bonus} de verba`),
+          panelTitle('ladder', `Degrau cumprido: +${r.stepBonus.bonus} de verba`),
           el('p', {}, r.stepBonus.first ? 'Você foi a primeira agência do seu lado a cumprir este degrau.' : 'Outra agência do seu lado chegou antes, por isso o bônus é menor.'),
         ]) : null,
         r.stages?.length ? el('div', {}, [el('h2', {}, 'O voo, etapa por etapa'), stageLog(r.stages)]) : null,
@@ -3143,7 +3844,7 @@ function reportScreen(state, actions) {
           el('ul', { class: 'reasons' }, failed.map((c) => el('li', {}, c.text))),
         ]) : null,
         r.success && history ? el('div', { class: 'panel lesson history' }, [
-          el('strong', {}, `📜 Na história real (${history.year})`),
+          panelTitle('scroll', `Na história real (${history.year})`),
           el('p', {}, history.text),
           state.sandbox || !p.side ? null : el('p', { class: 'hint' }, `Você cumpriu em ${r.year}. ${history.sides[p.side] ? `Seu lado, na história real: ${history.sides[p.side]}. ${compareYear(r.year, history.sides[p.side])}` : 'Na história real, seu lado nunca cumpriu esta missão.'}`),
           el('a', { href: history.source, target: '_blank', rel: 'noopener' }, 'Fonte: NASA History'),
@@ -3159,9 +3860,9 @@ function reportScreen(state, actions) {
       ? 'Pontuação = ciência entregue ×10 + verba poupada + margem de massa não usada. Projetos enxutos pontuam mais.'
       : 'A nave foi perdida. Monte outra na oficina: tecnologia, prédios e dados de falha continuam com você.'),
     el('div', { class: 'row' }, [
-      button(state.sandbox ? '🔧 Voltar à oficina' : 'Passar a vez →', () => actions.endTurn(), { class: 'primary' }),
-      state.sandbox ? null : button('🔧 Oficina', () => actions.go('workshop')),
-      button('Nova partida', () => actions.newGame(), { class: 'ghost' }),
+      button(state.sandbox ? [icon('wrench', { size: 18 }), 'Voltar à oficina'] : ['Passar a vez', icon('arrowRight', { size: 18 })], () => actions.endTurn(), { class: `primary ${hl(state, 'report', 'end')}` }),
+      state.sandbox ? null : button([icon('wrench', { size: 18 }), 'Oficina'], () => actions.go('workshop')),
+      button([icon('refresh', { size: 18 }), 'Nova partida'], () => actions.newGame(), { class: 'ghost' }),
     ]),
   ]);
 }
@@ -3180,7 +3881,8 @@ return { reportScreen };
 __mods["src/ui/gameover.js"] = (() => {
 // Fim da partida: o estado de todos é revelado. Vencedor pela escada (ou pelo maior progresso em 1969),
 // classificação e comparação com a história real de cada lado.
-const { el, button, avatar, progressBar, sideLabel } = __mods["src/ui/components.js"];
+const { el, button, avatar, progressBar, sideLabel, sideBadge, panelTitle } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
 const { ladderProgress } = __mods["src/sim/progress.js"];
 const { MISSIONS } = __mods["src/data/missions.js"];
 const { REAL_HISTORY, EPILOGUE, yearOf } = __mods["src/data/history.js"];
@@ -3196,7 +3898,7 @@ function gameoverScreen(state, actions) {
 
   return el('section', { class: 'screen gameover' }, [
     el('div', { class: 'panel report-head' }, [
-      el('span', { class: 'stamp' }, '🏆'),
+      el('span', { class: 'stamp' }, icon('trophy', { size: 150 })),
       el('div', {}, [
         el('p', { class: 'eyebrow' }, `Fim da corrida · ${yearOf(state.round)}`),
         el('h1', {}, `${names} ${state.winners.length > 1 ? 'venceram' : 'venceu'}`),
@@ -3211,8 +3913,8 @@ function gameoverScreen(state, actions) {
       const prog = ladderProgress(p);
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? '🏆' : null,
-          el('span', { class: 'chip small' }, sideLabel(p)),
+          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: 'Vencedor', className: 'winner' }) : null,
+          el('span', { class: 'chip small' }, sideBadge(p)),
           el('span', { class: 'spacer' }),
           el('span', { class: 'num' }, `${prog.steps}/${prog.total} degraus`),
         ]),
@@ -3230,8 +3932,8 @@ function gameoverScreen(state, actions) {
       return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year} (${sideLabel(p)} na história real: ${real}, ${diff === 0 ? 'mesmo ano' : diff < 0 ? `${-diff} ano(s) antes` : `${diff} ano(s) depois`}).`);
     }))),
     state.players.some((p) => !p.bot && p.completed.length) ? null : el('p', { class: 'hint' }, 'Nenhum degrau cumprido nesta partida.'),
-    el('div', { class: 'panel lesson' }, [el('strong', {}, '🤝 Epílogo'), el('p', {}, EPILOGUE)]),
-    el('div', { class: 'row' }, [button('Nova partida', () => actions.newGame(), { class: 'primary' })]),
+    el('div', { class: 'panel lesson' }, [panelTitle('coop', 'Epílogo'), el('p', {}, EPILOGUE)]),
+    el('div', { class: 'row' }, [button([icon('refresh', { size: 18 }), 'Nova partida'], () => actions.newGame(), { class: 'primary' })]),
   ]);
 }
 
@@ -3269,21 +3971,31 @@ __mods["src/main.js"] = (() => {
 const { createInitialState } = __mods["src/sim/state.js"];
 const game = __mods["src/sim/actions.js"];
 const { SCREENS } = __mods["src/ui/screens.js"];
+const { rocketSvg } = __mods["src/ui/icons.js"];
+const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
+const { endTurnBlocker } = __mods["src/ui/guide.js"];
+const { trackTurn, markTurnEnd, resetSummaries, turnSummaryModal } = __mods["src/ui/summary.js"];
 
 const app = document.getElementById('app');
 let state = createInitialState();
 
 let lastScreen = null;
 let lastTurn = null;
+// Estado só da interface (não entra no jogo): qual janela está aberta por cima da tela.
+const ui = { modal: null };
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
 function render() {
   const changed = state.screen !== lastScreen || state.turn !== lastTurn;
   const scrollY = window.scrollY;
+  trackTurn(state);
+  if (state.screen !== 'board' && state.screen !== 'report' && state.screen !== 'flight') ui.modal = null;
   const node = SCREENS[state.screen](state, actions);
   if (changed) node.classList.add('enter');
+  if (ui.modal === 'turnSummary') node.appendChild(turnSummaryModal(state, actions));
   app.replaceChildren(node);
+  if (ui.modal) node.querySelector('.modal .primary')?.focus();
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
@@ -3301,7 +4013,7 @@ function wrap(fn, after) {
 
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap(game.startGame),
+  startGame: wrap((s, ...args) => { resetSummaries(); ui.modal = null; return game.startGame(s, ...args); }),
   rollDice: wrap(game.rollDice),
   moveBy: wrap(game.moveBy),
   chooseDilemma: wrap(game.chooseDilemma),
@@ -3321,8 +4033,23 @@ const actions = {
   // Atalho de depuração no console: rola e anda com o primeiro dado.
   rollAndMove: wrap(game.rollAndMove),
   chooseStageOption: wrap(game.chooseStageOption),
-  endTurn: wrap(game.endTurn),
-  newGame: wrap(() => { state = createInitialState(); }),
+  // Passar a vez abre primeiro o "Resumo do turno"; o turno só termina em confirmEndTurn.
+  endTurn: wrap((s) => {
+    if (s.sandbox) return game.endTurn(s);
+    const blocker = endTurnBlocker(s);
+    if (blocker) return blocker;
+    ui.modal = 'turnSummary';
+    return null;
+  }),
+  confirmEndTurn: wrap((s) => {
+    ui.modal = null;
+    markTurnEnd(s);
+    return game.endTurn(s);
+  }),
+  closeModal: wrap(() => { ui.modal = null; }),
+  toggleGuide: wrap(() => { setGuide(!guideOn()); }),
+  setGuide: (on) => setGuide(on),
+  newGame: wrap(() => { state = createInitialState(); resetSummaries(); ui.modal = null; }),
 };
 
 function showToast(text) {
@@ -3339,7 +4066,7 @@ function showLaunchOverlay() {
   const o = document.createElement('div');
   o.className = 'launch-overlay';
   o.title = 'Clique para pular';
-  o.innerHTML = '<div class="count">3</div><div class="rocket">🚀</div><div class="flame"></div>';
+  o.innerHTML = `<div class="count">3</div><div class="rocket">${rocketSvg(96)}</div><div class="flame"></div>`;
   document.body.appendChild(o);
   const count = o.querySelector('.count');
   const timers = [
@@ -3350,6 +4077,11 @@ function showLaunchOverlay() {
   ];
   o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
 }
+
+// Esc fecha o resumo do turno (volta ao turno, sem passar a vez).
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ui.modal) actions.closeModal();
+});
 
 // Exposto para depuração no console do navegador.
 window.__game = { get state() { return state; }, actions };
