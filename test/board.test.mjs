@@ -323,6 +323,7 @@ test('construir, espionar e usar prédio de rival também devolvem o resultado',
   endTurn(state);
   const a = state.players[0];
   a.position = 2;
+  a.funds = 100; // verba inicial menor (balanceamento de 15/11): garante o custo do espião
   rollAndMove(state, die(2)); // A: 2 -> 4, espionagem
   assert.equal(spyOn(state, 1), null);
   assert.match(state.outcome.title, /Espião:/);

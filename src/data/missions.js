@@ -16,9 +16,12 @@
 // Todas as missões têm os mesmos 3 milestones; só mudam nome e requisito (texto).
 // Efeitos possíveis (só 3 tipos): 'funds' (+ verba), 'discount' (% de desconto na loja), 'shield' (proteção contra falha).
 
+// Balanceamento (15/11): "Projeto pronto" dava +20 de verba ANTES de lançar e, na prática, devolvia o preço
+// das peças (dava para lançar no turno 1). A verba agora vem só depois de lançar (prestígio), quando já não
+// paga o foguete desta nave.
 const milestones = (ready, launch, done) => [
-  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'funds', value: 20 } },
-  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'discount', value: 10 } },
+  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'discount', value: 10 } },
+  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'funds', value: 10 } },
   { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
 ];
 
