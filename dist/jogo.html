@@ -152,6 +152,32 @@ select option { background: #0f1736; }
 .toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
 .count-btns button { min-width: 44px; }
 
+/* ---------- Modos de jogo e sala online (setup + lobby, docs/PLANO-SALAS.md) ---------- */
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.mode { text-align: left; cursor: pointer; padding: 14px 16px; }
+.mode strong { display: block; margin-bottom: 2px; }
+.mode p { color: var(--muted); font-size: .9rem; margin: 6px 0 0; }
+.mode.selected { border-color: var(--accent); background: rgba(56,189,248,.08); }
+.match-box { margin-bottom: 8px; }
+.count-row, .join-row { align-items: center; gap: 10px; flex-wrap: wrap; }
+.join-row input { max-width: 260px; }
+
+.lobby .room-code { font-family: var(--mono); color: var(--accent); letter-spacing: .12em; }
+.lobby .invite { align-items: center; gap: 10px; flex-wrap: wrap; }
+.lobby .invite code { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-strong); overflow-wrap: anywhere; }
+.lobby-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0; }
+.slot { min-height: 140px; padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.slot.empty { cursor: pointer; border-style: dashed; }
+.slot.empty:hover { border-color: var(--accent); }
+.slot.mine { border-color: var(--accent); background: rgba(56,189,248,.08); }
+.slot .slot-n { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.slot .badges { gap: 6px; }
+/* "slot-badge" e não "badge": a classe .badge global (HUD) tem fundo cheio e margin-left:auto */
+.slot-badge { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.slot-badge.you { color: var(--accent); border-color: var(--accent); }
+.slot-edit { display: grid; gap: 8px; width: 100%; }
+.slot button.small, .slot-edit button { font-size: .85rem; padding: 6px 10px; }
+
 /* ---------- Tabuleiro em anel ---------- */
 .board-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
 .ring { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, minmax(110px, auto)); gap: 10px; }
@@ -2717,6 +2743,7 @@ const ICONS = {
   wrench: '<path d="M14.6 6.4a4.2 4.2 0 0 1 5.2-1.6l-2.7 2.7.2 2.2 2.2.2 2.7-2.7a4.2 4.2 0 0 1-5.6 5.3l-7.1 7.1a2 2 0 0 1-2.9-2.9l7.1-7.1a4.2 4.2 0 0 1 .9-3.2z"/>',
   lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',
   scissors: '<circle cx="6" cy="7" r="2.8"/><circle cx="6" cy="17" r="2.8"/><path d="M8.3 8.6L20 19M8.3 15.4L20 5"/>',
+  wifi: '<path d="M4.5 10.5a11 11 0 0 1 15 0"/><path d="M7.5 13.8a6.8 6.8 0 0 1 9 0"/><path d="M10.4 17a2.9 2.9 0 0 1 3.2 0"/><circle cx="12" cy="19.5" r="1" ' + F + '/>',
 
   // ---- prédios
   factory: '<path d="M3 21V11l5 3v-3l5 3v-3l5 3V4h3v17z"/><path d="M7 18h2M12 18h2"/>',
@@ -3355,7 +3382,9 @@ return { spacecraftSvg };
 
 // ---- src/ui/setup.js
 __mods["src/ui/setup.js"] = (() => {
-// Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
+// Tela inicial: apresentação, lados e escadas, e a escolha de COMO jogar (ver
+// docs/PLANO-SALAS.md, Fase 2): sozinho contra o bot, no mesmo aparelho (hot-seat) ou
+// online com link — o online cria a sala na hora e segue para o lobby de vagas.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
 const { el, button, glossary, missionIcon } = __mods["src/ui/components.js"];
 const { icon } = __mods["src/ui/icons.js"];
@@ -3367,7 +3396,11 @@ const { MISSIONS } = __mods["src/data/missions.js"];
 const { START_YEAR, END_YEAR, ROUNDS_PER_YEAR } = __mods["src/data/history.js"];
 
 function setupScreen(state, actions) {
-  const players = [{ name: '' }];
+  // Estado local da tela (nada disso entra no state do jogo antes do Começar)
+  const players = [{ name: '' }, { name: '' }, { name: '' }, { name: '' }];
+  let mode = 'solo';      // 'solo' | 'local' | 'online'
+  let localCount = 2;     // agências no hot-seat
+  let onlineCount = 2;    // vagas da sala online
   let sandbox = false;
 
   // Espaçonave de exemplo na capa (só visual)
@@ -3376,37 +3409,89 @@ function setupScreen(state, actions) {
   demo.spacecraft.instruments = ['camera', 'spectrometer', 'magnetometer'];
   demo.spacecraft.launcherId = 'medium';
 
-  const playersBox = el('div', { class: 'players-box' });
-  const soloNote = el('p', { class: 'hint' });
-  const renderPlayers = () => {
-    playersBox.innerHTML = '';
-    players.forEach((p, i) => {
-      const input = el('input', { type: 'text', placeholder: `Nome da agência ${i + 1}`, maxlength: 20, value: p.name });
-      input.addEventListener('input', (e) => { p.name = e.target.value; });
-      playersBox.appendChild(el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]));
-    });
-    soloNote.textContent = players.length === 1
-      ? 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
-      : players.length === 2
-        ? '2 agências: lados diferentes, sorteados. Cada uma joga escondida: use espionagem e boatos.'
-        : `${players.length} agências: lados sorteados de forma equilibrada. Quem é do mesmo lado disputa os mesmos degraus.`;
-  };
-  renderPlayers();
-
-  const setCount = (n) => {
-    while (players.length < n) players.push({ name: '' });
-    players.length = n;
-    renderPlayers();
-    countBox.querySelectorAll('button').forEach((b, i) => b.classList.toggle('selected', i + 1 === n));
-  };
-  const countBox = el('div', { class: 'row count-btns' }, ['Agências:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
-
-  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  const sandboxToggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  sandboxToggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
   // Orientações: liga/desliga as dicas de próximo passo durante a partida (salvo no navegador).
   const guideBox = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox', checked: guideOn() ? 'checked' : null }), 'Mostrar orientações durante a partida: o que fazer a cada passo e o botão recomendado. Dá para mudar a qualquer momento no topo da tela.']);
   guideBox.querySelector('input').addEventListener('change', (e) => actions.setGuide(e.target.checked));
-  toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
+
+  const nameInput = (i) => {
+    const input = el('input', { type: 'text', placeholder: `Nome da agência ${i + 1}`, maxlength: 20, value: players[i].name });
+    input.addEventListener('input', (e) => { players[i].name = e.target.value; });
+    return el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]);
+  };
+
+  const countButtons = (value, onPick) => el('div', { class: 'row count-btns' }, [2, 3, 4].map((n) => button(String(n), () => onPick(n), { class: n === value ? 'selected' : '' })));
+
+  // Botão que se desabilita enquanto a promessa da ação roda (criar/entrar na sala).
+  // Erros chegam por toast, tratados em main.js — a tela só chama actions.*.
+  const busyButton = (label, busyLabel, run, attrs) => {
+    const b = button(label, async () => {
+      b.disabled = true;
+      const original = b.innerHTML; // preserva o ícone do rótulo
+      b.textContent = busyLabel;
+      try { await run(); } finally { b.disabled = false; b.innerHTML = original; }
+    }, attrs);
+    return b;
+  };
+
+  // Área "Partida": re-renderizada quando o modo muda.
+  const matchBox = el('div', { class: 'match-box' });
+  const renderMatch = () => {
+    matchBox.innerHTML = '';
+    if (mode === 'solo') {
+      matchBox.append(
+        nameInput(0),
+        el('p', { class: 'hint' }, 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'),
+        sandboxToggle,
+        el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame([{ name: players[0].name.trim() }], { sandbox }), { class: 'primary' })]),
+      );
+    } else if (mode === 'local') {
+      matchBox.append(
+        el('div', { class: 'row count-row' }, ['Agências:', countButtons(localCount, (n) => { localCount = n; renderMatch(); })]),
+        ...Array.from({ length: localCount }, (_, i) => nameInput(i)),
+        el('p', { class: 'hint' }, localCount === 2
+          ? '2 agências no mesmo aparelho, revezando. Cada uma joga escondida: use espionagem e boatos.'
+          : `${localCount} agências no mesmo aparelho, revezando. Lados sorteados de forma equilibrada; quem é do mesmo lado disputa os mesmos degraus.`),
+        sandboxToggle,
+        el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.slice(0, localCount).map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
+      );
+    } else {
+      const joinInput = el('input', { type: 'text', placeholder: 'Código ou link da sala' });
+      matchBox.append(
+        el('div', { class: 'row count-row' }, ['Jogadores na sala:', countButtons(onlineCount, (n) => { onlineCount = n; renderMatch(); })]),
+        el('p', { class: 'hint' }, 'Criar a sala gera um link curto na hora: mande para os outros e cada um ocupa a sua agência no lobby. Precisa de internet, e quem criou mantém a aba aberta durante a partida.'),
+        el('div', { class: 'row' }, [busyButton([icon('wifi', { size: 18 }), 'Criar sala'], 'Criando sala...', () => actions.hostOnline(onlineCount), { class: 'primary' })]),
+        el('div', { class: 'row join-row' }, [
+          el('span', { class: 'hint' }, 'Recebeu um convite?'),
+          joinInput,
+          busyButton('Entrar na sala', 'Entrando...', () => actions.joinOnline(joinInput.value)),
+        ]),
+      );
+    }
+  };
+
+  // Seletor de modo: três cartões, estilo dos passos da capa.
+  const modeBox = el('div', { class: 'mode-grid' });
+  const modes = [
+    { id: 'solo', icon: 'helmet', title: 'Jogar sozinho', text: 'Você contra o calendário real da corrida espacial.' },
+    { id: 'local', icon: 'die', title: 'No mesmo aparelho', text: '2–4 agências revezando o dispositivo (hot-seat).' },
+    { id: 'online', icon: 'wifi', title: 'Online com link', text: 'Cada um no seu dispositivo, numa sala compartilhada.' },
+  ];
+  const renderModes = () => {
+    modeBox.innerHTML = '';
+    modes.forEach((m) => {
+      const card = el('button', { class: `panel mode${mode === m.id ? ' selected' : ''}`, type: 'button' }, [
+        el('strong', { class: 'with-icon' }, [icon(m.icon, { size: 18 }), m.title]),
+        el('p', {}, m.text),
+      ]);
+      card.addEventListener('click', () => { mode = m.id; renderModes(); renderMatch(); });
+      modeBox.appendChild(card);
+    });
+  };
+  renderModes();
+  renderMatch();
 
   return el('section', { class: 'screen setup' }, [
     el('div', { class: 'hero' }, [
@@ -3432,18 +3517,141 @@ function setupScreen(state, actions) {
       el('small', { class: 'lose-text' }, `− ${s.weakness}`),
     ]))),
     el('h2', {}, 'Partida'),
-    countBox,
-    playersBox,
-    soloNote,
-    toggle,
+    modeBox,
+    matchBox,
     guideBox,
-    el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
     glossary(),
     el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
   ]);
 }
 
 return { setupScreen };
+})();
+
+// ---- src/ui/lobby.js
+__mods["src/ui/lobby.js"] = (() => {
+// Lobby da sala online (ver docs/PLANO-SALAS.md, Fase 3): o código da sala em destaque
+// e uma vaga retangular por agência — cada jogador clica numa vaga livre, dá o nome da
+// sua agência e "senta na mesa". O anfitrião começa quando todas estiverem ocupadas.
+// A tela só lê a sessão e chama actions.lobby.* (regras em src/net/lobby.js, no host).
+const { el, button } = __mods["src/ui/components.js"];
+const { icon } = __mods["src/ui/icons.js"];
+
+// Rascunho local do editor de vaga (qual retângulo está aberto e o texto digitado):
+// sobrevive aos re-renders disparados pelos broadcasts dos outros jogadores.
+let draft = null; // { slot, name } | null
+
+function lobbyScreen(state, actions) {
+  const lobby = actions.lobby;
+  const session = lobby.session();
+
+  // Entrou pelo link e o primeiro broadcast do anfitrião ainda não chegou.
+  if (!session) {
+    return el('section', { class: 'screen lobby' }, [
+      el('h1', {}, 'Entrando na sala...'),
+      el('p', { class: 'hint' }, 'Recebendo os dados do anfitrião. Se demorar, confira o código e se o anfitrião está com a aba aberta.'),
+      el('div', { class: 'row' }, [button('Voltar', () => lobby.leave())]),
+    ]);
+  }
+
+  const myPeerId = lobby.myPeerId();
+  const hostPeerId = lobby.hostPeerId();
+  const isHost = lobby.isHost();
+  const link = `${location.origin}${location.pathname}?sala=${session.code}`;
+  const taken = session.slots.filter(Boolean).length;
+  const allTaken = taken === session.slots.length;
+
+  // Editor dentro do retângulo: nome da agência + ocupar/cancelar.
+  const slotEditor = (i, card) => {
+    const input = el('input', { type: 'text', placeholder: 'Nome da sua agência', maxlength: 20, value: draft?.name ?? '' });
+    input.addEventListener('input', (e) => { draft = { slot: i, name: e.target.value }; });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirm.click(); });
+    const confirm = button('Ocupar', () => { lobby.claim(i, input.value); draft = null; }, { class: 'primary' });
+    const cancel = button('Cancelar', () => { draft = null; card.replaceChildren(...emptyBody(i, card)); });
+    card.replaceChildren(el('div', { class: 'slot-edit' }, [input, el('div', { class: 'row' }, [confirm, cancel])]));
+    input.focus();
+  };
+
+  const emptyBody = (i, card) => {
+    const bits = [
+      el('span', { class: 'slot-n' }, String(i + 1)),
+      el('strong', {}, 'Vaga livre'),
+      el('p', { class: 'hint' }, 'Clique para ocupar com a sua agência.'),
+    ];
+    if (isHost && session.slots.length > 2) {
+      const rm = button('Remover vaga', (e) => { e.stopPropagation(); lobby.dropSlot(i); }, { class: 'small' });
+      bits.push(rm);
+    }
+    card.onclick = () => { draft = { slot: i, name: draft?.name ?? '' }; slotEditor(i, card); };
+    return bits;
+  };
+
+  const slotCard = (slot, i) => {
+    const mine = slot && slot.peerId === myPeerId;
+    const card = el('div', {
+      class: `panel slot${slot ? ' taken' : ' empty'}${mine ? ' mine' : ''}`,
+      role: slot ? undefined : 'button',
+    });
+    if (!slot) {
+      // Reabre o editor se era aqui que este jogador estava digitando.
+      if (draft && draft.slot === i) slotEditor(i, card);
+      else card.append(...emptyBody(i, card));
+      return card;
+    }
+    const badges = [];
+    if (slot.peerId === hostPeerId) badges.push(el('span', { class: 'slot-badge' }, 'anfitrião'));
+    if (mine) badges.push(el('span', { class: 'slot-badge you' }, 'você'));
+    card.append(
+      el('span', { class: 'slot-n' }, String(i + 1)),
+      el('strong', {}, slot.name),
+      el('div', { class: 'row badges' }, badges),
+    );
+    if (mine) {
+      card.append(el('div', { class: 'row' }, [
+        button('Renomear', () => { draft = { slot: i, name: slot.name }; slotEditor(i, card); }, { class: 'small' }),
+        button('Sair da vaga', () => { draft = null; lobby.release(); }, { class: 'small' }),
+      ]));
+    }
+    return card;
+  };
+
+  // Link de convite com botão copiar (fallback: seleciona o texto para copiar à mão).
+  const linkCode = el('code', {}, link);
+  const copyBtn = button('Copiar link', async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      copyBtn.textContent = 'Copiado!';
+      setTimeout(() => { copyBtn.textContent = 'Copiar link'; }, 1500);
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(linkCode);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  });
+
+  const footer = isHost
+    ? el('div', { class: 'row' }, [
+      button([icon('rocket', { size: 18 }), 'Começar a partida'], () => lobby.start(), { class: 'primary', disabled: !allTaken }),
+      button('Fechar a sala', () => lobby.leave()),
+    ])
+    : el('div', { class: 'row' }, [
+      el('p', { class: 'hint' }, 'O anfitrião começa a partida quando todas as vagas estiverem ocupadas.'),
+      button('Sair da sala', () => lobby.leave()),
+    ]);
+
+  return el('section', { class: 'screen lobby' }, [
+    el('p', { class: 'eyebrow' }, 'Sala multiplayer'),
+    el('h1', { class: 'with-icon' }, [icon('wifi', { size: 26 }), 'Código: ', el('span', { class: 'room-code' }, session.code)]),
+    el('div', { class: 'row invite' }, [linkCode, copyBtn]),
+    el('p', { class: 'hint' }, `Vagas ocupadas: ${taken} de ${session.slots.length}. Cada jogador clica numa vaga livre e dá o nome da sua agência — os lados (EUA/URSS) são sorteados quando a partida começa.`),
+    el('div', { class: 'lobby-slots' }, session.slots.map(slotCard)),
+    footer,
+  ]);
+}
+
+return { lobbyScreen };
 })();
 
 // ---- src/ui/summary.js
@@ -4448,6 +4656,7 @@ __mods["src/ui/screens.js"] = (() => {
 // Mapa de telas. Cada tela é uma função (state, actions) => elemento DOM.
 // Ciclo (IDEIA.md v3): setup -> troca -> tabuleiro <-> oficina -> voo (uma etapa por turno) -> relatório -> ... -> fim
 const { setupScreen } = __mods["src/ui/setup.js"];
+const { lobbyScreen } = __mods["src/ui/lobby.js"];
 const { handoffScreen } = __mods["src/ui/handoff.js"];
 const { boardScreen } = __mods["src/ui/board.js"];
 const { workshopScreen } = __mods["src/ui/workshop.js"];
@@ -4457,6 +4666,7 @@ const { gameoverScreen } = __mods["src/ui/gameover.js"];
 
 const SCREENS = {
   setup: setupScreen,
+  lobby: lobbyScreen, // sala online antes da partida (docs/PLANO-SALAS.md)
   handoff: handoffScreen,
   board: boardScreen,
   workshop: workshopScreen,
@@ -4466,6 +4676,431 @@ const SCREENS = {
 };
 
 return { SCREENS };
+})();
+
+// ---- src/net/peer.js
+__mods["src/net/peer.js"] = (() => {
+// Camada fina de transporte P2P (WebRTC via PeerJS). Ver docs/PLANO-P2P.md e PLANO-SALAS.md.
+// Não exige servidor nosso: usa o broker público gratuito do PeerJS só para o aperto de
+// mão inicial (achar os dois navegadores); depois disso os dados trafegam direto entre
+// eles. Carregado de CDN sob demanda, então não precisa de `npm install`.
+const PEERJS_CDN = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+
+let loadPromise = null;
+function loadPeerJs() {
+  if (window.Peer) return Promise.resolve();
+  if (loadPromise) return loadPromise;
+  loadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = PEERJS_CDN;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      loadPromise = null; // permite tentar de novo (ex.: a internet voltou)
+      script.remove();
+      reject(new Error('Não foi possível carregar a conexão online (sem internet?).'));
+    };
+    document.head.appendChild(script);
+  });
+  return loadPromise;
+}
+
+// Hospeda uma sala, opcionalmente com um ID escolhido (`peerId`, ver roomCode.js).
+// Se o ID já estiver em uso no broker, rejeita com err.type === 'unavailable-id' — quem
+// chamou sorteia outro código e tenta de novo.
+// Devolve { id, broadcast(data), sendTo(peerId, data), peerCount(), close() }.
+async function hostRoom({ peerId, onPeerJoin, onPeerLeave, onData, onError } = {}) {
+  await loadPeerJs();
+  return new Promise((resolve, reject) => {
+    const peer = peerId ? new window.Peer(peerId) : new window.Peer();
+    const conns = new Map();
+    let open = false;
+    peer.on('error', (err) => {
+      // Antes do registro no broker: falha na criação da sala. Depois: erro de um peer
+      // (ex.: handshake de um convidado falhou) — avisa sem derrubar a sala.
+      if (!open) { try { peer.destroy(); } catch { /* já caiu */ } reject(err); return; }
+      onError && onError(err);
+    });
+    peer.on('open', (id) => {
+      open = true;
+      peer.on('connection', (conn) => {
+        conn.on('open', () => { conns.set(conn.peer, conn); onPeerJoin && onPeerJoin(conn.peer); });
+        conn.on('data', (data) => onData && onData(data, conn.peer));
+        conn.on('close', () => { conns.delete(conn.peer); onPeerLeave && onPeerLeave(conn.peer); });
+      });
+      resolve({
+        id,
+        broadcast: (data) => conns.forEach((c) => c.send(data)),
+        sendTo: (pid, data) => { conns.get(pid)?.send(data); },
+        peerCount: () => conns.size,
+        close: () => { conns.forEach((c) => c.close()); peer.destroy(); },
+      });
+    });
+  });
+}
+
+// Entra numa sala existente. Devolve { id, send(data), close() } — `id` é a identidade
+// deste jogador (o host nos reconhece por ele; ver lobby.js).
+async function joinRoom(hostId, { onData, onClose, onError } = {}) {
+  await loadPeerJs();
+  return new Promise((resolve, reject) => {
+    const peer = new window.Peer();
+    let open = false;
+    const fail = (err) => { try { peer.destroy(); } catch { /* já caiu */ } reject(err); };
+    peer.on('error', (err) => {
+      if (!open) { fail(err); return; }
+      onError && onError(err);
+    });
+    peer.on('open', () => {
+      const conn = peer.connect(hostId, { reliable: true });
+      conn.on('open', () => {
+        open = true;
+        resolve({
+          id: peer.id,
+          send: (data) => conn.send(data),
+          close: () => { conn.close(); peer.destroy(); },
+        });
+      });
+      conn.on('data', (data) => onData && onData(data));
+      conn.on('close', () => { peer.destroy(); onClose && onClose(); });
+      conn.on('error', (err) => { if (!open) fail(err); else onError && onError(err); });
+    });
+  });
+}
+
+return { hostRoom, joinRoom };
+})();
+
+// ---- src/net/roomCode.js
+__mods["src/net/roomCode.js"] = (() => {
+// Código curto de sala (ver docs/PLANO-SALAS.md, Fase 1). Em vez do UUID do PeerJS,
+// registramos o host com um ID próprio "smdg-<CODIGO>"; o link vira ?sala=A3F9KQ e o
+// código dá para ditar em voz alta. Módulo puro, sem DOM (testado em node --test).
+
+// Alfabeto sem caracteres ambíguos (sem 0/O e 1/I/L): ninguém erra ao digitar.
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_LENGTH = 6;
+// Prefixo no ID do peer: evita colisão com outros usuários do broker público do PeerJS.
+const PEER_PREFIX = 'smdg-';
+
+// `rng` injetável para teste, como no resto do projeto (board.js).
+function newCode(rng = Math.random) {
+  let code = '';
+  for (let i = 0; i < CODE_LENGTH; i += 1) {
+    code += CODE_ALPHABET[Math.floor(rng() * CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+function peerIdFor(code) {
+  return PEER_PREFIX + code;
+}
+
+// Aceita o que o jogador colar: o link inteiro (?sala=...), o código em qualquer caixa,
+// com espaços ou hífens. Devolve o código normalizado, ou null se não sobrar nada válido.
+function normalizeCode(raw) {
+  if (!raw) return null;
+  let text = String(raw).trim();
+  if (text.includes('sala=')) {
+    try {
+      text = new URL(text, 'http://x').searchParams.get('sala') || '';
+    } catch {
+      // segue com o texto cru; a limpeza abaixo resolve
+    }
+  }
+  const code = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return code.length > 0 ? code : null;
+}
+
+return { CODE_ALPHABET, CODE_LENGTH, PEER_PREFIX, newCode, peerIdFor, normalizeCode };
+})();
+
+// ---- src/net/lobby.js
+__mods["src/net/lobby.js"] = (() => {
+// Lobby da sala online (ver docs/PLANO-SALAS.md, Fase 0/3): as vagas de agência que os
+// jogadores ocupam antes da partida começar. Módulo puro, sem DOM e sem rede — o host é
+// o único que altera a sessão (mesmo padrão autoritativo do state do jogo); aqui ficam
+// só as regras, testadas em node --test (test/lobby.test.mjs).
+//
+// Sessão: { code, slots: [{ peerId, name } | null, ...], started }
+// Toda função devolve { session } com um objeto NOVO, ou { error } com o motivo em
+// português (vira toast para quem tentou).
+
+const MIN_SLOTS = 2;
+const MAX_SLOTS = 4;
+const MAX_NAME_LENGTH = 20; // mesmo limite do input de nome do hot-seat (setup.js)
+
+function createSession(code, count) {
+  const size = Math.max(MIN_SLOTS, Math.min(MAX_SLOTS, count));
+  return { code, slots: Array.from({ length: size }, () => null), started: false };
+}
+
+function cleanName(name) {
+  return String(name ?? '').trim().slice(0, MAX_NAME_LENGTH);
+}
+
+// Ocupa (ou troca para) a vaga `slot`. Regras: vaga existe; está livre ou já é do
+// próprio peer (renomear); nome obrigatório. Quem já tinha outra vaga é movido — a
+// antiga é liberada, como trocar de cadeira na mesa.
+function claimSlot(session, peerId, slot, name) {
+  if (session.started) return { error: 'A partida já começou.' };
+  const target = session.slots[slot];
+  if (target === undefined) return { error: 'Essa vaga não existe.' };
+  if (target && target.peerId !== peerId) return { error: 'Essa vaga já foi ocupada.' };
+  const cleaned = cleanName(name);
+  if (!cleaned) return { error: 'Dê um nome à sua agência.' };
+  const slots = session.slots.map((s, i) => {
+    if (i === slot) return { peerId, name: cleaned };
+    return s?.peerId === peerId ? null : s; // libera a vaga antiga de quem se moveu
+  });
+  return { session: { ...session, slots } };
+}
+
+// Libera a vaga do peer (saiu da sala ou desistiu da vaga). Sem erro se não tinha vaga.
+function releaseSlot(session, peerId) {
+  const slots = session.slots.map((s) => (s?.peerId === peerId ? null : s));
+  return { session: { ...session, slots } };
+}
+
+// Host remove uma vaga VAZIA (alguém desistiu de vir): a sala encolhe, mínimo de 2.
+function removeSlot(session, slot) {
+  if (session.started) return { error: 'A partida já começou.' };
+  if (session.slots[slot] === undefined) return { error: 'Essa vaga não existe.' };
+  if (session.slots[slot] !== null) return { error: 'Só dá para remover uma vaga livre.' };
+  if (session.slots.length <= MIN_SLOTS) return { error: `A sala precisa de pelo menos ${MIN_SLOTS} vagas.` };
+  return { session: { ...session, slots: session.slots.filter((_, i) => i !== slot) } };
+}
+
+// A partida só começa com TODAS as vagas ocupadas (requisito R4 do PLANO-SALAS.md).
+function canStart(session) {
+  return !session.started && session.slots.length >= MIN_SLOTS && session.slots.every(Boolean);
+}
+
+// Mapa peerId -> índice do jogador no startGame (a ordem das vagas é a ordem das agências).
+function assignmentsFor(session) {
+  const map = {};
+  session.slots.forEach((s, i) => { if (s) map[s.peerId] = i; });
+  return map;
+}
+
+return { MIN_SLOTS, MAX_SLOTS, MAX_NAME_LENGTH, createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor };
+})();
+
+// ---- src/net/sync.js
+__mods["src/net/sync.js"] = (() => {
+// Protocolo de sincronização: host autoritativo. Ver docs/PLANO-P2P.md e PLANO-SALAS.md.
+// O host roda o jogo normalmente (mesmas regras de src/sim/actions.js) e transmite o
+// `state` inteiro a cada mudança. Os clientes não alteram o estado local: mandam a ação
+// pro host e esperam o `state` atualizado chegar. Antes da partida existe o LOBBY
+// (lobby.js): as vagas de agência que cada jogador ocupa; o host também é o dono da
+// sessão e rebate cada mudança para todos. Isola toda a rede deste arquivo; main.js
+// só chama createNetworkController().
+//
+// Mensagens: { type: 'action' | 'state' | 'claim' | 'release' | 'lobby' | 'start' |
+//              'toast' | 'rejected' }
+const { hostRoom, joinRoom } = __mods["src/net/peer.js"];
+const { newCode, peerIdFor, normalizeCode } = __mods["src/net/roomCode.js"];
+const { createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor } = __mods["src/net/lobby.js"];
+
+const HOST_RETRIES = 3; // tentativas de código até desistir (colisão é raríssima)
+
+function createNetworkController({
+  actionsMap, getState, setState, render, showError, enterLobby, exitToSetup,
+}) {
+  let channel = null;    // { isHost, broadcast?, sendTo?, send?, close }
+  let session = null;    // lobby.js; null fora do modo online
+  let myPeerId = null;   // identidade deste dispositivo na sala
+  let myPlayerId = null; // índice da agência deste dispositivo depois do start
+
+  function applyLocally(name, args) {
+    // `name` pode vir de uma mensagem de rede: só roda o que está na lista vetada
+    // (ver NETWORKED_ACTION_NAMES em main.js), nunca uma função arbitrária.
+    if (typeof actionsMap[name] !== 'function') return 'Ação desconhecida.';
+    const error = actionsMap[name](getState(), ...args);
+    render();
+    if (channel?.isHost) channel.broadcast({ type: 'state', state: getState() });
+    return error;
+  }
+
+  function broadcastLobby() {
+    if (channel?.isHost) channel.broadcast({ type: 'lobby', session });
+  }
+
+  // Mudança de vaga pedida por um convidado: o host valida com as regras puras do
+  // lobby.js e, se falhar, devolve o motivo só para quem pediu (vira toast lá).
+  function onGuestLobbyMessage(msg, fromPeer) {
+    const result = msg.type === 'claim'
+      ? claimSlot(session, fromPeer, msg.slot, msg.name)
+      : releaseSlot(session, fromPeer);
+    if (result.error) { channel.sendTo(fromPeer, { type: 'toast', text: result.error }); return; }
+    session = result.session;
+    broadcastLobby();
+    render();
+  }
+
+  function onHostData(msg, fromPeer) {
+    if (msg.type === 'action') { applyLocally(msg.name, msg.args); return; }
+    if (session && !session.started && (msg.type === 'claim' || msg.type === 'release')) {
+      onGuestLobbyMessage(msg, fromPeer);
+    }
+  }
+
+  // Cria a sala com um código curto. Colisão de código (unavailable-id) sorteia outro.
+  // Devolve o código; a tela de lobby entra em seguida.
+  async function host(count) {
+    let lastErr = null;
+    for (let attempt = 0; attempt < HOST_RETRIES; attempt += 1) {
+      const code = newCode();
+      try {
+        const room = await hostRoom({
+          peerId: peerIdFor(code),
+          onData: onHostData,
+          onPeerJoin: (pid) => {
+            if (session?.started) { room.sendTo(pid, { type: 'rejected', reason: 'Esta partida já começou.' }); return; }
+            broadcastLobby();
+          },
+          onPeerLeave: (pid) => {
+            if (session && !session.started) {
+              session = releaseSlot(session, pid).session;
+              broadcastLobby();
+              render();
+            }
+          },
+          onError: () => { showError?.('Um jogador não conseguiu se conectar à sala.'); },
+        });
+        channel = { isHost: true, broadcast: room.broadcast, sendTo: room.sendTo, close: room.close };
+        myPeerId = room.id;
+        myPlayerId = null;
+        session = createSession(code, count);
+        enterLobby?.();
+        return code;
+      } catch (err) {
+        if (err?.type === 'unavailable-id') { lastErr = err; continue; }
+        throw err;
+      }
+    }
+    throw lastErr ?? new Error('Não foi possível criar a sala.');
+  }
+
+  function onClientData(msg, conn) {
+    if (msg.type === 'state') { setState(msg.state); render(); return; }
+    if (msg.type === 'lobby') { session = msg.session; render(); return; }
+    if (msg.type === 'start') {
+      session = session ? { ...session, started: true } : session;
+      myPlayerId = msg.assignments[myPeerId] ?? null;
+      setState(msg.state);
+      render();
+      return;
+    }
+    if (msg.type === 'toast') { showError?.(msg.text); return; }
+    if (msg.type === 'rejected') {
+      showError?.(msg.reason);
+      conn.close();
+      channel = null;
+      session = null;
+      exitToSetup?.();
+    }
+  }
+
+  // Entra numa sala pelo código (ou link colado). O lobby abre vazio ("recebendo...")
+  // e preenche quando o primeiro broadcast do host chega.
+  async function join(rawCode) {
+    const code = normalizeCode(rawCode);
+    if (!code) throw new Error('Código de sala inválido.');
+    const conn = await joinRoom(peerIdFor(code), {
+      onData: (msg) => onClientData(msg, conn),
+      onClose: () => {
+        const wasConnected = !!channel;
+        channel = null;
+        session = null;
+        if (wasConnected) showError?.('A conexão com a sala caiu.');
+      },
+      onError: () => { showError?.('Problema na conexão com a sala.'); },
+    });
+    channel = { isHost: false, send: conn.send, close: conn.close };
+    myPeerId = conn.id;
+    myPlayerId = null;
+    enterLobby?.();
+  }
+
+  // ---- Vagas do lobby: o host aplica direto; o convidado pede ao host.
+  function claim(slot, name) {
+    if (!session || !channel) return;
+    if (!channel.isHost) { channel.send({ type: 'claim', slot, name }); return; }
+    const result = claimSlot(session, myPeerId, slot, name);
+    if (result.error) { showError?.(result.error); return; }
+    session = result.session;
+    broadcastLobby();
+    render();
+  }
+
+  function release() {
+    if (!session || !channel) return;
+    if (!channel.isHost) { channel.send({ type: 'release' }); return; }
+    session = releaseSlot(session, myPeerId).session;
+    broadcastLobby();
+    render();
+  }
+
+  // Host remove uma vaga vazia (alguém desistiu de vir) e a sala encolhe.
+  function dropSlot(slot) {
+    if (!channel?.isHost || !session) return;
+    const result = removeSlot(session, slot);
+    if (result.error) { showError?.(result.error); return; }
+    session = result.session;
+    broadcastLobby();
+    render();
+  }
+
+  // Host inicia a partida: roda o startGame de verdade (via `startGameFn`, em main.js)
+  // e manda o estado + o mapa peer->agência, para cada um saber qual jogador é seu.
+  // Devolve string de erro (vira toast) ou undefined.
+  function startSession(startGameFn) {
+    if (!channel?.isHost || !session) return 'Só o anfitrião inicia a partida.';
+    if (!canStart(session)) return 'A partida só começa com todas as vagas ocupadas.';
+    const error = startGameFn(session.slots.map((s) => ({ name: s.name })));
+    if (typeof error === 'string') return error;
+    session = { ...session, started: true };
+    const assignments = assignmentsFor(session);
+    myPlayerId = assignments[myPeerId] ?? null;
+    channel.broadcast({ type: 'start', state: getState(), assignments });
+    return undefined;
+  }
+
+  // Chamado pelo wrapper de ações do jogo (ver netWrap em main.js).
+  // Sem rede: devolve null (quem chamou aplica normal, como antes).
+  // Como host: aplica na hora e devolve { error } — o host sabe o resultado igual a
+  // antes, então o toast e o after() continuam funcionando no dispositivo dele.
+  // Como cliente: só manda a ação pro host e devolve { pending: true } — ainda não dá
+  // para saber se deu certo (Fase 4 do PLANO-SALAS.md fecha isso).
+  function dispatch(name, args) {
+    if (!channel) return null;
+    if (channel.isHost) return { error: applyLocally(name, args) };
+    channel.send({ type: 'action', name, args });
+    return { pending: true };
+  }
+
+  return {
+    host,
+    join,
+    dispatch,
+    claim,
+    release,
+    dropSlot,
+    startSession,
+    // Para ações locais do host que mudam o `state` todo (nova partida no hot-seat)
+    // e não passam por dispatch(). Sem efeito se não for host.
+    broadcastState: () => { if (channel?.isHost) channel.broadcast({ type: 'state', state: getState() }); },
+    getSession: () => session,
+    getMyPeerId: () => myPeerId,
+    getMyPlayerId: () => myPlayerId,
+    getHostPeerId: () => (session ? peerIdFor(session.code) : null),
+    isConnected: () => !!channel,
+    isHost: () => !!channel?.isHost,
+    disconnect: () => { channel?.close(); channel = null; session = null; myPlayerId = null; },
+  };
+}
+
+return { createNetworkController };
 })();
 
 // ---- src/ui/yearOverlay.js
@@ -4554,6 +5189,7 @@ const { rocketSvg } = __mods["src/ui/icons.js"];
 const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
 const { endTurnBlocker } = __mods["src/ui/guide.js"];
 const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
+const { createNetworkController } = __mods["src/net/sync.js"];
 const { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } = __mods["src/ui/yearOverlay.js"];
 
 const app = document.getElementById('app');
@@ -4562,6 +5198,40 @@ let state = createInitialState();
 let lastScreen = null;
 let lastTurn = null;
 let lastYearShown = null; // última virada de ano já animada (`round:playerId`), para não repetir a cada clique
+
+// Multiplayer remoto (opcional, ver docs/PLANO-P2P.md). Sem rede, nada muda: netWrap()
+// se comporta como wrap() normal. `name` é a chave em `networkedActions`, usada para o
+// host aplicar a ação que chegou do cliente (mesma função que o botão chamaria local).
+// `endTurn` entra com a mesma checagem de bloqueio de hoje, para o host não pular o aviso.
+// Lista fechada (não é `{ ...game }`): uma mensagem de rede só pode disparar uma destas
+// ações de gameplay, nunca outra função exportada por sim/actions.js (startGame, helpers
+// como useFeeFor etc., que têm outra assinatura ou efeitos que não fazem sentido vindos
+// de um cliente).
+const NETWORKED_ACTION_NAMES = [
+  'rollDice', 'moveBy', 'chooseDilemma', 'spyOn', 'buyItem', 'sellItem', 'chooseLauncher',
+  'chooseOrbit', 'chooseMission', 'buildOnLot', 'useRivalBuilding', 'skipTile',
+  'upgradeBuilding', 'requestBailout', 'rehearse', 'launch', 'advanceFlight',
+  'chooseStageOption',
+];
+const networkedActions = Object.fromEntries(NETWORKED_ACTION_NAMES.map((name) => [name, game[name]]));
+networkedActions.endTurn = (s) => {
+  if (s.sandbox) return game.endTurn(s);
+  const blocker = endTurnBlocker(s);
+  if (blocker) return blocker;
+  markTurnEnd(s);
+  return game.endTurn(s);
+};
+const net = createNetworkController({
+  actionsMap: networkedActions,
+  getState: () => state,
+  setState: (s) => { state = s; },
+  render: () => render(),
+  showError: (text) => showToast(text),
+  // O lobby é uma tela local (state.screen) que nunca entra no estado sincronizado:
+  // quando o host inicia, o state novo chega com a tela do jogo e todo mundo sai dele.
+  enterLobby: () => { state.screen = 'lobby'; render(); },
+  exitToSetup: () => { state.screen = 'setup'; render(); },
+});
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
 // num clique dentro da mesma tela (ex.: comprar peça na oficina) a rolagem fica onde estava.
@@ -4583,7 +5253,9 @@ function render() {
   }
 }
 
-// Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha.
+// Toda ação passa por aqui: executa, mostra erro (se houver) e redesenha. Puramente
+// local: nunca transmite nada pela rede (ver docs/PLANO-P2P.md — navegação de tela,
+// dicas etc. ficam sempre só no dispositivo de quem clicou).
 function wrap(fn, after) {
   return (...args) => {
     const error = fn(state, ...args);
@@ -4593,41 +5265,104 @@ function wrap(fn, after) {
   };
 }
 
+// Como wrap(), mas para ações de gameplay que precisam viajar pela rede quando há uma
+// sala online: sem rede, roda local igual a wrap(). Como host, net.dispatch() já aplica a
+// ação e devolve o erro de volta (o toast e o after() funcionam igual ao modo local). Como
+// cliente, só manda a ação pro host e não sabe ainda se vai dar certo — por isso não
+// mostra toast nem chama after() aqui; o after() só roda para quem sabe o resultado na
+// hora (local ou host). `name` é a chave correspondente em `networkedActions`.
+function netWrap(name, after) {
+  return (...args) => {
+    const result = net.dispatch(name, args);
+    if (result) {
+      if (typeof result.error === 'string') showToast(result.error);
+      if (!result.error && after) after();
+      return;
+    }
+    const error = networkedActions[name](state, ...args);
+    if (typeof error === 'string') showToast(error);
+    render();
+    if (!error && after) after();
+  };
+}
+
+// Para as duas ações locais que recriam o jogo inteiro (começar partida, nova partida):
+// como host, precisa mandar o `state` novo pros clientes também, já que eles não "pedem"
+// essa ação (não passa por netWrap/dispatch).
+function wrapAndSync(fn) {
+  return (...args) => {
+    const error = fn(state, ...args);
+    if (typeof error === 'string') showToast(error);
+    render();
+    if (!error && net.isHost()) net.broadcastState();
+  };
+}
+
 const actions = {
   go: wrap((s, screen) => { s.screen = screen; }),
-  startGame: wrap((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
-  rollDice: wrap(game.rollDice),
-  moveBy: wrap(game.moveBy),
-  chooseDilemma: wrap(game.chooseDilemma),
-  spyOn: wrap(game.spyOn),
-  buyItem: wrap(game.buyItem),
-  sellItem: wrap(game.sellItem),
-  chooseLauncher: wrap(game.chooseLauncher),
-  chooseOrbit: wrap(game.chooseOrbit),
-  chooseMission: wrap(game.chooseMission),
-  buildOnLot: wrap(game.buildOnLot),
-  useRivalBuilding: wrap(game.useRivalBuilding),
-  skipTile: wrap(game.skipTile),
-  upgradeBuilding: wrap(game.upgradeBuilding),
-  requestBailout: wrap(game.requestBailout),
-  rehearse: wrap(game.rehearse),
-  launch: wrap(game.launch, showLaunchOverlay),
-  advanceFlight: wrap(game.advanceFlight),
+  startGame: wrapAndSync((s, ...args) => { resetSummaries(); lastYearShown = null; return game.startGame(s, ...args); }),
+  rollDice: netWrap('rollDice'),
+  moveBy: netWrap('moveBy'),
+  chooseDilemma: netWrap('chooseDilemma'),
+  spyOn: netWrap('spyOn'),
+  buyItem: netWrap('buyItem'),
+  sellItem: netWrap('sellItem'),
+  chooseLauncher: netWrap('chooseLauncher'),
+  chooseOrbit: netWrap('chooseOrbit'),
+  chooseMission: netWrap('chooseMission'),
+  buildOnLot: netWrap('buildOnLot'),
+  useRivalBuilding: netWrap('useRivalBuilding'),
+  skipTile: netWrap('skipTile'),
+  upgradeBuilding: netWrap('upgradeBuilding'),
+  requestBailout: netWrap('requestBailout'),
+  rehearse: netWrap('rehearse'),
+  launch: netWrap('launch', showLaunchOverlay),
+  advanceFlight: netWrap('advanceFlight'),
   // Atalho de depuração no console: rola e anda com o primeiro dado.
   rollAndMove: wrap(game.rollAndMove),
-  chooseStageOption: wrap(game.chooseStageOption),
+  chooseStageOption: netWrap('chooseStageOption'),
   // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
   // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
-  endTurn: wrap((s) => {
-    if (s.sandbox) return game.endTurn(s);
-    const blocker = endTurnBlocker(s);
-    if (blocker) return blocker;
-    markTurnEnd(s);
-    return game.endTurn(s);
-  }),
+  endTurn: netWrap('endTurn'),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
-  newGame: wrap(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
+  newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
+  // Sala online (ver docs/PLANO-SALAS.md). A tela só chama estas ações; erros viram
+  // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
+  hostOnline: async (count) => {
+    try { await net.host(count); } catch (err) {
+      showToast(err?.message || 'Não foi possível criar a sala. Confira a internet.');
+    }
+  },
+  joinOnline: async (raw) => {
+    try { await net.join(raw); } catch (err) {
+      showToast(err?.type === 'peer-unavailable'
+        ? 'Sala não encontrada. Confira o código com o anfitrião.'
+        : err?.message || 'Não foi possível entrar na sala.');
+    }
+  },
+  isOnline: () => net.isConnected(),
+  // Tudo que a tela de lobby precisa (src/ui/lobby.js): ler a sessão e pedir mudanças.
+  lobby: {
+    session: () => net.getSession(),
+    myPeerId: () => net.getMyPeerId(),
+    hostPeerId: () => net.getHostPeerId(),
+    isHost: () => net.isHost(),
+    claim: (slot, name) => net.claim(slot, name),
+    release: () => net.release(),
+    dropSlot: (slot) => net.dropSlot(slot),
+    leave: () => { net.disconnect(); state.screen = 'setup'; render(); },
+    // Só o host: roda o startGame de verdade e transmite estado + agência de cada um.
+    start: () => {
+      const error = net.startSession((players) => {
+        resetSummaries();
+        lastYearShown = null;
+        return game.startGame(state, players, {});
+      });
+      if (typeof error === 'string') showToast(error);
+      render();
+    },
+  },
 };
 
 function showToast(text) {
@@ -4671,6 +5406,14 @@ function showYearOverlay(yc) {
 window.__game = { get state() { return state; }, actions };
 
 render();
+
+// Entrar direto numa sala por link de convite (?sala=<codigo>, ver docs/PLANO-SALAS.md):
+// cai no lobby da sala, sem passar pela tela de setup.
+const roomCode = new URLSearchParams(window.location.search).get('sala');
+if (roomCode) {
+  showToast('Conectando à sala...');
+  actions.joinOnline(roomCode);
+}
 
 return {  };
 })();

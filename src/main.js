@@ -43,6 +43,11 @@ const net = createNetworkController({
   getState: () => state,
   setState: (s) => { state = s; },
   render: () => render(),
+  showError: (text) => showToast(text),
+  // O lobby é uma tela local (state.screen) que nunca entra no estado sincronizado:
+  // quando o host inicia, o state novo chega com a tela do jogo e todo mundo sai dele.
+  enterLobby: () => { state.screen = 'lobby'; render(); },
+  exitToSetup: () => { state.screen = 'setup'; render(); },
 });
 
 // Redesenha a tela. Só volta ao topo e anima a entrada quando a TELA (ou o jogador da vez) muda;
@@ -139,12 +144,42 @@ const actions = {
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
   newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
-  // Sala online (ver docs/PLANO-P2P.md). hostOnline resolve com o id da sala para montar
-  // o link de convite; joinOnline troca o `state` local pelo que vier do host.
-  hostOnline: () => net.host(),
-  joinOnline: (id) => net.join(id),
+  // Sala online (ver docs/PLANO-SALAS.md). A tela só chama estas ações; erros viram
+  // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
+  hostOnline: async (count) => {
+    try { await net.host(count); } catch (err) {
+      showToast(err?.message || 'Não foi possível criar a sala. Confira a internet.');
+    }
+  },
+  joinOnline: async (raw) => {
+    try { await net.join(raw); } catch (err) {
+      showToast(err?.type === 'peer-unavailable'
+        ? 'Sala não encontrada. Confira o código com o anfitrião.'
+        : err?.message || 'Não foi possível entrar na sala.');
+    }
+  },
   isOnline: () => net.isConnected(),
-  isHostOnline: () => net.isHost(),
+  // Tudo que a tela de lobby precisa (src/ui/lobby.js): ler a sessão e pedir mudanças.
+  lobby: {
+    session: () => net.getSession(),
+    myPeerId: () => net.getMyPeerId(),
+    hostPeerId: () => net.getHostPeerId(),
+    isHost: () => net.isHost(),
+    claim: (slot, name) => net.claim(slot, name),
+    release: () => net.release(),
+    dropSlot: (slot) => net.dropSlot(slot),
+    leave: () => { net.disconnect(); state.screen = 'setup'; render(); },
+    // Só o host: roda o startGame de verdade e transmite estado + agência de cada um.
+    start: () => {
+      const error = net.startSession((players) => {
+        resetSummaries();
+        lastYearShown = null;
+        return game.startGame(state, players, {});
+      });
+      if (typeof error === 'string') showToast(error);
+      render();
+    },
+  },
 };
 
 function showToast(text) {
@@ -189,10 +224,10 @@ window.__game = { get state() { return state; }, actions };
 
 render();
 
-// Entrar direto numa sala por link (?sala=<id>, montado por hostOnline() na tela de
-// setup). Ver docs/PLANO-P2P.md.
-const roomId = new URLSearchParams(window.location.search).get('sala');
-if (roomId) {
+// Entrar direto numa sala por link de convite (?sala=<codigo>, ver docs/PLANO-SALAS.md):
+// cai no lobby da sala, sem passar pela tela de setup.
+const roomCode = new URLSearchParams(window.location.search).get('sala');
+if (roomCode) {
   showToast('Conectando à sala...');
-  net.join(roomId).catch((err) => showToast(err.message || 'Não foi possível entrar na sala.'));
+  actions.joinOnline(roomCode);
 }

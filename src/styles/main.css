@@ -140,6 +140,32 @@ select option { background: #0f1736; }
 .toggle input { accent-color: var(--accent); width: 18px; height: 18px; }
 .count-btns button { min-width: 44px; }
 
+/* ---------- Modos de jogo e sala online (setup + lobby, docs/PLANO-SALAS.md) ---------- */
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.mode { text-align: left; cursor: pointer; padding: 14px 16px; }
+.mode strong { display: block; margin-bottom: 2px; }
+.mode p { color: var(--muted); font-size: .9rem; margin: 6px 0 0; }
+.mode.selected { border-color: var(--accent); background: rgba(56,189,248,.08); }
+.match-box { margin-bottom: 8px; }
+.count-row, .join-row { align-items: center; gap: 10px; flex-wrap: wrap; }
+.join-row input { max-width: 260px; }
+
+.lobby .room-code { font-family: var(--mono); color: var(--accent); letter-spacing: .12em; }
+.lobby .invite { align-items: center; gap: 10px; flex-wrap: wrap; }
+.lobby .invite code { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-strong); overflow-wrap: anywhere; }
+.lobby-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 18px 0; }
+.slot { min-height: 140px; padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.slot.empty { cursor: pointer; border-style: dashed; }
+.slot.empty:hover { border-color: var(--accent); }
+.slot.mine { border-color: var(--accent); background: rgba(56,189,248,.08); }
+.slot .slot-n { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+.slot .badges { gap: 6px; }
+/* "slot-badge" e não "badge": a classe .badge global (HUD) tem fundo cheio e margin-left:auto */
+.slot-badge { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.slot-badge.you { color: var(--accent); border-color: var(--accent); }
+.slot-edit { display: grid; gap: 8px; width: 100%; }
+.slot button.small, .slot-edit button { font-size: .85rem; padding: 6px 10px; }
+
 /* ---------- Tabuleiro em anel ---------- */
 .board-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
 .ring { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, minmax(110px, auto)); gap: 10px; }

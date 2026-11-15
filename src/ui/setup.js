@@ -1,4 +1,6 @@
-// Tela inicial: apresentação, lados e escadas, agências (hot-seat) e modo sandbox.
+// Tela inicial: apresentação, lados e escadas, e a escolha de COMO jogar (ver
+// docs/PLANO-SALAS.md, Fase 2): sozinho contra o bot, no mesmo aparelho (hot-seat) ou
+// online com link — o online cria a sala na hora e segue para o lobby de vagas.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
 import { el, button, glossary, missionIcon } from './components.js';
 import { icon } from './icons.js';
@@ -10,7 +12,11 @@ import { MISSIONS } from '../data/missions.js';
 import { START_YEAR, END_YEAR, ROUNDS_PER_YEAR } from '../data/history.js';
 
 export function setupScreen(state, actions) {
-  const players = [{ name: '' }];
+  // Estado local da tela (nada disso entra no state do jogo antes do Começar)
+  const players = [{ name: '' }, { name: '' }, { name: '' }, { name: '' }];
+  let mode = 'solo';      // 'solo' | 'local' | 'online'
+  let localCount = 2;     // agências no hot-seat
+  let onlineCount = 2;    // vagas da sala online
   let sandbox = false;
 
   // Espaçonave de exemplo na capa (só visual)
@@ -19,74 +25,89 @@ export function setupScreen(state, actions) {
   demo.spacecraft.instruments = ['camera', 'spectrometer', 'magnetometer'];
   demo.spacecraft.launcherId = 'medium';
 
-  const playersBox = el('div', { class: 'players-box' });
-  const soloNote = el('p', { class: 'hint' });
-  const renderPlayers = () => {
-    playersBox.innerHTML = '';
-    players.forEach((p, i) => {
-      const input = el('input', { type: 'text', placeholder: `Nome da agência ${i + 1}`, maxlength: 20, value: p.name });
-      input.addEventListener('input', (e) => { p.name = e.target.value; });
-      playersBox.appendChild(el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]));
-    });
-    soloNote.textContent = players.length === 1
-      ? 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'
-      : players.length === 2
-        ? '2 agências: lados diferentes, sorteados. Cada uma joga escondida: use espionagem e boatos.'
-        : `${players.length} agências: lados sorteados de forma equilibrada. Quem é do mesmo lado disputa os mesmos degraus.`;
-  };
-  renderPlayers();
-
-  const setCount = (n) => {
-    while (players.length < n) players.push({ name: '' });
-    players.length = n;
-    renderPlayers();
-    countBox.querySelectorAll('button').forEach((b, i) => b.classList.toggle('selected', i + 1 === n));
-  };
-  const countBox = el('div', { class: 'row count-btns' }, ['Agências:', ...[1, 2, 3, 4].map((n) => button(String(n), () => setCount(n), { class: n === 1 ? 'selected' : '' }))]);
-
-  const toggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  const sandboxToggle = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox' }), 'Modo sandbox: sem tabuleiro, verba e tecnologia livres, qualquer missão. Só para explorar os trade-offs.']);
+  sandboxToggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
   // Orientações: liga/desliga as dicas de próximo passo durante a partida (salvo no navegador).
   const guideBox = el('label', { class: 'toggle' }, [el('input', { type: 'checkbox', checked: guideOn() ? 'checked' : null }), 'Mostrar orientações durante a partida: o que fazer a cada passo e o botão recomendado. Dá para mudar a qualquer momento no topo da tela.']);
   guideBox.querySelector('input').addEventListener('change', (e) => actions.setGuide(e.target.checked));
-  toggle.querySelector('input').addEventListener('change', (e) => { sandbox = e.target.checked; });
 
-  // Sala online (experimental, ver docs/PLANO-P2P.md): cada jogador no seu dispositivo,
-  // conectados direto por WebRTC. Quem cria a sala vira o host (guarda o jogo oficial);
-  // quem entra pelo link recebe o estado do host e passa a jogar à distância.
-  const onlineStatus = el('p', { class: 'hint' });
-  const joinInput = el('input', { type: 'text', placeholder: 'Cole o link ou o código da sala' });
-  const onlinePanel = el('div', { class: 'panel online-room' }, [
-    el('strong', { class: 'with-icon' }, [icon('wifi', { size: 18 }), 'Jogar à distância (experimental)']),
-    el('p', { class: 'hint' }, 'Um jogador cria a sala e manda o link para os outros. Precisa de internet; quem criou tem que deixar a aba aberta durante a partida.'),
-    el('div', { class: 'row' }, [
-      button('Criar sala', async () => {
-        onlineStatus.textContent = 'Criando sala...';
-        try {
-          const id = await actions.hostOnline();
-          const link = `${location.origin}${location.pathname}?sala=${id}`;
-          onlineStatus.innerHTML = '';
-          onlineStatus.append('Link da sala: ', el('code', {}, link));
-        } catch (err) {
-          onlineStatus.textContent = err.message || 'Não foi possível criar a sala.';
-        }
-      }),
-      joinInput,
-      button('Entrar na sala', async () => {
-        const raw = joinInput.value.trim();
-        if (!raw) return;
-        const id = raw.includes('sala=') ? new URL(raw, location.href).searchParams.get('sala') : raw;
-        onlineStatus.textContent = 'Conectando...';
-        try {
-          await actions.joinOnline(id);
-          onlineStatus.textContent = 'Conectado! Aguardando o estado do host...';
-        } catch (err) {
-          onlineStatus.textContent = err.message || 'Não foi possível entrar na sala.';
-        }
-      }),
-    ]),
-    onlineStatus,
-  ]);
+  const nameInput = (i) => {
+    const input = el('input', { type: 'text', placeholder: `Nome da agência ${i + 1}`, maxlength: 20, value: players[i].name });
+    input.addEventListener('input', (e) => { players[i].name = e.target.value; });
+    return el('div', { class: 'player-row' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]);
+  };
+
+  const countButtons = (value, onPick) => el('div', { class: 'row count-btns' }, [2, 3, 4].map((n) => button(String(n), () => onPick(n), { class: n === value ? 'selected' : '' })));
+
+  // Botão que se desabilita enquanto a promessa da ação roda (criar/entrar na sala).
+  // Erros chegam por toast, tratados em main.js — a tela só chama actions.*.
+  const busyButton = (label, busyLabel, run, attrs) => {
+    const b = button(label, async () => {
+      b.disabled = true;
+      const original = b.innerHTML; // preserva o ícone do rótulo
+      b.textContent = busyLabel;
+      try { await run(); } finally { b.disabled = false; b.innerHTML = original; }
+    }, attrs);
+    return b;
+  };
+
+  // Área "Partida": re-renderizada quando o modo muda.
+  const matchBox = el('div', { class: 'match-box' });
+  const renderMatch = () => {
+    matchBox.innerHTML = '';
+    if (mode === 'solo') {
+      matchBox.append(
+        nameInput(0),
+        el('p', { class: 'hint' }, 'Solo: o outro lado é um bot que cumpre cada degrau no ano em que ele aconteceu de verdade (com um ano de variação). Corra contra a história.'),
+        sandboxToggle,
+        el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame([{ name: players[0].name.trim() }], { sandbox }), { class: 'primary' })]),
+      );
+    } else if (mode === 'local') {
+      matchBox.append(
+        el('div', { class: 'row count-row' }, ['Agências:', countButtons(localCount, (n) => { localCount = n; renderMatch(); })]),
+        ...Array.from({ length: localCount }, (_, i) => nameInput(i)),
+        el('p', { class: 'hint' }, localCount === 2
+          ? '2 agências no mesmo aparelho, revezando. Cada uma joga escondida: use espionagem e boatos.'
+          : `${localCount} agências no mesmo aparelho, revezando. Lados sorteados de forma equilibrada; quem é do mesmo lado disputa os mesmos degraus.`),
+        sandboxToggle,
+        el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.slice(0, localCount).map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
+      );
+    } else {
+      const joinInput = el('input', { type: 'text', placeholder: 'Código ou link da sala' });
+      matchBox.append(
+        el('div', { class: 'row count-row' }, ['Jogadores na sala:', countButtons(onlineCount, (n) => { onlineCount = n; renderMatch(); })]),
+        el('p', { class: 'hint' }, 'Criar a sala gera um link curto na hora: mande para os outros e cada um ocupa a sua agência no lobby. Precisa de internet, e quem criou mantém a aba aberta durante a partida.'),
+        el('div', { class: 'row' }, [busyButton([icon('wifi', { size: 18 }), 'Criar sala'], 'Criando sala...', () => actions.hostOnline(onlineCount), { class: 'primary' })]),
+        el('div', { class: 'row join-row' }, [
+          el('span', { class: 'hint' }, 'Recebeu um convite?'),
+          joinInput,
+          busyButton('Entrar na sala', 'Entrando...', () => actions.joinOnline(joinInput.value)),
+        ]),
+      );
+    }
+  };
+
+  // Seletor de modo: três cartões, estilo dos passos da capa.
+  const modeBox = el('div', { class: 'mode-grid' });
+  const modes = [
+    { id: 'solo', icon: 'helmet', title: 'Jogar sozinho', text: 'Você contra o calendário real da corrida espacial.' },
+    { id: 'local', icon: 'die', title: 'No mesmo aparelho', text: '2–4 agências revezando o dispositivo (hot-seat).' },
+    { id: 'online', icon: 'wifi', title: 'Online com link', text: 'Cada um no seu dispositivo, numa sala compartilhada.' },
+  ];
+  const renderModes = () => {
+    modeBox.innerHTML = '';
+    modes.forEach((m) => {
+      const card = el('button', { class: `panel mode${mode === m.id ? ' selected' : ''}`, type: 'button' }, [
+        el('strong', { class: 'with-icon' }, [icon(m.icon, { size: 18 }), m.title]),
+        el('p', {}, m.text),
+      ]);
+      card.addEventListener('click', () => { mode = m.id; renderModes(); renderMatch(); });
+      modeBox.appendChild(card);
+    });
+  };
+  renderModes();
+  renderMatch();
 
   return el('section', { class: 'screen setup' }, [
     el('div', { class: 'hero' }, [
@@ -112,13 +133,9 @@ export function setupScreen(state, actions) {
       el('small', { class: 'lose-text' }, `− ${s.weakness}`),
     ]))),
     el('h2', {}, 'Partida'),
-    countBox,
-    playersBox,
-    soloNote,
-    toggle,
+    modeBox,
+    matchBox,
     guideBox,
-    onlinePanel,
-    el('div', { class: 'row' }, [button([icon('rocket', { size: 18 }), 'Começar a partida'], () => actions.startGame(players.map((p) => ({ name: p.name.trim() })), { sandbox }), { class: 'primary' })]),
     glossary(),
     el('p', { class: 'hint' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
   ]);
