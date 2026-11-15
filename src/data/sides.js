@@ -6,33 +6,27 @@
 // launcherTech = ajuste no nível de tecnologia exigido pelos lançadores (−1 = foguetes fortes cedo).
 // A ordem e o degrau final da URSS estão "a definir" na v3; aqui o final é a Lua para os dois lados
 // (a corrida à Lua). Mudar a escada é só trocar a lista.
+// Nome, foco, vantagem e fraqueza em i18n (side.<id>.name/focus/advantage/weakness).
+import { localize } from '../i18n/localize.js';
 
-export const SIDES = {
+export const SIDES = localize('side', {
   usa: {
     id: 'usa',
-    name: 'EUA',
     icon: 'wings',
     ladder: ['first_satellite', 'living_being', 'lunar_probe', 'crewed_moon'],
-    focus: 'Foguete pesado e suporte de vida',
-    advantage: 'Mais verba: +5 por ano (a URSS tem −5).',
-    weakness: 'Foguetes grandes chegam mais tarde: lançadores exigem +1 de tecnologia.',
     startFunds: 0,
     yearlyBonus: 5,
     launcherTech: 1,
   },
   ussr: {
     id: 'ussr',
-    name: 'URSS',
     icon: 'star',
     ladder: ['first_satellite', 'living_being', 'space_station', 'crewed_moon'],
-    focus: 'Vida no espaço e energia contínua',
-    advantage: 'Foguetes fortes cedo: lançadores exigem −1 de tecnologia.',
-    weakness: 'Orçamento mais apertado: −5 de verba por ano.',
     startFunds: 0,
     yearlyBonus: -5,
     launcherTech: -1,
   },
-};
+}, ['name', 'focus', 'advantage', 'weakness']);
 
 export const STEP_BONUS_FIRST = 20; // primeiro do lado a cumprir o degrau
 export const STEP_BONUS_LATER = 8;  // quem cumpre depois, no mesmo lado, leva menos

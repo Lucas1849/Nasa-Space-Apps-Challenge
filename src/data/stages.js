@@ -8,20 +8,21 @@
 // guaranteedEvent = sempre tem imprevisto nessa etapa (pontos-chave do voo nunca ficam vazios).
 // consolation = missão de consolação (IDEIA.md v3 seção 7): se a etapa falha, a nave ainda cumpre um
 //               objetivo menor e dá crédito parcial. Não existe "abortar".
+import { t } from '../i18n/index.js';
+import { localize } from '../i18n/localize.js';
 
 export const STAGES = {
-  ascent: { id: 'ascent', name: 'Subida', system: 'launch', baseRisk: 0.08, icon: 'rocket', text: 'O foguete atravessa a atmosfera com a carga no topo.' },
-  orbit_insertion: { id: 'orbit_insertion', name: 'Entrada em órbita', system: 'power', baseRisk: 0.05, icon: 'satellite', text: 'A espaçonave abre os painéis e liga os sistemas.',
-    consolation: 'A nave ficou numa órbita baixa demais, mas transmitiu dados de engenharia por alguns dias antes de reentrar.' },
-  transfer: { id: 'transfer', name: 'Transferência', system: 'power', baseRisk: 0.07, icon: 'orbit', text: 'Longa viagem até o destino, dependendo de energia o tempo todo.',
-    consolation: 'A nave ficou presa em órbita da Terra, mas testou os sistemas por semanas: dados preciosos para a próxima.' },
-  geo_arrival: { id: 'geo_arrival', name: 'Chegada à GEO', system: 'comms', baseRisk: 0.06, icon: 'dish', text: 'A 36 mil km de altura, o sinal precisa chegar firme à Terra.', guaranteedEvent: true,
-    consolation: 'A nave parou numa órbita alta errada, mas mediu a radiação dos cinturões de Van Allen.' },
-  lunar_arrival: { id: 'lunar_arrival', name: 'Chegada à Lua', system: 'comms', baseRisk: 0.10, icon: 'moon', text: 'Entrar em órbita lunar e falar com a Terra a 384 mil km.', guaranteedEvent: true,
-    consolation: 'A nave não entrou em órbita lunar, mas fez um sobrevoo e mandou fotos de perto da Lua.' },
-  crew_return: { id: 'crew_return', name: 'Retorno da tripulação', system: 'life', baseRisk: 0.10, icon: 'parachute', text: 'Trazer a tripulação viva de volta à Terra.', guaranteedEvent: true,
-    consolation: 'A cápsula fez um pouso de emergência longe da área prevista. A tripulação foi resgatada, mas a missão não conta.' },
+  ascent: { id: 'ascent', system: 'launch', baseRisk: 0.08, icon: 'rocket' },
+  orbit_insertion: { id: 'orbit_insertion', system: 'power', baseRisk: 0.05, icon: 'satellite', consolation: true },
+  transfer: { id: 'transfer', system: 'power', baseRisk: 0.07, icon: 'orbit', consolation: true },
+  geo_arrival: { id: 'geo_arrival', system: 'comms', baseRisk: 0.06, icon: 'dish', guaranteedEvent: true, consolation: true },
+  lunar_arrival: { id: 'lunar_arrival', system: 'comms', baseRisk: 0.10, icon: 'moon', guaranteedEvent: true, consolation: true },
+  crew_return: { id: 'crew_return', system: 'life', baseRisk: 0.10, icon: 'parachute', guaranteedEvent: true, consolation: true },
 };
+// Nome, texto e consolação (onde existe) em i18n (stage.<id>.name/text/consolation).
+for (const s of Object.values(STAGES)) {
+  localize('stage', { [s.id]: s }, s.consolation ? ['name', 'text', 'consolation'] : ['name', 'text']);
+}
 
 export const CONSOLATION_FUNDS = 8; // crédito parcial em verba (+1 de tecnologia, como toda falha)
 
@@ -32,7 +33,11 @@ export const FLIGHT_PLANS = {
   moon: ['ascent', 'transfer', 'lunar_arrival'],
 };
 
-export const SYSTEM_NAMES = { launch: 'lançamento', power: 'energia', comms: 'comunicação', life: 'suporte de vida' };
+// Nomes dos subsistemas em i18n (system.launch/power/comms/life). Getters para trocar com o idioma.
+export const SYSTEM_NAMES = {};
+for (const k of ['launch', 'power', 'comms', 'life']) {
+  Object.defineProperty(SYSTEM_NAMES, k, { enumerable: true, get() { return t(`system.${k}`); } });
+}
 
 export const FAILURE_DATA_BONUS = 0.05; // cada falha anterior no mesmo sistema tira 5% de risco
 export const MAX_FAILURE_DATA = 3;      // no máximo −15%

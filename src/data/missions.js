@@ -19,72 +19,66 @@
 // Balanceamento (15/11): "Projeto pronto" dava +20 de verba ANTES de lançar e, na prática, devolvia o preço
 // das peças (dava para lançar no turno 1). A verba agora vem só depois de lançar (prestígio), quando já não
 // paga o foguete desta nave.
-const milestones = (ready, launch, done) => [
-  { id: 'design_ready', name: 'Projeto pronto', requirement: ready, effect: { type: 'discount', value: 10 } },
-  { id: 'launched', name: 'Lançamento', requirement: launch, effect: { type: 'funds', value: 10 } },
-  { id: 'mission_complete', name: 'Missão cumprida', requirement: done, effect: { type: 'shield', value: 1 } },
-];
+import { t } from '../i18n/index.js';
+import { localize } from '../i18n/localize.js';
 
-export const MISSIONS = {
+// Milestones: o NOME é compartilhado por todas as missões (milestone.<id>); o REQUISITO é por missão
+// (mission.<missionId>.ms.<id>). Getters para trocar com o idioma. Efeitos continuam fixos.
+const MILESTONE_EFFECTS = {
+  design_ready: { type: 'discount', value: 10 },
+  launched: { type: 'funds', value: 10 },
+  mission_complete: { type: 'shield', value: 1 },
+};
+const milestones = (missionId) => Object.keys(MILESTONE_EFFECTS).map((id) => {
+  const ms = { id, effect: MILESTONE_EFFECTS[id] };
+  Object.defineProperty(ms, 'name', { enumerable: true, get() { return t(`milestone.${id}`); } });
+  Object.defineProperty(ms, 'requirement', { enumerable: true, get() { return t(`mission.${missionId}.ms.${id}`); } });
+  return ms;
+});
+
+// Nome, dificuldade e objetivo em i18n (mission.<id>.name/difficulty/goal). Aqui ficam ids e números.
+export const MISSIONS = localize('mission', {
   first_satellite: {
     id: 'first_satellite',
-    name: 'Primeiro satélite',
-    difficulty: 'fácil',
     orbit: 'leo',
-    goal: 'Colocar um objeto em órbita e provar que ele está lá: basta transmitir um sinal.',
     needs: { science: 2, comms: 2, lifeSupport: false, lifetime: 1 },
     kit: ['radio_beacon', 'solar_small', 'antenna_basic', 'small'],
-    milestones: milestones('Montar um satélite que transmita sinal', 'Lançar em órbita baixa', 'Receber o sinal na Terra'),
+    milestones: milestones('first_satellite'),
   },
   living_being: {
     id: 'living_being',
-    name: 'Ser vivo em órbita',
-    difficulty: 'médio',
     orbit: 'leo',
-    goal: 'Levar um ser vivo à órbita e monitorar seus sinais vitais.',
     needs: { science: 4, comms: 4, lifeSupport: true, lifetime: 1 },
     kit: ['life_support', 'solar_large', 'radio_beacon', 'antenna_basic', 'small'],
-    milestones: milestones('Montar cápsula com suporte de vida', 'Lançar em órbita baixa', 'Manter o passageiro vivo e transmitir dados'),
+    milestones: milestones('living_being'),
   },
   weather_watch: {
     id: 'weather_watch',
-    name: 'Satélite meteorológico',
-    difficulty: 'médio',
     orbit: 'geo',
-    goal: 'Observar o clima do mesmo ponto do planeta durante anos.',
     needs: { science: 6, comms: 6, lifeSupport: false, lifetime: 5 },
     kit: ['camera', 'radio_beacon', 'antenna_dish', 'solar_large', 'medium'],
-    milestones: milestones('Montar satélite com câmera e boa antena', 'Lançar em órbita geoestacionária', 'Operar por 5 anos enviando imagens'),
+    milestones: milestones('weather_watch'),
   },
   lunar_probe: {
     id: 'lunar_probe',
-    name: 'Sonda lunar',
-    difficulty: 'difícil',
     orbit: 'moon',
-    goal: 'Chegar à Lua e enviar dados científicos de lá.',
     needs: { science: 8, comms: 5, lifeSupport: false, lifetime: 2 },
     kit: ['spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
-    milestones: milestones('Montar sonda com instrumentos científicos', 'Lançar rumo à Lua', 'Enviar dados científicos da Lua'),
+    milestones: milestones('lunar_probe'),
   },
   space_station: {
     id: 'space_station',
-    name: 'Estação espacial',
-    difficulty: 'difícil',
     orbit: 'leo',
-    goal: 'Manter uma estação com gente a bordo em órbita baixa por anos: energia contínua e suporte de vida.',
     needs: { science: 6, comms: 4, lifeSupport: true, lifetime: 5 },
     kit: ['life_support', 'camera', 'thruster', 'antenna_basic', 'solar_large', 'medium'],
-    milestones: milestones('Montar estação com suporte de vida e energia de sobra', 'Lançar em órbita baixa', 'Operar com tripulação por 5 anos'),
+    milestones: milestones('space_station'),
   },
   crewed_moon: {
     id: 'crewed_moon',
-    name: 'Tripulação na Lua',
-    difficulty: 'muito difícil',
     orbit: 'moon',
-    goal: 'Levar pessoas à órbita da Lua, com ciência a bordo, e trazê-las de volta.',
     needs: { science: 10, comms: 8, lifeSupport: true, lifetime: 1 },
     kit: ['life_support', 'spectrometer', 'antenna_dish', 'solar_large', 'heavy'],
     extraStages: ['crew_return'], // voo tripulado só termina com a tripulação de volta (ver data/stages.js)
-    milestones: milestones('Montar nave tripulada com instrumentos', 'Lançar rumo à Lua com foguete pesado', 'Operar na Lua e voltar com a tripulação'),
+    milestones: milestones('crewed_moon'),
   },
-};
+}, ['name', 'difficulty', 'goal']);
