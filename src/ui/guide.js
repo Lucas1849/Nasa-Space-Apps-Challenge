@@ -15,15 +15,16 @@ import { nameOf } from '../sim/resources.js';
 import { MISSIONS } from '../data/missions.js';
 import { ORBITS } from '../data/orbits.js';
 import { STAGES } from '../data/stages.js';
+import { t } from '../i18n/index.js';
 
 
 // Mesmo que o motor de jogo exige para passar a vez (ver endTurn em sim/actions.js).
 export function endTurnBlocker(state) {
   const p = currentPlayer(state);
-  if (!p.rolled) return 'Role os dados e ande antes de passar a vez.';
-  if (state.pendingDilemma) return 'Resolva a carta de dilema antes de passar a vez.';
-  if (p.flight?.pending) return 'Decida o imprevisto do voo antes de passar a vez.';
-  if (p.flight && !p.flightAdvanced) return 'Sua nave está em voo: avance uma etapa antes de passar a vez.';
+  if (!p.rolled) return t('gd.block.roll');
+  if (state.pendingDilemma) return t('gd.block.dilemma');
+  if (p.flight?.pending) return t('gd.block.flightPending');
+  if (p.flight && !p.flightAdvanced) return t('gd.block.advance');
   return null;
 }
 
@@ -32,13 +33,13 @@ function noLauncherYet(player) {
   if (player.spacecraft.launcherId) return null;
   const all = Object.values(LAUNCHERS).filter((l) => isDiscovered(player, l));
   if (!all.length) {
-    return { title: 'Você ainda não tem a blueprint de nenhum foguete', text: 'Pare numa casa de Fornecedor do tabuleiro: ele sempre oferece o que a sua missão precisa (a primeira blueprint é de graça). Depois você compra as peças na oficina.' };
+    return { title: t('gd.noLauncher.noBpTitle'), text: t('gd.noLauncher.noBpText') };
   }
   if (!all.every((l) => isLocked(player, l))) return null;
   const need = Math.min(...all.map((l) => requiredTech(player, l)));
   return {
-    title: 'Nenhum foguete liberado ainda',
-    text: `O foguete mais simples exige tecnologia ${need} e você tem ${player.tech}. Ganhe tecnologia a cada Ano novo, na casa Ano Geofísico Internacional ou construindo um Laboratório. Enquanto isso, compre as peças da nave.`,
+    title: t('gd.noLauncher.lockedTitle'),
+    text: t('gd.noLauncher.lockedText', { need, tech: player.tech }),
   };
 }
 
@@ -58,93 +59,89 @@ export function nextStep(state, screen, player = null) {
 
   if (screen === 'board') {
     if (state.pendingDilemma) {
-      return { title: 'Resolva a carta de dilema', text: 'No centro do tabuleiro, escolha uma das opções. Não existe resposta certa: cada uma ganha algo e perde outra coisa.', target: 'dilemma' };
+      return { title: t('gd.board.dilemma.t'), text: t('gd.board.dilemma.x'), target: 'dilemma' };
     }
     if (state.dice) {
-      return { title: 'Escolha um dos dados', text: 'Olhe as casas à frente do seu peão e escolha o dado que para na melhor casa para você agora.', target: 'die' };
+      return { title: t('gd.board.die.t'), text: t('gd.board.die.x'), target: 'die' };
     }
     if (!p.rolled) {
-      return { title: 'Comece rolando os dados', text: 'Você rola 2 dados e escolhe qual usar. Cada casa dá algo: verba, tecnologia, blueprints no Fornecedor, uma carta de dilema ou um prédio.', target: 'roll' };
+      return { title: t('gd.board.roll.t'), text: t('gd.board.roll.x'), target: 'roll' };
     }
     const pending = state.pendingTile;
     if (pending?.kind === 'build') {
-      return { title: 'Terreno livre: construir?', text: 'Um prédio dá vantagem até o fim da partida. Laboratório acelera a tecnologia, Fábrica dá desconto, Controle de missão reduz o risco do voo e Patrocinador rende um pouco de verba. Ou clique em Seguir.', target: 'tile' };
+      return { title: t('gd.board.build.t'), text: t('gd.board.build.x'), target: 'tile' };
     }
     if (pending?.kind === 'spy') {
-      return { title: 'Espionagem: observar ou sabotar', text: `Por ${SPY_COST} de verba você vê em que degrau um rival está e quão pronta está a nave dele. Por ${SABOTAGE_COST} você o sabota: uma interferência na telemetria da etapa final do voo dele, ou 1 ano de atraso para a agência rival do solo. Só uma ação por ano.`, target: 'tile' };
+      return { title: t('gd.board.spy.t'), text: t('gd.board.spy.x', { spy: SPY_COST, sabotage: SABOTAGE_COST }), target: 'tile' };
     }
     if (pending?.kind === 'supplier') {
-      return { title: 'Fornecedor: escolha uma blueprint', text: 'A blueprint é o projeto de uma peça ou foguete. Ela vale para sempre; a peça em si você compra na oficina. A primeira é de graça. O fornecedor sempre oferece algo que a sua missão precisa.', target: 'tile' };
+      return { title: t('gd.board.supplier.t'), text: t('gd.board.supplier.x'), target: 'tile' };
     }
     if (pending) {
-      return { title: 'Prédio de um rival', text: 'Você pode pagar para usar o prédio. Você ganha o benefício, mas o dono recebe a taxa.', target: 'tile' };
+      return { title: t('gd.board.rival.t'), text: t('gd.board.rival.x'), target: 'tile' };
     }
     if (p.flight && !p.flightAdvanced) {
-      return { title: 'Sua nave está em voo', text: `Avance o voo para resolver a próxima etapa: ${STAGES[p.flight.plan[p.flight.stageIndex]].name}. Uma etapa por turno.`, target: 'advance' };
+      return { title: t('gd.board.flight.t'), text: t('gd.board.flight.x', { stage: STAGES[p.flight.plan[p.flight.stageIndex]].name }), target: 'advance' };
     }
     if (!mission) {
-      return { title: 'Escada completa', text: 'Você cumpriu todos os degraus. Passe a vez: o vencedor é revelado no fim da rodada.', target: 'end' };
+      return { title: t('gd.board.ladderDone.t'), text: t('gd.board.ladderDone.x'), target: 'end' };
     }
     const design = checkDesign(p);
     if (design.ok && !p.flight && !p.launchedThisTurn) {
-      return { title: 'Nave pronta para lançar', text: 'Lance agora ou espere melhorar. Esperar rende tecnologia e peças melhores, mas um rival pode cumprir o degrau antes.', target: 'launch' };
+      return { title: t('gd.board.launchReady.t'), text: t('gd.board.launchReady.x'), target: 'launch' };
     }
     if (!p.flight && !p.launchedThisTurn) {
       const locked = noLauncherYet(p);
       if (locked) return { ...locked, target: 'workshop' };
       const fail = firstHardFailure(p);
       return {
-        title: `Monte a nave: ${mission.name}`,
-        text: `${fail ? `Falta resolver: ${fail.text}.` : 'Monte a nave do degrau atual.'} Você pode ver o projeto na Oficina a qualquer hora, mas só compra e lança parando numa casa de Oficina do tabuleiro (são 3).`,
+        title: t('gd.board.buildShip.t', { mission: mission.name }),
+        text: t('gd.board.buildShip.x', { lead: fail ? t('gd.board.buildShip.fail', { text: fail.text }) : t('gd.board.buildShip.ok') }),
         target: 'workshop',
       };
     }
-    return { title: 'Turno concluído', text: 'Você já fez o principal. Passe a vez para ver o resumo do turno.', target: 'end' };
+    return { title: t('gd.board.done.t'), text: t('gd.board.done.x'), target: 'end' };
   }
 
   if (screen === 'workshop') {
     if (!mission) return null;
-    const tips = [
-      'Etiquetas verdes mostram o que a peça dá. As amarelas, o que ela custa.',
-      'Barra vermelha no painel de recursos impede o lançamento. Amarela só reduz a ciência.',
-      'Passe o mouse sobre um medidor para ver o que ele significa.',
-    ];
+    const tips = [t('gd.ws.tip1'), t('gd.ws.tip2'), t('gd.ws.tip3')];
     const locked = noLauncherYet(p);
     if (locked) return { ...locked, target: 'launcher', tips };
     if (!p.spacecraft.launcherId) {
-      return { title: 'Escolha o foguete', text: 'Comece pelo veículo de lançamento: ele define quanta massa cabe na nave e até que órbita ela chega.', target: 'launcher', tips };
+      return { title: t('gd.ws.launcher.t'), text: t('gd.ws.launcher.x'), target: 'launcher', tips };
     }
     if (!p.spacecraft.orbitId) {
-      return { title: 'Escolha a órbita', text: `A missão "${mission.name}" exige a ${ORBITS[mission.orbit].name}.`, target: 'orbit', tips };
+      return { title: t('gd.ws.orbit.t'), text: t('gd.ws.orbit.x', { mission: mission.name, orbit: ORBITS[mission.orbit].name }), target: 'orbit', tips };
     }
     const fail = firstHardFailure(p);
-    if (fail) return { title: 'Resolva os itens em vermelho', text: fail.text, target: 'checks', tips };
+    if (fail) return { title: t('gd.ws.fail.t'), text: fail.text, target: 'checks', tips };
     // Projeto fecha nas contas físicas, mas os mínimos de ciência e comunicação ainda são desconhecidos.
     if (isHidden(p) && !p.flight && !p.launchedThisTurn && !p.rehearsedThisTurn) {
-      return { title: 'Nave montada, requisitos desconhecidos', text: `A missão pede ciência e comunicação que você ainda não conhece. Faça um ensaio em solo (${REHEARSAL_COST}) para ter uma pista, ou lance e descubra no relatório. Errar ensina: os números aparecem depois.`, target: 'rehearse', tips };
+      return { title: t('gd.ws.hidden.t'), text: t('gd.ws.hidden.x', { cost: REHEARSAL_COST }), target: 'rehearse', tips };
     }
     if (p.flight || p.launchedThisTurn) {
-      return { title: 'Nave montada', text: 'O projeto fecha. Você poderá lançar quando a nave atual terminar o voo, ou no próximo turno.', target: 'back', tips };
+      return { title: t('gd.ws.built.t'), text: t('gd.ws.built.x'), target: 'back', tips };
     }
     if (!state.sandbox && !p.rolled) {
-      return { title: 'Projeto pronto', text: 'Ande no tabuleiro antes de lançar: volte e role os dados.', target: 'back', tips };
+      return { title: t('gd.ws.ready.t'), text: t('gd.ws.ready.moveX'), target: 'back', tips };
     }
-    return { title: 'Projeto pronto', text: 'Veja o risco de cada etapa ao lado. Lançar agora é mais rápido. Peças reservas e margem de energia deixam o voo mais seguro.', target: 'launch', tips };
+    return { title: t('gd.ws.ready.t'), text: t('gd.ws.ready.x'), target: 'launch', tips };
   }
 
   if (screen === 'flight') {
     if (p.flight?.pending) {
-      return { title: 'Escolha como reagir', text: 'Compare o risco de cada opção. O número vem da sua nave: margem de massa e energia, peças reservas, dados de falha e o Controle de missão.', target: 'option' };
+      return { title: t('gd.fl.react.t'), text: t('gd.fl.react.x'), target: 'option' };
     }
-    return { title: 'Etapa superada', text: state.sandbox ? 'Siga para a próxima etapa.' : 'A próxima etapa acontece no seu próximo turno. A próxima nave só pode ser montada quando esta cumprir a missão.', target: state.sandbox ? 'next' : 'end' };
+    return { title: t('gd.fl.passed.t'), text: state.sandbox ? t('gd.fl.passed.sandbox') : t('gd.fl.passed.turn'), target: state.sandbox ? 'next' : 'end' };
   }
 
   if (screen === 'report') {
     const r = p.lastResult;
     if (!r) return null;
     return r.success
-      ? { title: 'Degrau cumprido', text: 'Leia o "Por quê" para entender o que funcionou. A próxima missão da escada já está esperando na oficina.', target: 'end' }
-      : { title: 'Toda falha ensina', text: 'Leia o "Por quê" e os dados de falha. O sistema que falhou fica mais seguro na próxima tentativa.', target: 'end' };
+      ? { title: t('gd.rep.success.t'), text: t('gd.rep.success.x'), target: 'end' }
+      : { title: t('gd.rep.fail.t'), text: t('gd.rep.fail.x'), target: 'end' };
   }
   return null;
 }
@@ -152,19 +149,19 @@ export function nextStep(state, screen, player = null) {
 // Dicas contextuais (Etapa 5): cada uma aparece uma única vez, no momento em que o jogador chega nela
 // (sim/actions.js, raiseTip). Explicam só aquilo, sem despejar o resto das regras.
 const TIPS = {
-  blueprint: (item) => ({ title: `Agora a oficina faz isto: você tem a blueprint${item ? ` de ${nameOf(item)}` : ''}`, text: 'Blueprint é o projeto: vale para sempre. Na Oficina você paga a peça em si, e paga de novo a cada nave que montar. Só dá para comprar e lançar parado numa casa de Oficina do tabuleiro.' }),
-  workshop: () => ({ title: 'Você está numa casa de Oficina', text: 'Aqui você compra e vende peças, escolhe o foguete, faz o ensaio e lança. Fora dessas casas a tela da Oficina serve só para planejar.' }),
-  part: () => ({ title: 'Primeira peça a bordo', text: 'Cada peça tem custo em massa, energia e dados. No painel de recursos, barra vermelha impede o lançamento e barra amarela só reduz a ciência. Vender devolve metade do preço.' }),
-  launch: () => ({ title: 'Primeiro lançamento', text: 'A subida foi sorteada agora. As próximas etapas do voo acontecem uma por turno, e o risco de cada uma depende da sua nave. Se falhar, o relatório explica o porquê.' }),
+  blueprint: (item) => ({ title: t('gd.tip.blueprint.t', { of: item ? t('gd.tip.blueprint.of', { name: nameOf(item) }) : '' }), text: t('gd.tip.blueprint.x') }),
+  workshop: () => ({ title: t('gd.tip.workshop.t'), text: t('gd.tip.workshop.x') }),
+  part: () => ({ title: t('gd.tip.part.t'), text: t('gd.tip.part.x') }),
+  launch: () => ({ title: t('gd.tip.launch.t'), text: t('gd.tip.launch.x') }),
 };
 
 function tipCard(state) {
   const tip = state.tip;
   if (!tip || !TIPS[tip.id] || tip.playerId !== currentPlayer(state)?.id) return null;
-  const t = TIPS[tip.id](tip.item);
+  const card = TIPS[tip.id](tip.item);
   return el('div', { class: 'guide-card guide-tip', role: 'status' }, [
     icon('compass', { size: 22, className: 'guide-icon' }),
-    el('div', {}, [el('span', { class: 'tip-tag' }, 'Primeira vez'), el('strong', {}, t.title), el('p', {}, t.text)]),
+    el('div', {}, [el('span', { class: 'tip-tag' }, t('gd.tip.firstTime')), el('strong', {}, card.title), el('p', {}, card.text)]),
   ]);
 }
 
@@ -184,8 +181,8 @@ function stepCard(step) {
       el('strong', {}, step.title),
       el('p', {}, step.text),
       step.tips?.length ? el('details', { class: 'guide-tips' }, [
-        el('summary', {}, 'Mais dicas desta tela'),
-        el('ul', {}, step.tips.map((t) => el('li', {}, t))),
+        el('summary', {}, t('gd.moreTips')),
+        el('ul', {}, step.tips.map((tip) => el('li', {}, tip))),
       ]) : null,
     ]),
   ]);
