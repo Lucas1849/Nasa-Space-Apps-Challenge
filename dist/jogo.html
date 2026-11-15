@@ -4882,7 +4882,14 @@ function assignmentsFor(session) {
   return map;
 }
 
-return { MIN_SLOTS, MAX_SLOTS, MAX_NAME_LENGTH, createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor };
+// Trava de turno (Fase 4 do PLANO-SALAS.md): só a agência da vez pode agir.
+// Devolve o motivo (vira toast) ou null se pode agir. `playerId` undefined = peer sem vaga.
+function turnBlockError(playerId, turn) {
+  if (playerId === turn) return null;
+  return playerId == null ? 'Você está sem vaga nesta partida.' : 'Não é a vez da sua agência.';
+}
+
+return { MIN_SLOTS, MAX_SLOTS, MAX_NAME_LENGTH, createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, turnBlockError };
 })();
 
 // ---- src/net/sync.js
@@ -4899,17 +4906,18 @@ __mods["src/net/sync.js"] = (() => {
 //              'toast' | 'rejected' }
 const { hostRoom, joinRoom } = __mods["src/net/peer.js"];
 const { newCode, peerIdFor, normalizeCode } = __mods["src/net/roomCode.js"];
-const { createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor } = __mods["src/net/lobby.js"];
+const { createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, turnBlockError } = __mods["src/net/lobby.js"];
 
 const HOST_RETRIES = 3; // tentativas de código até desistir (colisão é raríssima)
 
 function createNetworkController({
   actionsMap, getState, setState, render, showError, enterLobby, exitToSetup,
 }) {
-  let channel = null;    // { isHost, broadcast?, sendTo?, send?, close }
-  let session = null;    // lobby.js; null fora do modo online
-  let myPeerId = null;   // identidade deste dispositivo na sala
-  let myPlayerId = null; // índice da agência deste dispositivo depois do start
+  let channel = null;     // { isHost, broadcast?, sendTo?, send?, close }
+  let session = null;     // lobby.js; null fora do modo online
+  let myPeerId = null;    // identidade deste dispositivo na sala
+  let myPlayerId = null;  // índice da agência deste dispositivo depois do start
+  let assignments = null; // host: peerId -> índice do jogador (trava de turno, Fase 4)
 
   function applyLocally(name, args) {
     // `name` pode vir de uma mensagem de rede: só roda o que está na lista vetada
@@ -4938,7 +4946,18 @@ function createNetworkController({
   }
 
   function onHostData(msg, fromPeer) {
-    if (msg.type === 'action') { applyLocally(msg.name, msg.args); return; }
+    if (msg.type === 'action') {
+      // Trava de turno (Fase 4): o host só aceita ação do peer dono da agência da vez.
+      // Fora da vez, o estado não é tocado e só quem tentou recebe o motivo.
+      if (session?.started) {
+        const block = turnBlockError(assignments?.[fromPeer], getState().turn);
+        if (block) { channel.sendTo(fromPeer, { type: 'toast', text: block }); return; }
+      }
+      // Resultado da ação volta para o autor: o cliente finalmente vê o toast de erro.
+      const error = applyLocally(msg.name, msg.args);
+      if (typeof error === 'string') channel.sendTo(fromPeer, { type: 'toast', text: error });
+      return;
+    }
     if (session && !session.started && (msg.type === 'claim' || msg.type === 'release')) {
       onGuestLobbyMessage(msg, fromPeer);
     }
@@ -5060,7 +5079,7 @@ function createNetworkController({
     const error = startGameFn(session.slots.map((s) => ({ name: s.name })));
     if (typeof error === 'string') return error;
     session = { ...session, started: true };
-    const assignments = assignmentsFor(session);
+    assignments = assignmentsFor(session); // o host guarda o mapa para a trava de turno
     myPlayerId = assignments[myPeerId] ?? null;
     channel.broadcast({ type: 'start', state: getState(), assignments });
     return undefined;
@@ -5074,6 +5093,12 @@ function createNetworkController({
   // para saber se deu certo (Fase 4 do PLANO-SALAS.md fecha isso).
   function dispatch(name, args) {
     if (!channel) return null;
+    // Trava de turno também para quem age localmente (host) e antes de gastar rede
+    // (cliente): a tela de espera já esconde os botões, mas a regra vale sempre.
+    if (session?.started) {
+      const block = turnBlockError(myPlayerId, getState().turn);
+      if (block) return { error: block };
+    }
     if (channel.isHost) return { error: applyLocally(name, args) };
     channel.send({ type: 'action', name, args });
     return { pending: true };
@@ -5096,11 +5121,42 @@ function createNetworkController({
     getHostPeerId: () => (session ? peerIdFor(session.code) : null),
     isConnected: () => !!channel,
     isHost: () => !!channel?.isHost,
-    disconnect: () => { channel?.close(); channel = null; session = null; myPlayerId = null; },
+    // Partida online em andamento neste dispositivo (liga a visão por agência em main.js)
+    isPlaying: () => !!channel && !!session?.started,
+    disconnect: () => { channel?.close(); channel = null; session = null; myPlayerId = null; assignments = null; },
   };
 }
 
 return { createNetworkController };
+})();
+
+// ---- src/ui/wait.js
+__mods["src/ui/wait.js"] = (() => {
+// Tela de espera do modo online (Fase 4 do PLANO-SALAS.md): fora da sua vez, você não
+// vê o tabuleiro de ninguém — só quem está jogando agora e a sua agência. A tela troca
+// sozinha quando o estado do host chega com a sua vez. Não entra em SCREENS: é um
+// override do render em main.js, só quando há partida online e a vez é de outro.
+const { el, avatar, sideBadge } = __mods["src/ui/components.js"];
+const { currentPlayer } = __mods["src/sim/state.js"];
+const { MISSIONS } = __mods["src/data/missions.js"];
+const { yearOf } = __mods["src/data/history.js"];
+
+function waitScreen(state, myPlayerId) {
+  const current = currentPlayer(state);
+  const me = state.players[myPlayerId] ?? null;
+  return el('section', { class: 'screen handoff' }, [
+    el('div', { class: 'panel handoff-card' }, [
+      el('p', { class: 'eyebrow' }, `${yearOf(state.round)} · partida online`),
+      avatar(current, 64),
+      el('h1', {}, `Vez de ${current.name}`),
+      el('p', { class: 'chip' }, sideBadge(current)),
+      me && el('p', { class: 'hint' }, `Sua agência: ${me.name} · degrau ${me.step + 1}: ${MISSIONS[me.missionId]?.name ?? '—'}`),
+      el('p', { class: 'hint' }, 'Aguarde a sua vez — a tela atualiza sozinha. As decisões de cada agência são secretas.'),
+    ]),
+  ]);
+}
+
+return { waitScreen };
 })();
 
 // ---- src/ui/yearOverlay.js
@@ -5190,6 +5246,7 @@ const { setGuide, guideOn } = __mods["src/ui/prefs.js"];
 const { endTurnBlocker } = __mods["src/ui/guide.js"];
 const { trackTurn, markTurnEnd, resetSummaries } = __mods["src/ui/summary.js"];
 const { createNetworkController } = __mods["src/net/sync.js"];
+const { waitScreen } = __mods["src/ui/wait.js"];
 const { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } = __mods["src/ui/yearOverlay.js"];
 
 const app = document.getElementById('app');
@@ -5239,12 +5296,22 @@ function render() {
   const changed = state.screen !== lastScreen || state.turn !== lastTurn;
   const scrollY = window.scrollY;
   trackTurn(state);
-  const node = SCREENS[state.screen](state, actions);
+  // Partida online (Fase 4 do PLANO-SALAS.md): cada um vê só a própria agência.
+  // Fora da sua vez: tela de espera, sem tabuleiro de ninguém (o fim de jogo é público
+  // e aparece para todos). Na sua vez: a tela de troca do hot-seat é pulada — você já
+  // está no seu dispositivo, não há para quem "passar".
+  let waiting = false;
+  if (net.isPlaying() && state.screen !== 'gameover') {
+    if (state.turn !== net.getMyPlayerId()) waiting = true;
+    else if (state.screen === 'handoff') state.screen = 'board';
+  }
+  const node = waiting ? waitScreen(state, net.getMyPlayerId()) : SCREENS[state.screen](state, actions);
   if (changed) node.classList.add('enter');
   app.replaceChildren(node);
   window.scrollTo(0, changed ? 0 : scrollY);
   lastScreen = state.screen;
   lastTurn = state.turn;
+  if (waiting) return; // na espera não há virada de ano a animar (os ganhos são de quem joga)
   // Virada de ano: anima uma vez, só no tabuleiro do jogador da vez (os ganhos são secretos: nunca na tela de troca).
   const yearKey = yearOverlayKey(state, lastYearShown);
   if (yearKey) {
