@@ -199,9 +199,9 @@ const draft = {
 };
 
 const MODES = [
-  { id: 'solo', icon: 'helmet', label: 'Solo', desc: 'Contra o calendário real' },
-  { id: 'local', icon: 'die', label: 'Mesmo aparelho', desc: '2 a 4 agências revezando' },
-  { id: 'online', icon: 'wifi', label: 'Online', desc: 'Cada um no seu, com link' },
+  { id: 'solo', icon: 'helmet', label: 'Solo' },
+  { id: 'local', icon: 'die', label: 'Mesmo aparelho' },
+  { id: 'online', icon: 'wifi', label: 'Online' },
 ];
 
 // Tempo do relógio do turno: desligado ou 60/90/120/180 s (sim/turnTimer.js). Salvo no navegador e gravado
@@ -210,11 +210,11 @@ function timerChoice(onChange) {
   return segmented('Tempo por turno', [0, 60, 90, 120, 180].map((n) => ({ value: n, label: n ? `${n} s` : 'Sem relógio' })), timerSeconds(), (v) => { setTimerSeconds(v); onChange(); });
 }
 
-// Cartões de opção (ícone, nome e uma linha do que é): escolha que precisa de explicação, não só um rótulo.
+// Cartões de opção (ícone e nome), como a escolha de modo em jogos.
 function optionCards(label, options, value, onPick) {
   return el('div', { class: 'option-cards', role: 'group', 'aria-label': label, style: `--cols:${options.length}` }, options.map((o) => el('button', {
     type: 'button', class: 'option-card', 'aria-pressed': String(o.value === value), onclick: () => onPick(o.value),
-  }, [icon(o.icon, { size: 18 }), el('strong', {}, o.label), el('small', {}, o.desc)])));
+  }, [icon(o.icon, { size: 20 }), el('strong', {}, o.label)])));
 }
 
 // Botão que se desabilita enquanto a promessa da ação roda (criar/entrar na sala).
@@ -258,7 +258,7 @@ function renderConfigView(actions, backToSplash) {
   const playerInputs = (count) => el('div', { class: 'setup-players-list' }, Array.from({ length: count }, (_, i) => {
     const input = el('input', {
       type: 'text',
-      placeholder: count === 1 ? 'Nome da sua agência (ex.: NASA, Roscosmos)' : `Agência ${i + 1}`,
+      placeholder: `Agência ${i + 1}`, // o nome que ela recebe se ficar em branco
       maxlength: 20,
       value: draft.names[i],
       'aria-label': count === 1 ? 'Nome da sua agência' : `Nome da agência ${i + 1}`,
@@ -293,7 +293,7 @@ function renderConfigView(actions, backToSplash) {
     const rows = [
       el('div', { class: 'setup-row setup-row-stack' }, [
         rowLabel('Como jogar'),
-        optionCards('Como jogar', MODES.map((m) => ({ value: m.id, label: m.label, icon: m.icon, desc: m.desc })), draft.mode, (v) => { draft.mode = v; render(); }),
+        optionCards('Como jogar', MODES.map((m) => ({ value: m.id, label: m.label, icon: m.icon })), draft.mode, (v) => { draft.mode = v; render(); }),
       ]),
     ];
 
@@ -312,8 +312,8 @@ function renderConfigView(actions, backToSplash) {
       rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
         rowLabel('Modo'),
         optionCards('Modo de jogo', [
-          { value: false, icon: 'flag', label: `Corrida ${START_YEAR}–${String(END_YEAR).slice(2)}`, desc: 'Tabuleiro, rivais e calendário' },
-          { value: true, icon: 'flask', label: 'Sandbox', desc: 'Oficina livre, sem tabuleiro' },
+          { value: false, icon: 'flag', label: `Corrida ${START_YEAR}–${String(END_YEAR).slice(2)}` },
+          { value: true, icon: 'flask', label: 'Sandbox' },
         ], draft.sandbox, (v) => { draft.sandbox = v; render(); }),
       ]));
       if (draft.mode === 'local') {
@@ -456,6 +456,14 @@ function renderCredits(go) {
   const entry = (title, text) => el('li', {}, [el('strong', {}, title), text]);
   return menuSheet('Créditos', [
     el('ul', { class: 'credits-list' }, [
+      // Equipe em ordem alfabética, no mesmo formato das outras entradas.
+      el('li', {}, [el('strong', {}, 'Equipe'), ...[
+        'Daniel Carlos Medeiros Alves',
+        'Henrique Melo de Araújo',
+        'Lucas Vieira Alves Nominato Santos',
+        'Marcus Vinicius Alves Marques',
+        'Pedro Henrique Ferreira Borges Vaz',
+      ].map((n) => el('span', { class: 'credits-name' }, n))]),
       entry('Desafio', 'NASA Space Apps Challenge 2026, desafio Space Mission Design Game.'),
       entry('Base do jogo', 'Processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e a atividade Marsbound do JPL. Datas históricas: NASA History.'),
       entry('Números', 'Os valores de peças, foguetes e missões são fictícios, criados para o aprendizado.'),

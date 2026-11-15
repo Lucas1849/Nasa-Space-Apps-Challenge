@@ -8,7 +8,7 @@
 export const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-const STEP_MS = 150; // tempo de cada pulo do peão
+const STEP_MS = 340; // tempo de cada casa do peão (mais lento para dar para acompanhar o foguete)
 
 // Peão andando casa a casa: um clone sai da casa de origem e pula até a casa final, onde o peão de
 // verdade já está (escondido até o clone chegar). Devolve uma Promise que resolve no fim.
@@ -25,6 +25,7 @@ export function walkPawn({ playerId, from, steps, total }) {
 
   const box = target.getBoundingClientRect();
   const ghost = target.cloneNode(true);
+  ghost.classList.add('pawn-ghost'); // a chama acende enquanto o foguete anda (CSS .pawn-ghost .rk-flame)
   Object.assign(ghost.style, {
     position: 'fixed', left: '0px', top: '0px', width: `${box.width}px`, height: `${box.height}px`,
     margin: '0', zIndex: '45', pointerEvents: 'none',
@@ -32,20 +33,68 @@ export function walkPawn({ playerId, from, steps, total }) {
   document.body.appendChild(ghost);
   target.style.visibility = 'hidden';
 
-  // Cada casa vira dois quadros: o alto do pulo (no meio do caminho) e a aterrissagem.
-  const at = (pt, lift = 0, sx = 1, sy = 1) =>
-    `translate(${pt.x - box.width / 2}px, ${pt.y - box.height / 2 - lift}px) scale(${sx}, ${sy})`;
-  const frames = [{ transform: at(points[0]) }];
+  // O foguete aponta para onde vai: o desenho aponta para cima, então soma 90° ao ângulo do trecho.
+  const angle = (a, b) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 90;
+  const at = (pt, rot, lift = 0) =>
+    `translate(${pt.x - box.width / 2}px, ${pt.y - box.height / 2 - lift}px) rotate(${rot}deg)`;
+  const frames = [{ transform: at(points[0], angle(points[0], points[1])), offset: 0 }];
   for (let i = 1; i < points.length; i += 1) {
+    const rot = angle(points[i - 1], points[i]);
     const mid = { x: (points[i - 1].x + points[i].x) / 2, y: (points[i - 1].y + points[i].y) / 2 };
-    frames.push({ transform: at(mid, 22, 0.92, 1.1) });
-    frames.push({ transform: at(points[i], 0, i === points.length - 1 ? 1.15 : 1.05, i === points.length - 1 ? 0.85 : 0.95) });
+    frames.push({ transform: at(mid, rot, 6), offset: (i - 0.5) / steps });
+    frames.push({ transform: at(points[i], rot), offset: i / steps });
   }
-  frames.push({ transform: at(points[points.length - 1]) });
+  const last = points[points.length - 1];
+  frames.push({ transform: at(last, 0) }); // pousa de pé
 
-  const anim = ghost.animate(frames, { duration: STEP_MS * steps + 160, easing: 'ease-in-out' });
-  const done = () => { ghost.remove(); target.style.visibility = ''; };
+  // Rastro de fumaça em pixel atrás do foguete enquanto ele anda.
+  const smoke = setInterval(() => {
+    const r = ghost.getBoundingClientRect();
+    puff(r.left + r.width / 2, r.top + r.height / 2, 1, 'smoke-puff');
+  }, 60);
+  const anim = ghost.animate(frames, { duration: STEP_MS * steps + 260, easing: 'ease-in-out' });
+  const done = () => {
+    clearInterval(smoke);
+    ghost.remove();
+    target.style.visibility = '';
+    puff(last.x, last.y + box.height / 2 - 4, 7, 'land-puff'); // poeira do pouso
+    const tile = document.querySelector(`[data-tile="${(from + steps) % total}"]`);
+    if (tile) { tile.classList.add('tile-landed'); setTimeout(() => tile.classList.remove('tile-landed'), 700); }
+  };
   return anim.finished.then(done, done);
+}
+
+// Partículas de pixel (fumaça, poeira, faíscas) num ponto da tela; somem sozinhas.
+export function puff(x, y, count, cls) {
+  if (reducedMotion() || typeof document === 'undefined') return;
+  for (let i = 0; i < count; i += 1) {
+    const p = document.createElement('span');
+    p.className = `px-particle ${cls}`;
+    p.style.left = `${x + (Math.random() - 0.5) * 8}px`;
+    p.style.top = `${y + (Math.random() - 0.5) * 8}px`;
+    p.style.setProperty('--dx', `${(Math.random() - 0.5) * (cls === 'land-puff' ? 46 : 14)}px`);
+    p.style.setProperty('--dy', `${cls === 'land-puff' ? -6 - Math.random() * 10 : 4 + Math.random() * 10}px`);
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
+// Moedinhas voando da casa onde o jogador parou até a verba no topo (ganho de verba).
+export function flyCoins(fromNode, toNode, count = 5) {
+  if (!fromNode || !toNode || reducedMotion() || !document.body.animate) return;
+  const a = fromNode.getBoundingClientRect(), b = toNode.getBoundingClientRect();
+  const sx = a.left + a.width / 2, sy = a.top + a.height / 2, ex = b.left + 22, ey = b.top + b.height / 2;
+  for (let i = 0; i < count; i += 1) {
+    const c = document.createElement('span');
+    c.className = 'px-coin';
+    document.body.appendChild(c);
+    const lift = 60 + Math.random() * 50;
+    c.animate([
+      { transform: `translate(${sx}px, ${sy}px) scale(.6)`, opacity: 0 },
+      { transform: `translate(${(sx + ex) / 2 + (Math.random() - 0.5) * 40}px, ${Math.min(sy, ey) - lift}px) scale(1.1)`, opacity: 1, offset: 0.5 },
+      { transform: `translate(${ex}px, ${ey}px) scale(.7)`, opacity: 0.9 },
+    ], { duration: 700 + i * 90, delay: i * 70, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'both' }).finished.then(() => c.remove(), () => c.remove());
+  }
 }
 
 // Traz um elemento para a tela só se ele estiver (parcialmente) fora dela.

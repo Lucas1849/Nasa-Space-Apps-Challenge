@@ -101,6 +101,8 @@ export function sinceCard(state) {
       el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
     ]);
   }
+  // Nada mudou e não é ano novo: o cartão só empurraria o tabuleiro para baixo (um aviso só por tela).
+  if (!newYear && !since.changes.length && !since.entries.length) return null;
   return el('div', { class: 'panel since-card' }, [
     el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, 'Desde o seu último turno')]),
     el('p', { class: 'hint' }, roundLine(state)),

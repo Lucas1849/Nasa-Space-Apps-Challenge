@@ -15,6 +15,8 @@ import { BUILDINGS, MAX_LEVEL, upgradeCost } from '../data/buildings.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from './icons.js';
 import { turnClock } from './turnClock.js';
+import { TILE_ART } from './boardArt.js';
+import { buildingPhotoSvg } from './itemArt.js';
 import { guideOn, panelOpen, setPanelOpen, themeOf, toggleTheme } from './prefs.js';
 
 export function el(tag, attrs = {}, children = []) {
@@ -171,29 +173,50 @@ export function openExitDialog(actions) {
 
 // Modal "Como funciona": passos da partida, lados e escadas, glossário. Abre pela tela inicial e pelo menu.
 export function openRulesModal() {
-  const close = () => backdrop.remove();
-  const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
-    el('div', { class: 'modal rules-modal', onclick: (e) => e.stopPropagation() }, [
-      el('div', { class: 'modal-head', style: 'justify-content:space-between' }, [
-        el('h2', { class: 'modal-title' }, 'Como funciona a partida'),
-        button(icon('x', { size: 16 }), close, { class: 'small ghost', title: 'Fechar' }),
-      ]),
-      el('div', { class: 'steps-grid', style: 'margin-top:12px' }, [
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '01'), el('strong', { class: 'with-icon' }, [icon('die', { size: 16 }), 'Tabuleiro']), el('p', {}, `Role 2 dados e escolha 1. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`)]),
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '02'), el('strong', { class: 'with-icon' }, [icon('wrench', { size: 16 }), 'Oficina']), el('p', {}, 'Monte a nave do próximo degrau respeitando massa, energia, dados e verba.')]),
-        el('div', { class: 'panel step' }, [el('span', { class: 'n' }, '03'), el('strong', { class: 'with-icon' }, [icon('rocket', { size: 16 }), 'Voo']), el('p', {}, 'Avance uma etapa por turno. Se falhar, ainda resta uma missão de consolação.')]),
-      ]),
-      el('h3', { style: 'margin:18px 0 8px' }, 'Lados e escadas (sorteados no início)'),
-      el('div', { class: 'cards sides' }, Object.values(SIDES).map((s) => el('div', { class: 'card' }, [
-        el('div', { class: 'card-head' }, [el('span', { class: 'icon' }, icon(s.icon, { size: 20 })), el('strong', {}, s.name), el('small', { class: 'hint' }, s.focus)]),
-        el('ol', { class: 'ladder compact' }, s.ladder.map((m) => el('li', { class: 'with-icon' }, [missionIcon(m, { size: 15 }), MISSIONS[m].name]))),
-        el('small', { class: 'gain-text' }, `+ ${s.advantage}`),
-        el('small', { class: 'lose-text' }, `− ${s.weakness}`),
-      ]))),
-      glossary(),
-      el('p', { class: 'hint', style: 'margin-top:14px' }, 'Baseado no processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
+  const close = () => { backdrop.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  // Um turno em três passos, desenhado como fluxo (o que vem depois do quê), com os ícones do tabuleiro.
+  const step = (art, title, text) => el('li', { class: 'rm-step' }, [
+    el('span', { class: 'rm-step-art', html: art }),
+    el('strong', {}, title),
+    el('small', {}, text),
+  ]);
+  // A escada de cada lado como linha do tempo: um degrau por missão, o último é a vitória.
+  const side = (s) => el('section', { class: 'rm-side' }, [
+    el('header', { class: 'rm-side-head' }, [
+      el('span', { class: 'rm-side-ic' }, icon(s.icon, { size: 18 })),
+      el('div', {}, [el('strong', {}, s.name), el('small', {}, s.focus)]),
+    ]),
+    el('ol', { class: 'rm-ladder' }, s.ladder.map((m, i) => el('li', { class: i === s.ladder.length - 1 ? 'goal' : '' }, [
+      missionIcon(m, { size: 15 }), el('span', {}, MISSIONS[m].name),
+    ]))),
+    el('ul', { class: 'rm-traits' }, [
+      el('li', { class: 'plus' }, [icon('arrowUp', { size: 14 }), el('span', {}, s.advantage)]),
+      el('li', { class: 'minus' }, [icon('trendDown', { size: 14 }), el('span', {}, s.weakness)]),
     ]),
   ]);
+  const backdrop = el('div', { class: 'modal-backdrop', onclick: close }, [
+    el('div', { class: 'modal rules-modal', role: 'dialog', 'aria-label': 'Como funciona', onclick: (e) => e.stopPropagation() }, [
+      el('div', { class: 'rm-head' }, [
+        el('div', {}, [
+          el('h2', { class: 'modal-title' }, 'Como funciona'),
+          el('p', { class: 'rm-lead' }, `Cada degrau da sua escada é uma nave nova. Vence quem completar a escada primeiro; em 1969, vence quem subiu mais.`),
+        ]),
+        button(icon('x', { size: 16 }), close, { class: 'small ghost', title: 'Fechar' }),
+      ]),
+      el('h3', { class: 'rm-label' }, 'Um turno'),
+      el('ol', { class: 'rm-flow' }, [
+        step(TILE_ART.start, 'Tabuleiro', `Role 2 dados e escolha 1. A cada ${ROUNDS_PER_YEAR} rodadas, um ano novo traz verba e tecnologia.`),
+        step(TILE_ART.workshop, 'Oficina', 'Numa casa de Oficina, monte a nave do degrau respeitando massa, energia, dados e verba.'),
+        step(TILE_ART.tech, 'Voo', 'Uma etapa por turno, com imprevistos. Se falhar, ainda sobra uma missão de consolação.'),
+      ]),
+      el('h3', { class: 'rm-label' }, 'Os lados, sorteados no início'),
+      el('div', { class: 'rm-sides' }, Object.values(SIDES).map(side)),
+      glossary(),
+      el('p', { class: 'rm-foot' }, 'Baseado no processo de design de missões da NASA e na atividade Marsbound do JPL. Datas históricas: NASA History. Os números do jogo são fictícios, criados para o aprendizado.'),
+    ]),
+  ]);
+  document.addEventListener('keydown', onKey);
   document.body.appendChild(backdrop);
 }
 
@@ -299,14 +322,20 @@ export function rivalsPanel(state, player) {
 // Faixa da agência, sempre visível sob o tabuleiro e os botões de ação: os 4 prédios em cartões (nível,
 // o que dão e o botão de subir com o custo) e o socorro de emergência. Prédio não construído aparece
 // esmaecido, para o jogador ver o que existe. Construir continua sendo num terreno livre do tabuleiro.
+const seenLevels = new Map(); // `${jogador}:${prédio}` -> nível já mostrado (para animar quando sobe)
 export function agencyStrip(state, player, actions) {
   const cards = Object.values(BUILDINGS).map((b) => {
     const level = player.buildings[b.id] || 0;
+    const key = `${player.id}:${b.id}`;
+    const grew = seenLevels.has(key) && level > seenLevels.get(key);
+    seenLevels.set(key, level);
     const built = level > 0;
     const maxed = level >= MAX_LEVEL;
     const cost = built && !maxed ? upgradeCostFor(state, player, b.id) : null;
-    return el('div', { class: `building-card${built ? '' : ' not-built'}${maxed ? ' maxed' : ''}` }, [
-      el('div', { class: 'bc-head' }, [el('span', { class: 'b-icon' }, icon(b.icon, { size: 22 })), el('strong', {}, b.name)]),
+    // "Foto" do prédio no nível atual: cresce a cada nível (ui/itemArt.js). Não construído: nível 1 apagado.
+    return el('div', { class: `building-card${built ? '' : ' not-built'}${maxed ? ' maxed' : ''}${grew ? ' grew' : ''}`, 'data-level': String(level) }, [
+      el('span', { class: 'bc-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id, { level: level || 1 }) }),
+      el('div', { class: 'bc-head' }, [el('strong', {}, b.name)]),
       el('div', { class: 'bc-level' }, built
         ? [el('span', { class: 'pips' }, Array.from({ length: MAX_LEVEL }, (_, i) => el('span', { class: `pip${i < level ? ' on' : ''}` }))), el('span', {}, `nível ${level}/${MAX_LEVEL}`)]
         : el('span', { class: 'hint' }, 'não construído')),

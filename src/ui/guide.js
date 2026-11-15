@@ -158,32 +158,34 @@ const TIPS = {
   launch: () => ({ title: 'Primeiro lançamento', text: 'A subida foi sorteada agora. As próximas etapas do voo acontecem uma por turno, e o risco de cada uma depende da sua nave. Se falhar, o relatório explica o porquê.' }),
 };
 
-function tipCard(state) {
+function tipOf(state) {
   const tip = state.tip;
   if (!tip || !TIPS[tip.id] || tip.playerId !== currentPlayer(state)?.id) return null;
-  const t = TIPS[tip.id](tip.item);
-  return el('div', { class: 'guide-card guide-tip', role: 'status' }, [
-    icon('compass', { size: 22, className: 'guide-icon' }),
-    el('div', {}, [el('span', { class: 'tip-tag' }, 'Primeira vez'), el('strong', {}, t.title), el('p', {}, t.text)]),
-  ]);
+  return TIPS[tip.id](tip.item);
 }
 
 // Cartão "Próximo passo" exibido sob o HUD quando as dicas estão ligadas.
-export function guideCard(state, screen, player = null) {
-  if (!guideOn()) return null;
-  const tip = tipCard(state);
-  const step = nextStep(state, screen, player);
-  if (tip) return el('div', { class: 'guide-stack' }, [tip, step ? stepCard(step) : null]);
-  return step ? stepCard(step) : null;
-}
-
-function stepCard(step) {
-  return el('div', { class: 'guide-card', role: 'status' }, [
-    icon('compass', { size: 22, className: 'guide-icon' }),
+// Um aviso só por tela: a dica de "primeira vez", o próximo passo e o `note` da tela (ex.: modo
+// planejamento da oficina) viram UM cartão, em vez de vários empilhados empurrando o jogo para baixo.
+// `note` = { tag, text } aparece mesmo com as dicas desligadas (é estado da tela, não tutorial).
+export function guideCard(state, screen, player = null, note = null) {
+  const on = guideOn();
+  const tip = on ? tipOf(state) : null;
+  const step = on ? nextStep(state, screen, player) : null;
+  if (!tip && !step && !note) return null;
+  // Título principal: a novidade (primeira vez) > o próximo passo > o aviso da tela.
+  const head = tip || step || { title: note.tag, text: note.text };
+  const tag = tip ? 'Primeira vez' : null;
+  return el('div', { class: `guide-card${tip ? ' guide-tip' : ''}`, role: 'status' }, [
+    icon(note && !tip && !step ? 'clipboard' : 'compass', { size: 22, className: 'guide-icon' }),
     el('div', {}, [
-      el('strong', {}, step.title),
-      el('p', {}, step.text),
-      step.tips?.length ? el('details', { class: 'guide-tips' }, [
+      tag ? el('span', { class: 'tip-tag' }, tag) : null,
+      el('strong', {}, head.title),
+      el('p', {}, head.text),
+      // Com a dica de primeira vez no topo, o próximo passo vira uma linha curta embaixo.
+      tip && step ? el('p', { class: 'guide-next' }, [el('b', {}, 'Agora: '), step.title]) : null,
+      note && (tip || step) ? el('p', { class: 'guide-next' }, [el('b', {}, `${note.tag}: `), note.text]) : null,
+      !tip && step?.tips?.length ? el('details', { class: 'guide-tips' }, [
         el('summary', {}, 'Mais dicas desta tela'),
         el('ul', {}, step.tips.map((t) => el('li', {}, t))),
       ]) : null,

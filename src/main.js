@@ -2,7 +2,6 @@
 import { createInitialState } from './sim/state.js';
 import * as game from './sim/actions.js';
 import { SCREENS } from './ui/screens.js';
-import { rocketSvg } from './ui/icons.js';
 import { setGuide, guideOn, timerSeconds } from './ui/prefs.js';
 import { endTurnBlocker } from './ui/guide.js';
 import { trackTurn, markTurnEnd, resetSummaries } from './ui/summary.js';
@@ -13,7 +12,7 @@ import { workshopScreen } from './ui/workshop.js';
 import { timeoutTurn } from './sim/turnTimer.js';
 import { tickClock } from './ui/turnClock.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
-import { floatDelta, countUp } from './ui/motion.js';
+import { floatDelta, countUp, flyCoins, puff } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
 
 const app = document.getElementById('app');
@@ -122,8 +121,17 @@ function animateStats() {
     const fundsNode = app.querySelector('.hud .stat.funds');
     const techNode = app.querySelector('.hud .stat.tech');
     if (now.funds !== lastStats.funds) {
-      floatDelta(fundsNode, now.funds - lastStats.funds, 'funds');
-      countUp(fundsNode?.querySelector('.stat-num'), lastStats.funds, now.funds);
+      const before = lastStats.funds;
+      const show = () => {
+        // ganho de verba no tabuleiro: moedinhas voam da casa onde o foguete pousou até a verba no topo
+        const node = app.querySelector('.hud .stat.funds');
+        if (now.funds > before && state.screen === 'board') flyCoins(app.querySelector('.board-gadget .tile.active'), node, Math.min(6, 2 + Math.round((now.funds - before) / 10)));
+        floatDelta(node, now.funds - before, 'funds');
+        countUp(node?.querySelector('.stat-num'), before, now.funds);
+      };
+      // se o foguete ainda está andando, o dinheiro sai da casa só depois do pouso
+      const wait = () => (document.querySelector('.pawn-ghost') ? setTimeout(wait, 100) : show());
+      wait();
     }
     if (now.tech !== lastStats.tech) floatDelta(techNode, now.tech - lastStats.tech, 'tech');
   }
@@ -277,20 +285,27 @@ function showToast(text) {
 
 // Animação curta de lançamento (contagem + foguete) antes da tela de voo. Um clique pula.
 function showLaunchOverlay() {
+  // Decolagem: contagem, o foguete sobe com chama acesa e fumaça em pixel. Um clique pula.
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const o = document.createElement('div');
   o.className = 'launch-overlay';
   o.title = 'Clique para pular';
-  o.innerHTML = `<div class="count">3</div><div class="rocket">${rocketSvg(96)}</div><div class="flame"></div>`;
+  o.innerHTML = `<div class="count">3</div><div class="lift"><svg viewBox="0 0 40 72" aria-hidden="true"><path class="lift-flame" d="M14 50 20 70l6-20z" fill="#ffc857" stroke="#ff7a3c" stroke-width="1.5"/><path d="M20 2c8 6 11 15 11 26v22H9V28C9 17 12 8 20 2z" fill="#f2f6ff" stroke="#10213d" stroke-width="1.6"/><path d="M9 34 2 46v8l7-4zM31 34l7 12v8l-7-4z" fill="#c4473a" stroke="#10213d" stroke-width="1.4"/><circle cx="20" cy="24" r="5" fill="#1d3f86" stroke="#10213d" stroke-width="1.4"/></svg></div><div class="pad"></div>`;
   document.body.appendChild(o);
   const count = o.querySelector('.count');
+  const lift = o.querySelector('.lift');
+  let smoke = null;
   const timers = [
-    setTimeout(() => { count.textContent = '2'; }, 300),
-    setTimeout(() => { count.textContent = '1'; }, 600),
-    setTimeout(() => { count.textContent = 'Lançar!'; }, 900),
-    setTimeout(() => o.remove(), 1400),
+    setTimeout(() => { count.textContent = '2'; }, 450),
+    setTimeout(() => { count.textContent = '1'; }, 900),
+    setTimeout(() => {
+      count.textContent = 'Decolagem!';
+      lift.classList.add('go');
+      smoke = setInterval(() => { const r = lift.getBoundingClientRect(); puff(r.left + r.width / 2, r.bottom - 6, 3, 'launch-smoke'); }, 50);
+    }, 1350),
+    setTimeout(() => { clearInterval(smoke); o.remove(); }, 2600),
   ];
-  o.addEventListener('click', () => { timers.forEach(clearTimeout); o.remove(); });
+  o.addEventListener('click', () => { timers.forEach(clearTimeout); clearInterval(smoke); o.remove(); });
 }
 
 // Calendário da virada de ano (ui/yearOverlay.js): ~6 s, some sozinho, um clique pula, sem confirmar.
@@ -300,6 +315,9 @@ function showYearOverlay(yc) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const node = yearOverlayNode(yc, { reduced });
   document.body.appendChild(node);
+  // uma faixa de luz varre a planta do tabuleiro quando o ano vira
+  const board = document.querySelector('.board-gadget');
+  if (board && !reduced) { board.classList.remove('year-sweep'); void board.offsetWidth; board.classList.add('year-sweep'); setTimeout(() => board.classList.remove('year-sweep'), 2200); }
   const timer = setTimeout(() => node.remove(), reduced ? YEAR_OVERLAY_REDUCED_MS : YEAR_OVERLAY_MS);
   node.addEventListener('click', () => { clearTimeout(timer); node.remove(); });
 }
