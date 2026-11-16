@@ -3116,7 +3116,7 @@ body::before { will-change: transform; }
   /* Barra de navegação horizontal: rola de lado sem mostrar a barra de rolagem; alvos de toque maiores. */
   .side-rail { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .side-rail::-webkit-scrollbar { display: none; }
-  .rail-item { min-height: 48px; flex: 0 0 auto; }
+  .rail-item { min-height: 48px; flex: 0 0 auto; width: auto; min-width: 64px; } /* width:auto: senão cada botão ocupa a faixa toda */
 
   /* Barra do turno colada no rodapé, mais enxuta */
   .turn-dock, .launch-dock { padding: 8px 10px; gap: 8px; margin-top: 12px; border-radius: 10px 10px 0 0; }
@@ -3156,4 +3156,37 @@ body::before { will-change: transform; }
   .board-screen .board-gadget .center-cards > .tile-decision,
   .board-screen .board-gadget .center-cards > .outcome { width: 100%; }
   .build-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Casas do tabuleiro legíveis no celular: antes o nome da casa sumia e a faixa de cima era cortada
+     ("PARTI", "TER"). Aqui as 5 colunas ficam iguais (os cantos largos roubavam espaço; !important porque a
+     grade vem em style inline de ui/board.js), a faixa usa letra menor sem a seta, e o nome volta em
+     letra pequena, quebrando linha. O efeito curto (t-sub) continua só no balão da casa. */
+  .board-screen .board-gadget .ring.ring-16 { grid-template-columns: repeat(var(--ring-n, 5), minmax(0, 1fr)) !important; gap: 4px; }
+  .board-screen .board-gadget .ring.ring-16 .tile { padding: 0; min-height: 0; border-radius: 6px; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-band {
+    justify-content: center;
+    padding: 2px 2px;
+    font-size: 8px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-band-num { overflow: hidden; text-overflow: ellipsis; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-band-dir { display: none; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-art-row { height: auto; padding: 3px 0 1px; border-bottom: 0; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-art-ink { width: 22px; height: 22px; }
+  .board-screen .board-gadget .ring.ring-16 .tile-corner .t-art-ink { width: 26px; height: 26px; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-main-row { padding: 1px 3px 4px; justify-content: center; text-align: center; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-body { width: 100%; }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-label,
+  .board-screen .board-gadget .ring.ring-16 .tile-corner .t-label {
+    display: block;
+    font-size: 9.5px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  .board-screen .board-gadget .ring.ring-16 .tile .t-sub { display: none; }
+  .board-screen .board-gadget .t-target-pill { top: auto; bottom: 1px; right: 2px; padding: 0 4px; font-size: 10px; }
 }
