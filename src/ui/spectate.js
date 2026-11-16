@@ -15,15 +15,16 @@ import { ORBIT_ART, dieSvg } from './boardArt.js';
 import { TILES } from '../board/board.js';
 import { currentPlayer } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
+import { t } from '../i18n/index.js';
 
 // Em que ponto do turno o jogador da vez está (público, sem revelar número nenhum).
 function phaseText(state, current) {
-  if (!current.rolled) return 'vai rolar os dados';
-  if (state.dice) return 'escolhendo o dado';
-  if (state.pendingDilemma) return 'resolvendo uma carta de dilema';
-  if (state.pendingTile) return 'resolvendo a casa onde parou';
-  if (current.flight && !current.flightAdvanced) return 'cuidando do voo da nave';
-  return 'cuidando da nave';
+  if (!current.rolled) return t('sp.phase.roll');
+  if (state.dice) return t('sp.phase.die');
+  if (state.pendingDilemma) return t('sp.phase.dilemma');
+  if (state.pendingTile) return t('sp.phase.tile');
+  if (current.flight && !current.flightAdvanced) return t('sp.phase.flight');
+  return t('sp.phase.ship');
 }
 
 // Faixa do topo: quem está jogando e em que fase do turno (nada sigiloso).
@@ -31,12 +32,12 @@ function banner(state, current) {
   return el('div', { class: 'panel spectate-banner' }, [
     avatar(current, 44),
     el('div', { class: 'spectate-who' }, [
-      el('strong', {}, `Vez de ${current.name}`),
+      el('strong', {}, t('common.turnOf', { name: current.name })),
       el('span', { class: 'chip' }, sideBadge(current)),
-      el('small', { class: 'hint' }, `${current.name} está ${phaseText(state, current)}.`),
+      el('small', { class: 'hint' }, t('sp.banner.is', { name: current.name, phase: phaseText(state, current) })),
     ]),
     el('span', { class: 'spacer' }),
-    el('span', { class: 'chip spectating-chip' }, [icon('eye', { size: 15 }), 'Assistindo']),
+    el('span', { class: 'chip spectating-chip' }, [icon('eye', { size: 15 }), t('sp.watching')]),
   ]);
 }
 
@@ -48,17 +49,17 @@ function spectateCenter(state, current) {
   if (state.dice) {
     dice = el('div', { class: 'gb-dice' }, [
       el('div', { class: 'gb-dice-row' }, state.dice.map((d) => el('span', { class: 'gb-die', html: dieSvg(d) }))),
-      el('span', { class: 'gb-caption' }, `${current.name} rolou — escolhendo o dado`),
+      el('span', { class: 'gb-caption' }, t('sp.rolled', { name: current.name })),
     ]);
   } else if (!current.rolled) {
     dice = el('div', { class: 'gb-dice' }, [
       el('span', { class: 'gb-die idle', html: dieSvg(0) }),
-      el('span', { class: 'gb-caption' }, `Vez de ${current.name} — aguardando a rolagem`),
+      el('span', { class: 'gb-caption' }, t('sp.waiting', { name: current.name })),
     ]);
   } else {
     dice = el('div', { class: 'gb-dice' }, [
       el('span', { class: 'gb-die', html: dieSvg(state.lastRoll) }),
-      el('span', { class: 'gb-caption' }, `${current.name} andou ${state.lastRoll} casa${state.lastRoll > 1 ? 's' : ''}`),
+      el('span', { class: 'gb-caption' }, t(state.lastRoll > 1 ? 'board.walked.other' : 'board.walked.one', { name: current.name, n: state.lastRoll })),
     ]);
   }
   return el('div', { class: 'panel ring-center gb-center' }, [
@@ -72,19 +73,19 @@ function spectateCenter(state, current) {
 function myObjectives(state, me) {
   if (me.flight) {
     const f = me.flight;
-    return sidePanel('mission', 'satellite', `Sua nave em voo: ${MISSIONS[f.missionId].name}`, [
-      el('p', { class: 'hint' }, `Etapa ${f.stageIndex + 1} de ${f.plan.length}. Você avança o voo na sua vez.`),
-    ], { hint: `Etapa ${f.stageIndex + 1} de ${f.plan.length}` });
+    return sidePanel('mission', 'satellite', t('sp.flying', { name: MISSIONS[f.missionId].name }), [
+      el('p', { class: 'hint' }, t('sp.flyingText', { n: f.stageIndex + 1, total: f.plan.length })),
+    ], { hint: t('board.mission.stageHint', { n: f.stageIndex + 1, total: f.plan.length }) });
   }
   if (!me.missionId) {
-    return sidePanel('mission', 'flag', 'Sua escada está completa', [
-      el('p', { class: 'hint' }, 'O vencedor é revelado no fim da rodada.'),
-    ], { hint: 'Todos os degraus cumpridos' });
+    return sidePanel('mission', 'flag', t('ws.ladderComplete'), [
+      el('p', { class: 'hint' }, t('board.mission.winnerEnd')),
+    ], { hint: t('board.mission.allDone') });
   }
   return sidePanel('mission', MISSION_ICONS[me.missionId] || 'rocket', MISSIONS[me.missionId].name, [
     el('p', { class: 'hint' }, MISSIONS[me.missionId].goal),
     milestoneTrack(me),
-  ], { hint: 'Seu objetivo atual' });
+  ], { hint: t('sp.yourObjective') });
 }
 
 // `actions` aqui é o conjunto de espectador (ver main.js): só navegação local e o botão de dicas.
@@ -102,9 +103,9 @@ export function spectateScreen(state, me, actions) {
           ]),
         ]),
         el('div', { class: 'row action-bar' }, [
-          button([icon('wrench', { size: 18 }), 'Minha oficina'], () => actions.openWorkshop(), {}),
+          button([icon('wrench', { size: 18 }), t('sp.myWorkshop')], () => actions.openWorkshop(), {}),
         ]),
-        el('p', { class: 'hint action-hint' }, 'Você está assistindo: pode ver sua oficina e seus objetivos, mas só joga na sua vez.'),
+        el('p', { class: 'hint action-hint' }, t('sp.watchHint')),
       ]),
       el('div', { class: 'side-stack' }, [
         myObjectives(state, me),

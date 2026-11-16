@@ -15,29 +15,32 @@
 //   repair   reparos: +1 proteção contra falha
 //   catchup  choque do Sputnik: verba de recuperação para quem está atrás
 // As decisões (dilema, prédio, espião) ficam em sim/actions.js, que conhece o estado inteiro.
+import { localizeList } from '../i18n/localize.js';
+import { t } from '../i18n/index.js';
 
-export const TILES = [
-  { id: 0, type: 'start', label: 'Largada', funds: 10 },
-  { id: 1, type: 'lot', label: 'Terreno livre' },
-  { id: 2, type: 'workshop', label: 'Oficina de montagem' },
-  { id: 3, type: 'funds', label: 'Discurso: o espaço vira prioridade', funds: 10 },
-  { id: 4, type: 'event', label: 'Evento' },
-  { id: 5, type: 'spy', label: 'Espionagem' },
-  { id: 6, type: 'tech', label: 'Ano Geofísico Internacional', tech: 1 },
-  { id: 7, type: 'shop', label: 'Fornecedor' },
-  { id: 8, type: 'lot', label: 'Terreno livre' },
-  { id: 9, type: 'event', label: 'Evento' },
-  { id: 10, type: 'workshop', label: 'Oficina de montagem' },
-  { id: 11, type: 'catchup', label: 'Choque do Sputnik', funds: 20 },
-  { id: 12, type: 'repair', label: 'Reparos', shield: 1 },
-  { id: 13, type: 'lot', label: 'Terreno livre' },
-  { id: 14, type: 'shop', label: 'Fornecedor' },
-  { id: 15, type: 'event', label: 'Evento' },
-  { id: 16, type: 'funds', label: 'Crise diplomática: verba desviada', funds: -10 },
-  { id: 17, type: 'workshop', label: 'Oficina de montagem' },
-  { id: 18, type: 'lot', label: 'Terreno livre' },
-  { id: 19, type: 'event', label: 'Evento' },
-];
+// Rótulos das casas em i18n (tile.<id>.label). Aqui ficam só ids, tipos e números.
+export const TILES = localizeList('tile', [
+  { id: 0, type: 'start', funds: 10 },
+  { id: 1, type: 'lot' },
+  { id: 2, type: 'workshop' },
+  { id: 3, type: 'funds', funds: 10 },
+  { id: 4, type: 'event' },
+  { id: 5, type: 'spy' },
+  { id: 6, type: 'tech', tech: 1 },
+  { id: 7, type: 'shop' },
+  { id: 8, type: 'lot' },
+  { id: 9, type: 'event' },
+  { id: 10, type: 'workshop' },
+  { id: 11, type: 'catchup', funds: 20 },
+  { id: 12, type: 'repair', shield: 1 },
+  { id: 13, type: 'lot' },
+  { id: 14, type: 'shop' },
+  { id: 15, type: 'event' },
+  { id: 16, type: 'funds', funds: -10 },
+  { id: 17, type: 'workshop' },
+  { id: 18, type: 'lot' },
+  { id: 19, type: 'event' },
+], ['label']);
 
 // A oficina de montagem: só nela (ou no sandbox) dá para comprar, vender, escolher foguete/órbita, ensaiar e lançar.
 // A TELA da oficina abre de qualquer lugar, para planejar sem gastar.
@@ -63,31 +66,31 @@ export function applyTile(player, tile, { isLast = false } = {}) {
 
   if (p.passedStart && tile.type !== 'start') {
     p.funds += TILES[0].funds;
-    messages.push(`Passou pela largada: +${TILES[0].funds} de verba.`);
+    messages.push(t('tilemsg.passedStart', { n: TILES[0].funds }));
   }
 
   switch (tile.type) {
     case 'start':
     case 'funds':
       p.funds += tile.funds;
-      messages.push(`${tile.label}: ${tile.funds >= 0 ? '+' : ''}${tile.funds} de verba.`);
+      messages.push(t('tilemsg.funds', { label: tile.label, v: `${tile.funds >= 0 ? '+' : ''}${tile.funds}` }));
       break;
     case 'tech':
       p.tech = (p.tech || 0) + tile.tech;
-      messages.push(`${tile.label}: cooperação científica, +${tile.tech} de tecnologia.`);
+      messages.push(t('tilemsg.tech', { label: tile.label, n: tile.tech }));
       break;
     case 'shop':
       break; // as ofertas de blueprint abrem em sim/actions.js (moveBy, pendingTile 'supplier')
     case 'repair':
       p.shields = (p.shields || 0) + tile.shield;
-      messages.push(`${tile.label}: +${tile.shield} proteção contra falha.`);
+      messages.push(t('tilemsg.repair', { label: tile.label, n: tile.shield }));
       break;
     case 'catchup':
       if (isLast) {
         p.funds += tile.funds;
-        messages.push(`${tile.label}: o governo libera verba de recuperação, +${tile.funds}.`);
+        messages.push(t('tilemsg.catchup', { label: tile.label, n: tile.funds }));
       } else {
-        messages.push(`${tile.label}: só vale para quem está atrás na corrida.`);
+        messages.push(t('tilemsg.catchupNo', { label: tile.label }));
       }
       break;
     default:

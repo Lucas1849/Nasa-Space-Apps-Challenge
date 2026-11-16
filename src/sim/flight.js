@@ -9,6 +9,8 @@ import {
   STAGES, FLIGHT_PLANS, SYSTEM_NAMES, FAILURE_DATA_BONUS, MAX_FAILURE_DATA, MIN_RISK, MAX_RISK,
   REVIEW_COST, REVIEW_RISK_CUT,
 } from '../data/stages.js';
+// `tr`: `t` é usado como variável local (totais da nave) em funções deste módulo.
+import { t as tr } from '../i18n/index.js';
 
 export const CONTROL_RISK_CUT = 0.03; // por nível do Controle de missão
 
@@ -27,35 +29,35 @@ const count = (player, ids) => [...player.spacecraft.parts, ...player.spacecraft
 export function stageRisk(player, stageId, extra = {}) {
   const stage = STAGES[stageId];
   const t = effectiveTotals(player);
-  const parts = [{ text: `risco base da etapa "${stage.name}"`, value: stage.baseRisk }];
+  const parts = [{ text: tr('sim.risk.base', { stage: stage.name }), value: stage.baseRisk }];
   const add = (text, value) => parts.push({ text, value });
 
   switch (stage.system) {
     case 'launch':
-      if (t.maxMass && t.mass > 0.85 * t.maxMass) add(`carga perto do limite do foguete (${t.mass}/${t.maxMass})`, 0.10);
-      if (player.launchRisk) add('defeito conhecido que não foi corrigido', player.launchRisk);
+      if (t.maxMass && t.mass > 0.85 * t.maxMass) add(tr('sim.risk.mass', { mass: t.mass, max: t.maxMass }), 0.10);
+      if (player.launchRisk) add(tr('sim.risk.defect'), player.launchRisk);
       break;
     case 'power':
-      if (t.powerBalance < 5) add(`energia sem margem (sobra ${t.powerBalance})`, 0.10);
-      if (count(player, ['battery'])) add('bateria de reserva', -0.05);
+      if (t.powerBalance < 5) add(tr('sim.risk.powerThin', { bal: t.powerBalance }), 0.10);
+      if (count(player, ['battery'])) add(tr('sim.risk.battery'), -0.05);
       break;
     case 'comms':
-      if (t.commsEffective < t.data) add(`antena sobrecarregada (${t.data} de dados para ${t.commsEffective} de comunicação)`, 0.10);
-      if (count(player, ['antenna_basic', 'antenna_dish']) >= 2) add('antena reserva (redundância)', -0.05);
+      if (t.commsEffective < t.data) add(tr('sim.risk.antennaOver', { data: t.data, comms: t.commsEffective }), 0.10);
+      if (count(player, ['antenna_basic', 'antenna_dish']) >= 2) add(tr('sim.risk.antennaBackup'), -0.05);
       break;
     case 'life':
-      if (t.powerBalance < 10) add(`suporte de vida com pouca energia sobrando (${t.powerBalance})`, 0.10);
+      if (t.powerBalance < 10) add(tr('sim.risk.lifeThin', { bal: t.powerBalance }), 0.10);
       break;
     default:
       break;
   }
 
   const fd = Math.min(player.failureData?.[stage.system] || 0, MAX_FAILURE_DATA);
-  if (fd) add(`dados de falha anteriores em ${SYSTEM_NAMES[stage.system]} (${fd})`, -FAILURE_DATA_BONUS * fd);
+  if (fd) add(tr('sim.risk.failData', { system: SYSTEM_NAMES[stage.system], n: fd }), -FAILURE_DATA_BONUS * fd);
   const control = player.buildings?.control || 0;
-  if (control) add(`Controle de missão nível ${control}`, -CONTROL_RISK_CUT * control);
-  if (extra.failChance) add(extra.label || 'decisão arriscada', extra.failChance);
-  if (extra.riskCut) add(extra.cutLabel || 'revisão extra', -extra.riskCut);
+  if (control) add(tr('sim.risk.control', { n: control }), -CONTROL_RISK_CUT * control);
+  if (extra.failChance) add(extra.label || tr('sim.risk.risky'), extra.failChance);
+  if (extra.riskCut) add(extra.cutLabel || tr('sim.risk.review'), -extra.riskCut);
 
   const sum = parts.reduce((s, p) => s + p.value, 0);
   const total = Math.round(Math.min(MAX_RISK, Math.max(MIN_RISK, sum)) * 100) / 100;
@@ -92,21 +94,21 @@ export function stageOptions(player, pending) {
         kind: 'event',
         label: opt.label,
         effect,
-        risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: 'decisão arriscada no imprevisto' }),
+        risk: stageRisk(ship, stageId, { failChance: effect.failChance, label: tr('sim.opt.riskyEvent') }),
         lesson: opt.lesson,
         disabled: effect.funds < 0 && player.funds < -effect.funds, // não dá para pagar a opção
       };
     });
   }
   return [
-    { kind: 'go', label: 'Seguir com a etapa', effect: {}, risk: stageRisk(ship, stageId), lesson: null },
+    { kind: 'go', label: tr('sim.opt.go'), effect: {}, risk: stageRisk(ship, stageId), lesson: null },
     {
       kind: 'review',
-      label: `Gastar a reserva: revisão extra (${REVIEW_COST} de verba)`,
+      label: tr('sim.opt.review', { cost: REVIEW_COST }),
       effect: { funds: -REVIEW_COST },
-      risk: stageRisk(ship, stageId, { riskCut: REVIEW_RISK_CUT, cutLabel: 'revisão extra paga' }),
+      risk: stageRisk(ship, stageId, { riskCut: REVIEW_RISK_CUT, cutLabel: tr('sim.opt.reviewPaid') }),
       disabled: player.funds < REVIEW_COST,
-      lesson: 'Revisões e testes extras custam dinheiro, mas pegam defeitos antes que virem falhas.',
+      lesson: tr('sim.opt.reviewLesson'),
     },
   ];
 }

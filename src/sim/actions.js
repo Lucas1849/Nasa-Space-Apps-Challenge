@@ -39,6 +39,7 @@ import { SIDES, ladderOf, drawSides, STEP_BONUS_FIRST, STEP_BONUS_LATER } from '
 import { DILEMMAS, pickDilemma } from '../data/dilemmas.js';
 import { BUILDINGS, MAX_LEVEL, upgradeCost, USE_FEE, CATCHUP_UPGRADE_DISCOUNT } from '../data/buildings.js';
 import { MAX_ROUNDS, REAL_HISTORY, yearOf, isNewYear } from '../data/history.js';
+import { t } from '../i18n/index.js';
 
 const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
 
@@ -48,7 +49,7 @@ const RUMOR_TRUTH = 0.7;            // boatos acertam 70% das vezes
 export function startGame(state, setup, options = {}) {
   const rng = options.rng || Math.random;
   state.sandbox = Boolean(options.sandbox);
-  state.players = setup.map((p, i) => createPlayer(i, p.name || `Agência ${i + 1}`, p.missionId || null));
+  state.players = setup.map((p, i) => createPlayer(i, p.name || t('act.defaultAgency', { n: i + 1 }), p.missionId || null));
   state.turn = 0;
   state.round = 1;
   state.log = [];
@@ -67,7 +68,7 @@ export function startGame(state, setup, options = {}) {
   if (state.sandbox) {
     state.players.forEach((p) => { p.funds = SANDBOX_FUNDS; p.tech = SANDBOX_TECH; p.unlocked = allDiscoverableIds(); });
     state.screen = 'workshop';
-    pushLog(state, 'Modo sandbox: verba livre, tecnologia liberada, sem tabuleiro. Explore os trade-offs à vontade.');
+    pushLog(state, t('act.sandboxStart'));
     return null;
   }
 
@@ -75,8 +76,8 @@ export function startGame(state, setup, options = {}) {
   state.players.forEach((p, i) => assignSide(p, sides[i]));
   if (state.players.length === 1) state.players.push(createBot(state.players[0], rng));
 
-  pushLog(state, `Começa a corrida espacial. A cada 3 rodadas passa um ano; a partida termina em ${yearOf(MAX_ROUNDS)}.`);
-  state.players.forEach((p) => pushLog(state, `${p.name} joga pelo lado ${SIDES[p.side].name}.`));
+  pushLog(state, t('act.raceStart', { year: yearOf(MAX_ROUNDS) }));
+  state.players.forEach((p) => pushLog(state, t('act.playsSide', { name: p.name, side: SIDES[p.side].name })));
   state.players.filter((p) => !p.bot).forEach((p) => {
     p.hideNeeds = true; // os mínimos de ciência e comunicação da missão começam escondidos (sim/needs.js)
     setMission(state, p, p.missionId); // kit do 1º degrau
@@ -108,10 +109,10 @@ function setMission(state, p, missionId) {
 // o degrau atual é cumprido (completeMission). O sandbox continua livre.
 // Agir (comprar, vender, escolher foguete/órbita, ensaiar, lançar) exige o peão numa casa de oficina. Ver é livre.
 const workshopLock = (state, p) =>
-  (state.sandbox || atWorkshopTile(p) ? null : 'Vá a uma casa de Oficina do tabuleiro para montar e lançar. Aqui você só planeja.');
+  (state.sandbox || atWorkshopTile(p) ? null : t('act.lock.workshop'));
 
 const inFlightLock = (state, p) =>
-  (!state.sandbox && p.flight ? 'Sua nave está em voo: aguarde o resultado para montar a próxima.' : null);
+  (!state.sandbox && p.flight ? t('act.lock.inFlight') : null);
 
 
 // ---------------------------------------------------------------- retorno imediato ao jogador
@@ -123,7 +124,7 @@ const inFlightLock = (state, p) =>
 const statsOf = (p) => ({ funds: p.funds, tech: p.tech, shields: p.shields, discount: p.discount || 0, launchRisk: p.launchRisk || 0 });
 
 function changesBetween(before, after) {
-  return [['funds', 'Verba'], ['tech', 'Tecnologia'], ['shields', 'Proteção']]
+  return [['funds', t('res.funds')], ['tech', t('res.tech')], ['shields', t('act.shieldLabel')]]
     .filter(([key]) => after[key] !== before[key])
     .map(([key, label]) => ({ label, value: after[key] - before[key] }));
 }
@@ -131,8 +132,8 @@ function changesBetween(before, after) {
 // Efeitos que não são um número simples viram frases.
 function extrasBetween(before, after) {
   const extras = [];
-  if (after.discount > before.discount) extras.push(`${after.discount}% de desconto na próxima compra.`);
-  if (after.launchRisk > before.launchRisk) extras.push(`A próxima subida terá ${Math.round((after.launchRisk - before.launchRisk) * 100)}% a mais de risco.`);
+  if (after.discount > before.discount) extras.push(t('act.extra.discount', { n: after.discount }));
+  if (after.launchRisk > before.launchRisk) extras.push(t('act.extra.launchRisk', { n: Math.round((after.launchRisk - before.launchRisk) * 100) }));
   return extras;
 }
 
@@ -151,7 +152,7 @@ function setOutcome(state, p, outcome) {
 // Bot do solo: o outro lado, cumprindo cada degrau no ano real (±1). Se o lado nunca cumpriu, nunca cumpre.
 function createBot(human, rng) {
   const sideId = human.side === 'usa' ? 'ussr' : 'usa';
-  const bot = createPlayer(1, `Agência rival (${SIDES[sideId].name})`);
+  const bot = createPlayer(1, t('act.rivalAgency', { side: SIDES[sideId].name }));
   bot.bot = true;
   assignSide(bot, sideId);
   bot.schedule = ladderOf(bot).map((m) => {
@@ -181,7 +182,7 @@ function startTurn(state) {
     const { funds, tech } = income;
     p.funds += funds;
     p.tech += tech;
-    pushLog(state, `${p.name}: Ano novo! Orçamento +${funds} de verba, +${tech} de tecnologia (nível ${p.tech}).`, p.id);
+    pushLog(state, t('act.newYear', { name: p.name, funds, tech, level: p.tech }), p.id);
     // Registro estruturado da virada: a UI anima o calendário e mostra o que entrou (só para este jogador).
     state.yearChange = {
       playerId: p.id, round: state.round, year: yearOf(state.round),
@@ -201,7 +202,7 @@ function botTurn(state) {
     bot.bestStage[missionId] = flightPlan(missionId).length;
     bot.step += 1;
     bot.missionId = ladder[bot.step] || null;
-    pushLog(state, `${bot.name} cumpriu "${MISSIONS[missionId].name}".`, bot.id);
+    pushLog(state, t('act.botCompleted', { name: bot.name, mission: MISSIONS[missionId].name }), bot.id);
   }
 }
 
@@ -211,10 +212,10 @@ export function endTurn(state) {
     state.screen = p.flight ? 'flight' : 'workshop';
     return null;
   }
-  if (!p.rolled) return 'Role os dados e ande antes de passar a vez.';
-  if (state.pendingDilemma) return 'Resolva a carta de dilema antes de passar a vez.';
-  if (p.flight?.pending) return 'Decida o imprevisto do voo antes de passar a vez.';
-  if (p.flight && !p.flightAdvanced) return 'Sua nave está em voo: avance uma etapa antes de passar a vez.';
+  if (!p.rolled) return t('gd.block.roll');
+  if (state.pendingDilemma) return t('gd.block.dilemma');
+  if (p.flight?.pending) return t('gd.block.flightPending');
+  if (p.flight && !p.flightAdvanced) return t('gd.block.advance');
   advanceTurn(state);
   return null;
 }
@@ -227,7 +228,7 @@ function advanceTurn(state) {
       endRound(state);
       if (state.gameOver) return;
       state.round += 1;
-      if (isNewYear(state.round)) pushLog(state, `Começa o ano de ${yearOf(state.round)}.`);
+      if (isNewYear(state.round)) pushLog(state, t('act.yearBegins', { year: yearOf(state.round) }));
     }
     startTurn(state);
     if (!currentPlayer(state).bot) break;
@@ -260,7 +261,7 @@ function endRound(state) {
   state.endReason = done.length ? 'ladder' : 'time';
   state.screen = 'gameover';
   const names = state.winners.map((id) => state.players[id].name).join(' e ');
-  pushLog(state, done.length ? `${names} completou a escada de missões!` : `Fim de ${yearOf(state.round)}: vence quem subiu mais degraus (${names}).`);
+  pushLog(state, done.length ? t('act.endLadder', { names }) : t('act.endTime', { year: yearOf(state.round), names }));
 }
 
 // ---------------------------------------------------------------- tabuleiro
@@ -273,17 +274,17 @@ function isLastPlayer(state, player) {
 // Rola 2 dados; o jogador escolhe qual usar (IDEIA.md v3: ainda tem sorte, mas ele sente que decidiu).
 export function rollDice(state, rng = Math.random) {
   const p = currentPlayer(state);
-  if (state.sandbox) return 'No modo sandbox não há tabuleiro.';
-  if (p.rolled || state.dice) return 'Você já rolou os dados neste turno.';
+  if (state.sandbox) return t('act.noBoardSandbox');
+  if (p.rolled || state.dice) return t('act.alreadyRolled');
   state.dice = [rollDie(rng), rollDie(rng)];
   return null;
 }
 
 export function moveBy(state, index, rng = Math.random) {
   const p = currentPlayer(state);
-  if (!state.dice) return 'Role os dados primeiro.';
+  if (!state.dice) return t('act.rollFirst');
   const steps = state.dice[index];
-  if (!steps) return 'Dado inválido.';
+  if (!steps) return t('act.invalidDie');
   state.dice = null;
   const moved = movePlayer(p, steps);
   const tile = TILES[moved.position];
@@ -291,11 +292,11 @@ export function moveBy(state, index, rng = Math.random) {
   Object.assign(p, player);
   p.rolled = true;
   state.lastRoll = steps;
-  pushLog(state, `${p.name} andou ${steps} e parou em "${tile.label}".`, p.id);
+  pushLog(state, t('act.movedTo', { name: p.name, steps, tile: tile.label }), p.id);
   messages.forEach((m) => pushLog(state, `${p.name}: ${m}`, p.id));
 
   // Retorno imediato: o que a casa deu (casas de decisão e de evento mostram a própria carta).
-  if (messages.length) setOutcome(state, p, { title: `Parou em "${tile.label}"`, notes: messages });
+  if (messages.length) setOutcome(state, p, { title: t('act.stoppedAt', { tile: tile.label }), notes: messages });
   else state.outcome = null;
 
   if (tile.type === 'workshop') raiseTip(state, p, 'workshop');
@@ -304,19 +305,19 @@ export function moveBy(state, index, rng = Math.random) {
   if (tile.type === 'shop') {
     const offers = makeOffers(p, rng);
     if (offers.length) state.pendingTile = { tileId: tile.id, kind: 'supplier', offers };
-    else pushLog(state, `${p.name}: o fornecedor não tem nenhuma blueprint nova para você.`, p.id);
+    else pushLog(state, t('act.noNewBlueprint', { name: p.name }), p.id);
   }
 
   if (tile.type === 'lot') {
     const lot = state.lots[tile.id];
     if (!lot) state.pendingTile = { tileId: tile.id, kind: 'build' };
     else if (lot.ownerId !== p.id) state.pendingTile = { tileId: tile.id, kind: 'use' };
-    else pushLog(state, `${p.name}: este terreno já é seu (${BUILDINGS[lot.buildingId].name}).`, p.id);
+    else pushLog(state, t('act.lotYours', { name: p.name, building: BUILDINGS[lot.buildingId].name }), p.id);
   }
 
   if (tile.type === 'spy') {
-    if (state.players.length < 2) pushLog(state, `${p.name}: não há rivais para espionar.`, p.id);
-    else if (p.lastSpyYear === yearOf(state.round)) pushLog(state, `${p.name}: o espião já trabalhou este ano.`, p.id);
+    if (state.players.length < 2) pushLog(state, t('act.noRivalsSpy', { name: p.name }), p.id);
+    else if (p.lastSpyYear === yearOf(state.round)) pushLog(state, t('act.spyUsed', { name: p.name }), p.id);
     else state.pendingTile = { tileId: tile.id, kind: 'spy' };
   }
 
@@ -325,7 +326,7 @@ export function moveBy(state, index, rng = Math.random) {
     if (p.flight) {
       const eventId = pickEvent(rng).id;
       p.flight.tileEvent = eventId;
-      pushLog(state, `${p.name}: sua nave em voo vai enfrentar "${FLIGHT_EVENTS[eventId].title}" na próxima etapa.`, p.id);
+      pushLog(state, t('act.flightEventIncoming', { name: p.name, event: FLIGHT_EVENTS[eventId].title }), p.id);
     } else {
       state.pendingDilemma = { id: pickDilemma(p, rng).id };
     }
@@ -342,8 +343,8 @@ export function rollAndMove(state, rng = Math.random) {
 function applyEffect(state, p, e, rng, notes = []) {
   if (e.gamble) {
     const won = rng() < e.gamble.chance;
-    pushLog(state, `${p.name}: ${won ? 'deu certo!' : 'deu errado.'}`, p.id);
-    notes.push(won ? 'Deu certo!' : 'Deu errado.');
+    pushLog(state, `${p.name}: ${won ? t('act.gambleWonLog') : t('act.gambleLostLog')}`, p.id);
+    notes.push(won ? t('act.gambleWon') : t('act.gambleLost'));
     applyEffect(state, p, won ? e.gamble.win : e.gamble.lose, rng, notes);
     return;
   }
@@ -358,11 +359,11 @@ function applyEffect(state, p, e, rng, notes = []) {
 export function chooseDilemma(state, index, rng = Math.random) {
   const p = currentPlayer(state);
   const card = DILEMMAS.find((d) => d.id === state.pendingDilemma?.id);
-  if (!card) return 'Nenhuma carta de dilema pendente.';
+  if (!card) return t('act.noDilemma');
   const option = card.options[index];
-  if (!option) return 'Opção inválida.';
+  if (!option) return t('act.invalidOption');
   state.pendingDilemma = null;
-  pushLog(state, `${p.name} — ${card.title}: "${option.label}". ${option.lesson}`, p.id);
+  pushLog(state, t('act.dilemmaLog', { name: p.name, title: card.title, label: option.label, lesson: option.lesson }), p.id);
   const before = statsOf(p);
   const notes = [];
   applyEffect(state, p, option.effect, rng, notes);
@@ -386,7 +387,7 @@ function spreadRumor(state, p, rng, notes = []) {
   const truth = rng() < RUMOR_TRUTH;
   const shown = truth ? rival.step : Math.max(0, Math.min(total, rival.step + (rng() < 0.5 ? -1 : 1)));
   p.intel[rival.id] = { year: yearOf(state.round), rumor: true, steps: shown, total };
-  const text = `Boato: dizem que ${rival.name} já cumpriu ${shown} de ${total} degraus. Pode não ser verdade.`;
+  const text = t('act.rumorText', { name: rival.name, shown, total });
   pushLog(state, text, p.id);
   notes.push(text);
 }
@@ -396,13 +397,13 @@ function spreadRumor(state, p, rng, notes = []) {
 // que chega na etapa final do voo dele; contra o bot do solo atrasa o próximo degrau dele em 1 ano.
 export function sabotage(state, rivalId) {
   const p = currentPlayer(state);
-  if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
+  if (state.pendingTile?.kind !== 'spy') return t('act.notSpyTile');
   const rival = state.players.find((r) => r.id === rivalId && r.id !== p.id);
-  if (!rival) return 'Rival inválido.';
-  if (p.funds < SABOTAGE_COST) return `Verba insuficiente: a sabotagem custa ${SABOTAGE_COST}.`;
-  if (rival.interference) return `${rival.name} já tem uma sabotagem armada: espere ela chegar.`;
-  if (rival.bot && (rival.step >= ladderOf(rival).length || rival.schedule[rival.step] == null)) return `${rival.name} não tem mais um degrau para atrasar.`;
-  if (rival.bot && rival.delayedStep === rival.step) return `${rival.name} já foi atrasada neste degrau: sabotar de novo o adiaria sem fim.`;
+  if (!rival) return t('act.invalidRival');
+  if (p.funds < SABOTAGE_COST) return t('act.sabotageCost', { cost: SABOTAGE_COST });
+  if (rival.interference) return t('act.sabotageArmed', { name: rival.name });
+  if (rival.bot && (rival.step >= ladderOf(rival).length || rival.schedule[rival.step] == null)) return t('act.noStepToDelay', { name: rival.name });
+  if (rival.bot && rival.delayedStep === rival.step) return t('act.alreadyDelayed', { name: rival.name });
   p.funds -= SABOTAGE_COST;
   p.lastSpyYear = yearOf(state.round);
   state.pendingTile = null;
@@ -410,37 +411,37 @@ export function sabotage(state, rivalId) {
   if (rival.bot) {
     rival.schedule[rival.step] += 1;
     rival.delayedStep = rival.step; // só um atraso por degrau (senão, 1 sabotagem por ano o seguraria para sempre)
-    note = `O próximo degrau de ${rival.name} atrasou 1 ano.`;
+    note = t('act.sabotageBotNote', { name: rival.name });
   } else {
     rival.interference = { fromId: p.id, year: yearOf(state.round) };
-    note = `A interferência vai atingir a telemetria de ${rival.name} na etapa final do voo dele, se ele voar neste ano.`;
+    note = t('act.sabotageNote', { name: rival.name });
   }
-  pushLog(state, `${p.name} pagou ${SABOTAGE_COST} ao espião para sabotar ${rival.name}.`, p.id);
+  pushLog(state, t('act.sabotageLog', { name: p.name, cost: SABOTAGE_COST, rival: rival.name }), p.id);
   setOutcome(state, p, {
-    title: `Sabotagem: ${rival.name}`,
-    changes: [{ label: 'Verba', value: -SABOTAGE_COST }],
-    notes: [note, 'Sabotar custa verba e uma ação de espião; o rival pode se proteger pagando a rede de reserva.'],
+    title: t('act.sabotageTitle', { name: rival.name }),
+    changes: [{ label: t('res.funds'), value: -SABOTAGE_COST }],
+    notes: [note, t('act.sabotageHint')],
   });
   return null;
 }
 
 export function spyOn(state, rivalId) {
   const p = currentPlayer(state);
-  if (state.pendingTile?.kind !== 'spy') return 'Você não está na casa de espionagem.';
+  if (state.pendingTile?.kind !== 'spy') return t('act.notSpyTile');
   const rival = state.players.find((r) => r.id === rivalId && r.id !== p.id);
-  if (!rival) return 'Rival inválido.';
-  if (p.funds < SPY_COST) return `Verba insuficiente: o espião custa ${SPY_COST}.`;
+  if (!rival) return t('act.invalidRival');
+  if (p.funds < SPY_COST) return t('act.spyCost', { cost: SPY_COST });
   p.funds -= SPY_COST;
   p.lastSpyYear = yearOf(state.round);
   p.intel[rival.id] = spyReport(state, rival);
   state.pendingTile = null;
-  pushLog(state, `${p.name} pagou ${SPY_COST} ao espião para observar ${rival.name}.`, p.id);
+  pushLog(state, t('act.spyLog', { name: p.name, cost: SPY_COST, rival: rival.name }), p.id);
   const r = p.intel[rival.id];
-  const ship = r.inFlight ? `nave em voo (etapa ${r.stage + 1} de ${r.stages})` : r.ready != null ? `nave ${Math.round(r.ready * 100)}% pronta` : r.note || '';
+  const ship = r.inFlight ? t('act.spyShipFlying', { n: r.stage + 1, total: r.stages }) : r.ready != null ? t('act.spyShipReady', { pct: Math.round(r.ready * 100) }) : r.note || '';
   setOutcome(state, p, {
-    title: `Espião: ${rival.name}`,
-    changes: [{ label: 'Verba', value: -SPY_COST }],
-    notes: [`${r.steps} de ${r.total} degraus cumpridos${r.mission ? `, mirando "${r.mission}"` : ''}${ship ? `; ${ship}` : ''}.`, 'O relatório fica guardado na aba Rivais.'],
+    title: t('act.spyTitle', { name: rival.name }),
+    changes: [{ label: t('res.funds'), value: -SPY_COST }],
+    notes: [t('act.spyNote', { steps: r.steps, total: r.total, mission: r.mission ? t('act.spyAiming', { mission: r.mission }) : '', ship: ship ? `; ${ship}` : '' }), t('act.spySaved')],
   });
   return null;
 }
@@ -454,7 +455,7 @@ function spyReport(state, rival) {
     total: ladder.length,
     mission: rival.missionId ? MISSIONS[rival.missionId].name : null,
   };
-  if (rival.bot) return { ...report, note: 'Segue o próprio calendário; não dá para ver a oficina.' };
+  if (rival.bot) return { ...report, note: t('act.spyBotNote') };
   if (rival.flight) {
     return { ...report, mission: MISSIONS[rival.flight.missionId].name, inFlight: true, stage: rival.flight.stageIndex, stages: rival.flight.plan.length };
   }
@@ -466,20 +467,20 @@ function spyReport(state, rival) {
 export function buildOnLot(state, buildingId) {
   const p = currentPlayer(state);
   const pending = state.pendingTile;
-  if (!pending || pending.kind !== 'build') return 'Você não está num terreno livre.';
-  if (!BUILDINGS[buildingId]) return 'Prédio desconhecido.';
-  if (p.buildings[buildingId] > 0) return `Você já tem ${BUILDINGS[buildingId].name}. Suba o nível no painel da agência.`;
+  if (!pending || pending.kind !== 'build') return t('act.notFreeLot');
+  if (!BUILDINGS[buildingId]) return t('act.unknownBuilding');
+  if (p.buildings[buildingId] > 0) return t('act.alreadyHaveBuilding', { building: BUILDINGS[buildingId].name });
   const cost = upgradeCost(0);
-  if (p.funds < cost) return `Verba insuficiente: construir custa ${cost}.`;
+  if (p.funds < cost) return t('act.buildCost', { cost });
   p.funds -= cost;
   p.buildings[buildingId] = 1;
   state.lots[pending.tileId] = { ownerId: p.id, buildingId };
   state.pendingTile = null;
-  pushLog(state, `${p.name} construiu ${BUILDINGS[buildingId].name} num terreno.`);
+  pushLog(state, t('act.builtLog', { name: p.name, building: BUILDINGS[buildingId].name }));
   setOutcome(state, p, {
-    title: `Construiu ${BUILDINGS[buildingId].name}`,
-    changes: [{ label: 'Verba', value: -cost }],
-    notes: [BUILDINGS[buildingId].effect, 'Suba o nível na aba Sua agência.'],
+    title: t('act.builtTitle', { building: BUILDINGS[buildingId].name }),
+    changes: [{ label: t('res.funds'), value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, t('act.upgradeInPanel')],
   });
   return null;
 }
@@ -490,23 +491,23 @@ export const useFeeFor = (level) => USE_FEE + 2 * (level - 1);
 export function useRivalBuilding(state, rng = Math.random) {
   const p = currentPlayer(state);
   const pending = state.pendingTile;
-  if (!pending || pending.kind !== 'use') return 'Não há prédio de rival para usar aqui.';
+  if (!pending || pending.kind !== 'use') return t('act.noRivalBuilding');
   const lot = state.lots[pending.tileId];
   const owner = state.players[lot.ownerId];
   const building = BUILDINGS[lot.buildingId];
   const fee = useFeeFor(owner.buildings[lot.buildingId]);
-  if (p.funds < fee) return `Verba insuficiente: a taxa é ${fee}.`;
+  if (p.funds < fee) return t('act.feeCost', { fee });
   const before = statsOf(p);
   p.funds -= fee;
   owner.funds += fee;
   applyEffect(state, p, building.useEffect, rng); // `rng` injetável: o simulador (scripts/simulate.mjs) repete partidas
   state.pendingTile = null;
-  pushLog(state, `${p.name} pagou ${fee} a ${owner.name} para usar o ${building.name}.`);
+  pushLog(state, t('act.usedLog', { name: p.name, fee, owner: owner.name, building: building.name }));
   const after = statsOf(p);
   setOutcome(state, p, {
-    title: `Usou ${building.name} de ${owner.name}`,
+    title: t('act.usedTitle', { building: building.name, owner: owner.name }),
     changes: changesBetween(before, after),
-    notes: [...extrasBetween(before, after), `${owner.name} recebeu ${fee}: os dois saem ganhando.`],
+    notes: [...extrasBetween(before, after), t('act.ownerReceived', { owner: owner.name, fee })],
   });
   return null;
 }
@@ -522,21 +523,21 @@ export function skipTile(state) {
 export function buyBlueprint(state, itemId) {
   const p = currentPlayer(state);
   const pending = state.pendingTile;
-  if (!pending || pending.kind !== 'supplier') return 'Você não está num fornecedor.';
-  if (!pending.offers.includes(itemId)) return 'Esse item não está nas ofertas desta visita.';
+  if (!pending || pending.kind !== 'supplier') return t('act.notSupplier');
+  if (!pending.offers.includes(itemId)) return t('act.notInOffers');
   const free = !p.freeBlueprintUsed;
   const price = blueprintCostFor(p, itemId);
-  if (p.funds < price) return `Verba insuficiente: a blueprint custa ${price}.`;
+  if (p.funds < price) return t('act.blueprintCost', { price });
   p.funds -= price;
   p.freeBlueprintUsed = true;
   discover(p, [itemId]);
   pending.offers = pending.offers.filter((id) => id !== itemId);
   if (!pending.offers.length) state.pendingTile = null;
-  pushLog(state, `${p.name} conseguiu a blueprint de ${nameOf(itemId)}${free ? ' (a primeira é de graça)' : ` por ${price}`}.`, p.id);
+  pushLog(state, t('act.blueprintLog', { name: p.name, item: nameOf(itemId), suffix: free ? t('act.blueprintFreeSuffix') : t('act.blueprintPaidSuffix', { price }) }), p.id);
   setOutcome(state, p, {
-    title: `Blueprint: ${nameOf(itemId)}`,
-    changes: price ? [{ label: 'Verba', value: -price }] : [],
-    notes: [free ? 'A primeira blueprint é de graça.' : 'A blueprint vale para sempre.', 'Agora você pode comprar essa peça (ou escolher esse foguete) na oficina.'],
+    title: t('act.blueprintTitle', { item: nameOf(itemId) }),
+    changes: price ? [{ label: t('res.funds'), value: -price }] : [],
+    notes: [free ? t('act.blueprintFree') : t('act.blueprintForever'), t('act.blueprintBuyNow')],
   });
   raiseTip(state, p, 'blueprint', itemId);
   return null;
@@ -544,20 +545,20 @@ export function buyBlueprint(state, itemId) {
 
 export function upgradeBuilding(state, buildingId) {
   const p = currentPlayer(state);
-  if (state.sandbox) return 'Prédios não existem no modo sandbox.';
+  if (state.sandbox) return t('act.noBuildingsSandbox');
   const level = p.buildings[buildingId];
-  if (!level) return 'Construa este prédio num terreno livre primeiro.';
-  if (level >= MAX_LEVEL) return 'Este prédio já está no nível máximo.';
+  if (!level) return t('act.buildFirst');
+  if (level >= MAX_LEVEL) return t('act.maxLevel');
   const cost = upgradeCostFor(state, p, buildingId);
-  if (p.funds < cost) return `Verba insuficiente: o upgrade custa ${cost}.`;
+  if (p.funds < cost) return t('act.upgradeCost', { cost });
   p.funds -= cost;
   p.buildings[buildingId] = level + 1;
-  pushLog(state, `${p.name} subiu ${BUILDINGS[buildingId].name} para o nível ${level + 1} por ${cost}.`, p.id);
+  pushLog(state, t('act.upgradeLog', { name: p.name, building: BUILDINGS[buildingId].name, level: level + 1, cost }), p.id);
   // Retorno imediato: o clique em "subir" mostra o custo e o que o novo nível rende.
   setOutcome(state, p, {
-    title: `${BUILDINGS[buildingId].name}: nível ${level + 1} de ${MAX_LEVEL}`,
-    changes: [{ label: 'Verba', value: -cost }],
-    notes: [BUILDINGS[buildingId].effect, level + 1 >= MAX_LEVEL ? 'Nível máximo.' : `Próximo nível: ${upgradeCostFor(state, p, buildingId)} de verba.`],
+    title: t('act.upgradeTitle', { building: BUILDINGS[buildingId].name, level: level + 1, max: MAX_LEVEL }),
+    changes: [{ label: t('res.funds'), value: -cost }],
+    notes: [BUILDINGS[buildingId].effect, level + 1 >= MAX_LEVEL ? t('act.maxLevelNote') : t('act.nextLevel', { cost: upgradeCostFor(state, p, buildingId) })],
   });
   return null;
 }
@@ -572,14 +573,14 @@ export function upgradeCostFor(state, player, buildingId) {
 // Sem eliminação: com pouca verba, a agência pede socorro e perde tecnologia.
 export function requestBailout(state) {
   const p = currentPlayer(state);
-  if (p.funds >= BAILOUT_LIMIT) return `Socorro só com menos de ${BAILOUT_LIMIT} de verba.`;
+  if (p.funds >= BAILOUT_LIMIT) return t('act.bailoutLimit', { limit: BAILOUT_LIMIT });
   p.funds += BAILOUT_FUNDS;
   // Piso de tecnologia 1: toda peça exige pelo menos 1. Com a pesquisa básica de 2 em 2 anos, descer a 0 trancaria a
   // agência fora da oficina por até 2 anos, e o socorro de emergência não pode ser uma armadilha.
   const lost = Math.min(BAILOUT_TECH_COST, Math.max(0, p.tech - TECH_FLOOR));
   p.tech -= lost;
   p.bailouts += 1;
-  pushLog(state, `${p.name} pediu socorro de emergência: +${BAILOUT_FUNDS} de verba${lost ? `, −${lost} de tecnologia` : ' (sem perder tecnologia: já está no mínimo)'}.`, p.id);
+  pushLog(state, t('act.bailoutLog', { name: p.name, funds: BAILOUT_FUNDS, tech: lost ? t('act.bailoutTechLost', { lost }) : t('act.bailoutNoTech') }), p.id);
   return null;
 }
 
@@ -588,11 +589,11 @@ export function requestBailout(state) {
 // Só no sandbox: no jogo normal a missão é o degrau atual da escada.
 export function chooseMission(state, missionId) {
   const p = currentPlayer(state);
-  if (!state.sandbox) return 'A missão é o próximo degrau da escada do seu lado.';
-  if (!MISSIONS[missionId]) return 'Missão desconhecida.';
-  if (p.flight) return 'Espere a nave em voo terminar a missão antes de trocar.';
+  if (!state.sandbox) return t('act.missionIsStep');
+  if (!MISSIONS[missionId]) return t('act.unknownMission');
+  if (p.flight) return t('act.waitFlightSwap');
   p.missionId = missionId;
-  pushLog(state, `${p.name} escolheu a missão "${MISSIONS[missionId].name}".`, p.id);
+  pushLog(state, t('act.choseMission', { name: p.name, mission: MISSIONS[missionId].name }), p.id);
   checkMilestones(state, p);
   return null;
 }
@@ -602,14 +603,14 @@ export function buyItem(state, itemId) {
   const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   const item = CATALOG[itemId];
-  if (!isDiscovered(p, item)) return `${item.name}: você ainda não tem a blueprint. Pare numa casa de Fornecedor do tabuleiro para consegui-la.`;
-  if (isLocked(p, item)) return `${item.name} exige tecnologia ${requiredTech(p, item)} (você tem ${p.tech}).`;
+  if (!isDiscovered(p, item)) return t('act.noBlueprint', { name: item.name });
+  if (isLocked(p, item)) return t('act.itemLocked', { name: item.name, req: requiredTech(p, item), tech: p.tech });
   const price = priceFor(p, itemId);
-  if (p.funds < price) return `Verba insuficiente: ${item.name} custa ${price}.`;
+  if (p.funds < price) return t('act.itemCost', { name: item.name, price });
   p.funds -= price;
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   bucket.push(itemId);
-  pushLog(state, `${p.name} comprou ${item.name} por ${price}.`, p.id);
+  pushLog(state, t('act.boughtLog', { name: p.name, item: item.name, price }), p.id);
   raiseTip(state, p, 'part');
   p.discount = 0; // desconto de evento vale para uma compra (a Fábrica é permanente)
   checkMilestones(state, p);
@@ -623,11 +624,11 @@ export function sellItem(state, itemId) {
   if (locked) return locked;
   const bucket = INSTRUMENTS[itemId] ? p.spacecraft.instruments : p.spacecraft.parts;
   const idx = bucket.indexOf(itemId);
-  if (idx === -1) return 'Item não está na espaçonave.';
+  if (idx === -1) return t('act.itemNotOnboard');
   bucket.splice(idx, 1);
   const refund = refundFor(itemId); // sucata: metade do custo base (sim/resources.js)
   p.funds += refund;
-  pushLog(state, `${p.name} revendeu ${CATALOG[itemId].name} como sucata por ${refund}.`, p.id);
+  pushLog(state, t('act.soldLog', { name: p.name, item: CATALOG[itemId].name, refund }), p.id);
   return null;
 }
 
@@ -636,8 +637,8 @@ export function chooseLauncher(state, launcherId) {
   const locked = inFlightLock(state, p) || workshopLock(state, p);
   if (locked) return locked;
   const launcher = LAUNCHERS[launcherId];
-  if (!isDiscovered(p, launcher)) return `${launcher.name}: você ainda não tem a blueprint. Pare numa casa de Fornecedor do tabuleiro para consegui-la.`;
-  if (isLocked(p, launcher)) return `${launcher.name} exige tecnologia ${requiredTech(p, launcher)} (você tem ${p.tech}).`;
+  if (!isDiscovered(p, launcher)) return t('act.noBlueprint', { name: launcher.name });
+  if (isLocked(p, launcher)) return t('act.itemLocked', { name: launcher.name, req: requiredTech(p, launcher), tech: p.tech });
   p.spacecraft.launcherId = launcherId;
   checkMilestones(state, p);
   return null;
@@ -663,13 +664,13 @@ function grant(state, player, milestoneId, missionId = player.missionId) {
   if (ms.effect.type === 'funds') player.funds += ms.effect.value;
   if (ms.effect.type === 'discount') player.discount = Math.max(player.discount, ms.effect.value);
   if (ms.effect.type === 'shield') player.shields += ms.effect.value;
-  pushLog(state, `${player.name} atingiu "${ms.name}" (${describeEffect(ms.effect)}).`, player.id);
+  pushLog(state, t('act.milestoneLog', { name: player.name, ms: ms.name, effect: describeEffect(ms.effect) }), player.id);
 }
 
 export function describeEffect(effect) {
-  if (effect.type === 'funds') return `+${effect.value} de verba`;
-  if (effect.type === 'discount') return `${effect.value}% de desconto na próxima compra`;
-  return 'proteção contra uma falha';
+  if (effect.type === 'funds') return t('act.effectFunds', { n: effect.value });
+  if (effect.type === 'discount') return t('act.effectDiscount', { n: effect.value });
+  return t('act.effectShield');
 }
 
 function checkMilestones(state, player) {
@@ -682,27 +683,25 @@ function checkMilestones(state, player) {
 // escondidos da missão. Não dá o número: para isso é preciso lançar e errar (sim/needs.js).
 export function rehearse(state) {
   const p = currentPlayer(state);
-  if (state.sandbox) return 'No sandbox os requisitos da missão já aparecem na checagem.';
+  if (state.sandbox) return t('act.rehearseSandbox');
   const inFlight = inFlightLock(state, p) || workshopLock(state, p);
   if (inFlight) return inFlight;
-  if (!p.missionId) return 'Sua escada já está completa.';
-  if (!isHidden(p)) return 'Os requisitos desta missão já são conhecidos: veja a checagem do projeto.';
-  if (p.rehearsedThisTurn) return 'Só um ensaio por turno.';
-  if (p.funds < REHEARSAL_COST) return `Verba insuficiente: o ensaio custa ${REHEARSAL_COST}.`;
+  if (!p.missionId) return t('act.ladderDone');
+  if (!isHidden(p)) return t('act.reqsKnown');
+  if (p.rehearsedThisTurn) return t('act.rehearseOnce');
+  if (p.funds < REHEARSAL_COST) return t('act.rehearseCost', { cost: REHEARSAL_COST });
   p.funds -= REHEARSAL_COST;
   p.rehearsedThisTurn = true;
   const results = assessNeeds(p);
   const short = results.filter((r) => !r.ok);
-  pushLog(state, `${p.name} fez um ensaio em solo da missão "${MISSIONS[p.missionId].name}".`, p.id);
+  pushLog(state, t('act.rehearseLog', { name: p.name, mission: MISSIONS[p.missionId].name }), p.id);
   setOutcome(state, p, {
     where: 'workshop', // a oficina mostra este resultado (os da casa do tabuleiro ficam no tabuleiro)
-    title: 'Ensaio em solo',
-    changes: [{ label: 'Verba', value: -REHEARSAL_COST }],
+    title: t('act.rehearseTitle'),
+    changes: [{ label: t('res.funds'), value: -REHEARSAL_COST }],
     notes: [
       ...results.map((r) => `${r.label[0].toUpperCase()}${r.label.slice(1)}: ${r.status}.`),
-      short.length
-        ? 'Ajuste a nave e ensaie de novo no próximo turno, ou lance para descobrir os números.'
-        : 'Nada indica falta de requisito. Ainda há o risco do voo.',
+      short.length ? t('act.rehearseShort') : t('act.rehearseOk'),
     ],
   });
   return null;
@@ -711,14 +710,14 @@ export function rehearse(state) {
 // Lança: paga o lançador, a nave sai da oficina e a SUBIDA é sorteada na hora (encerra o turno).
 export function launch(state, rng = Math.random) {
   const p = currentPlayer(state);
-  if (!p.missionId) return state.sandbox ? 'Escolha uma missão antes de lançar.' : 'Sua escada já está completa.';
-  if (p.flight) return 'Você já tem uma nave em voo.';
+  if (!p.missionId) return state.sandbox ? t('act.chooseMissionFirst') : t('act.ladderDone');
+  if (p.flight) return t('act.alreadyInFlight');
   const away = workshopLock(state, p);
   if (away) return away;
-  if (!state.sandbox && !p.rolled) return 'Ande no tabuleiro antes de lançar.';
-  if (!state.sandbox && p.launchedThisTurn) return 'Só um lançamento por turno.';
+  if (!state.sandbox && !p.rolled) return t('act.moveBeforeLaunch');
+  if (!state.sandbox && p.launchedThisTurn) return t('act.launchOnce');
   const design = checkDesign(p);
-  if (!design.ok) return 'O projeto ainda tem pendências: veja a checagem na oficina.';
+  if (!design.ok) return t('act.designPending');
   p.funds -= design.totals.launchCost;
   p.launches += 1;
   raiseTip(state, p, 'launch');
@@ -742,22 +741,22 @@ export function launch(state, rng = Math.random) {
   p.flightAdvanced = true;
   // Lançar é público (o mundo vê um foguete subir): todos ficam sabendo e o peão ganha o marcador "em voo".
   // O que continua secreto: a nave por dentro e se o voo deu certo (só o espião ou o fim da partida revelam).
-  pushLog(state, `${p.name} lançou a missão "${MISSIONS[missionId].name}".`);
+  pushLog(state, t('act.launchLog', { name: p.name, mission: MISSIONS[missionId].name }));
   const stageId = p.flight.plan[0];
   const risk = stageRisk(flyer(p), stageId);
   p.launchRisk = 0; // o defeito ignorado só pesa nesta subida
-  resolveStage(state, p, stageId, risk, { label: 'Lançamento' }, rng);
+  resolveStage(state, p, stageId, risk, { label: t('milestone.launched') }, rng);
   return null;
 }
 
 // Prepara a próxima etapa: imprevisto da casa de evento onde o jogador parou (ou garantido nas chegadas).
 export function advanceFlight(state, rng = Math.random) {
   const p = currentPlayer(state);
-  if (!p.flight) return 'Nenhuma nave em voo.';
+  if (!p.flight) return t('fl.noFlight');
   if (p.flight.pending) { state.screen = 'flight'; return null; }
   if (!state.sandbox) {
-    if (!p.rolled) return 'Ande no tabuleiro primeiro: uma casa de evento pode trazer um imprevisto para o voo.';
-    if (p.flightAdvanced) return 'O voo avança uma etapa por turno.';
+    if (!p.rolled) return t('act.moveBeforeAdvance');
+    if (p.flightAdvanced) return t('act.oneAdvancePerTurn');
   }
   const stageId = p.flight.plan[p.flight.stageIndex];
   let eventId = p.flight.tileEvent;
@@ -765,8 +764,8 @@ export function advanceFlight(state, rng = Math.random) {
   if (p.interference && p.flight.stageIndex === p.flight.plan.length - 1) {
     const from = state.players.find((r) => r.id === p.interference.fromId);
     eventId = 'interference';
-    pushLog(state, `${p.name}: a telemetria da nave sofreu interferência na etapa final (suspeita de sabotagem rival).`, p.id);
-    if (from) pushLog(state, `${from.name}: sua sabotagem chegou à telemetria de ${p.name}.`, from.id);
+    pushLog(state, t('act.interferenceLog', { name: p.name }), p.id);
+    if (from) pushLog(state, t('act.sabotageArrived', { from: from.name, name: p.name }), from.id);
     p.interference = null;
   }
   if (!eventId && STAGES[stageId].guaranteedEvent) eventId = pickEvent(rng).id;
@@ -783,10 +782,10 @@ const combinePenalty = (a, b) => 1 - (1 - a) * (1 - b);
 export function chooseStageOption(state, index, rng = Math.random) {
   const p = currentPlayer(state);
   const pending = p.flight?.pending;
-  if (!pending) return 'Nenhuma etapa aguardando decisão.';
+  if (!pending) return t('act.noStagePending');
   const option = stageOptions(p, pending)[index];
-  if (!option) return 'Opção inválida.';
-  if (option.disabled) return 'Verba insuficiente para esta opção.';
+  if (!option) return t('act.invalidOption');
+  if (option.disabled) return t('act.optionNoFunds');
   const e = option.effect;
   if (e.funds) p.funds = Math.max(0, p.funds + e.funds);
   if (e.sciencePenalty) p.flight.modifiers.sciencePenalty = combinePenalty(p.flight.modifiers.sciencePenalty, e.sciencePenalty);
@@ -822,7 +821,7 @@ function resolveStage(state, p, stageId, risk, info, rng) {
   };
   p.flight.stages.push(record);
   p.flight.last = record;
-  pushLog(state, `${p.name}: etapa "${stage.name}" ${failed ? 'FALHOU' : 'superada'} (risco ${pct(risk.total)})${usedShield ? ', salva pela proteção' : ''}.`, p.id);
+  pushLog(state, t('act.stageLog', { name: p.name, stage: stage.name, result: failed ? t('act.stageFailed') : t('act.stagePassed'), pct: pct(risk.total), shield: usedShield ? t('rep.savedByShield') : '' }), p.id);
 
   if (failed) return failMission(state, p, stageId);
 
@@ -858,11 +857,11 @@ function failMission(state, p, stageId) {
     failedStage: stageId,
     system: stage.system,
     reasons: [
-      `A etapa "${stage.name}" falhou: o risco era ${pct(last.risk)}.`,
-      ...(last.causes.length ? [`O que aumentou o risco: ${last.causes.join('; ')}.`] : ['Mesmo um projeto bom tem risco: nada no espaço é garantido.']),
+      t('act.failReason', { stage: stage.name, pct: pct(last.risk) }),
+      ...(last.causes.length ? [t('act.failCauses', { causes: last.causes.join('; ') })] : [t('act.failNoCause')]),
     ],
-    consolation: stage.consolation ? `${stage.consolation} Crédito parcial: +${CONSOLATION_FUNDS} de verba.` : null,
-    failureLesson: `Dados de falha: na próxima tentativa, o risco de ${SYSTEM_NAMES[stage.system]} cai ${pct(FAILURE_DATA_BONUS)}, e a agência ganhou +1 de tecnologia. Falhar ensina: é o passo "Verify" do ciclo de projeto da NASA.`,
+    consolation: stage.consolation ? t('act.consolationText', { text: stage.consolation, funds: CONSOLATION_FUNDS }) : null,
+    failureLesson: t('act.failureLesson', { system: SYSTEM_NAMES[stage.system], pct: pct(FAILURE_DATA_BONUS) }),
     checks: checkDesign(ship, { ...flight.modifiers, launched: true }).checks,
     score: 0,
     scienceDelivered: 0,
@@ -893,8 +892,8 @@ function completeMission(state, p) {
     if (shortfalls.length) {
       p.tech += 1;
       const n = MISSIONS[missionId].needs;
-      result.learning = `Requisito descoberto: esta missão pede ciência ≥ ${n.science} e comunicação ≥ ${n.comms}. Os números passam a aparecer na oficina e a travar o lançamento. Errar ensinou: +1 de tecnologia.`;
-      pushLog(state, `${p.name} descobriu os requisitos de "${MISSIONS[missionId].name}" ao errar.`, p.id);
+      result.learning = t('act.learning', { science: n.science, comms: n.comms });
+      pushLog(state, t('act.learnedLog', { name: p.name, mission: MISSIONS[missionId].name }), p.id);
     }
   }
   if (result.success) {
@@ -911,7 +910,7 @@ function completeMission(state, p) {
       result.stepBonus = { bonus, first };
     }
   }
-  pushLog(state, `${p.name}: missão "${MISSIONS[missionId].name}" ${result.success ? 'CUMPRIDA' : 'não atingiu os requisitos na operação'}.`, p.id);
+  pushLog(state, t('act.missionResultLog', { name: p.name, mission: MISSIONS[missionId].name, result: result.success ? t('act.missionDone') : t('act.missionShort') }), p.id);
   p.lastResult = result;
   p.flight = null;
   // Cumprir o degrau passa a mirar o próximo; falhar mantém o degrau atual. As blueprints vêm dos fornecedores.

@@ -3,6 +3,7 @@
 // (sim/turnTimer.js), que termina o turno. Atualiza só o próprio número a cada tique, sem redesenhar a tela.
 import { icon } from './icons.js';
 import { timerApplies, turnSecondsOf } from '../sim/turnTimer.js';
+import { t } from '../i18n/index.js';
 
 const GAME_SCREENS = ['board', 'workshop', 'flight', 'report'];
 let clockKey = null;   // `rodada:vez` do turno que está sendo contado
@@ -25,7 +26,7 @@ function paint(node, s, total) {
   node.className = `turn-clock ${level(s)}`.trim();
   node.querySelector('.tc-num').textContent = fmt(s);
   node.querySelector('.tc-fill').style.width = `${(s / total) * 100}%`;
-  node.setAttribute('aria-label', `Tempo do turno: ${fmt(s)}`);
+  node.setAttribute('aria-label', t('clock.aria', { time: fmt(s) }));
 }
 
 // Elemento do relógio para o HUD (ui/components.js). Null quando a partida não tem relógio.
@@ -33,7 +34,7 @@ export function turnClock(state) {
   if (!clockActive(state)) return null;
   const node = document.createElement('div');
   node.setAttribute('role', 'timer');
-  node.title = `Cada agência tem ${turnSecondsOf(state)} s por turno. Quando o tempo acaba, o turno termina sozinho (o tempo se escolhe antes da partida).`;
+  node.title = t('clock.title', { n: turnSecondsOf(state) });
   const num = document.createElement('span'); num.className = 'tc-num num';
   const bar = document.createElement('span'); bar.className = 'tc-bar';
   const fill = document.createElement('span'); fill.className = 'tc-fill';

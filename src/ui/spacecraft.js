@@ -4,6 +4,7 @@
 import { CATALOG } from '../sim/resources.js';
 import { LAUNCHERS } from '../data/launchers.js';
 import { MISSIONS } from '../data/missions.js';
+import { t } from '../i18n/index.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -29,12 +30,12 @@ function visualCounts(player) {
 export function assemblySlots(player) {
   const owned = [...player.spacecraft.parts, ...player.spacecraft.instruments].map((id) => CATALOG[id]).filter(Boolean);
   const slots = [
-    { id: 'power', label: 'Energia', ok: owned.some((i) => i.powerGen > 0) },
-    { id: 'comms', label: 'Comunicação', ok: owned.some((i) => i.commsRate > 0) },
-    { id: 'science', label: 'Instrumento', ok: player.spacecraft.instruments.length > 0 },
+    { id: 'power', label: t('sc.slot.power'), ok: owned.some((i) => i.powerGen > 0) },
+    { id: 'comms', label: t('sc.slot.comms'), ok: owned.some((i) => i.commsRate > 0) },
+    { id: 'science', label: t('sc.slot.science'), ok: player.spacecraft.instruments.length > 0 },
   ];
-  if (MISSIONS[player.missionId]?.needs.lifeSupport) slots.push({ id: 'life', label: 'Cápsula', ok: owned.some((i) => i.lifeSupport) });
-  slots.push({ id: 'launcher', label: 'Foguete', ok: Boolean(LAUNCHERS[player.spacecraft.launcherId]) });
+  if (MISSIONS[player.missionId]?.needs.lifeSupport) slots.push({ id: 'life', label: t('sc.slot.life'), ok: owned.some((i) => i.lifeSupport) });
+  slots.push({ id: 'launcher', label: t('sc.slot.launcher'), ok: Boolean(LAUNCHERS[player.spacecraft.launcherId]) });
   return slots;
 }
 
@@ -51,7 +52,7 @@ function ghostLabel(g, x, y, text, anchor = 'middle') {
 // `assembly`: modo oficina, com os encaixes vazios tracejados e a peça nova encaixando.
 export function spacecraftSvg(player, { assembly = false } = {}) {
   const c = visualCounts(player);
-  const svg = svgEl('svg', { viewBox: '0 0 320 220', class: `spacecraft${assembly ? ' assembling' : ''}`, role: 'img', 'aria-label': 'Desenho da espaçonave' });
+  const svg = svgEl('svg', { viewBox: '0 0 320 220', class: `spacecraft${assembly ? ' assembling' : ''}`, role: 'img', 'aria-label': t('sc.ariaLabel') });
   const slots = assembly ? assemblySlots(player) : [];
   const slotOk = Object.fromEntries(slots.map((sl) => [sl.id, sl.ok]));
   const before = lastFilled.get(player.id);
@@ -168,26 +169,26 @@ export function spacecraftSvg(player, { assembly = false } = {}) {
     const bx = cx - busW / 2, by = cy - busH / 2;
     if (!slotOk.power) {
       for (const x of [bx - 46, cx + busW / 2 + 6]) ghosts.appendChild(svgEl('rect', { x, y: by + 6, width: 40, height: 12, rx: 1, ...GHOST }));
-      ghostLabel(ghosts, bx - 26, by + 32, 'energia');
+      ghostLabel(ghosts, bx - 26, by + 32, t('sc.ghost.power'));
     }
     if (!slotOk.comms) {
       ghosts.appendChild(svgEl('line', { x1: cx, y1: by, x2: cx, y2: by - 14, ...GHOST }));
       ghosts.appendChild(svgEl('path', { d: `M${cx - 16},${by - 14} Q${cx},${by - 30} ${cx + 16},${by - 14} Z`, ...GHOST }));
-      ghostLabel(ghosts, cx + 22, by - 20, 'comunicação', 'start');
+      ghostLabel(ghosts, cx + 22, by - 20, t('sc.ghost.comms'), 'start');
     }
     if (!slotOk.science) {
       ghosts.appendChild(svgEl('rect', { x: cx - 15, y: by + busH - 2, width: 30, height: 12, rx: 1, ...GHOST }));
-      ghostLabel(ghosts, cx, by + busH + 22, 'instrumento');
+      ghostLabel(ghosts, cx, by + busH + 22, t('sc.ghost.science'));
     }
     if (slotOk.life === false) {
       const w = 74, h = 62;
       ghosts.appendChild(svgEl('path', { d: `M${cx - w / 2},${cy + h / 2} L${cx - w / 2 + 10},${cy - h / 2} L${cx + w / 2 - 10},${cy - h / 2} L${cx + w / 2},${cy + h / 2} Z`, ...GHOST }));
-      ghostLabel(ghosts, cx - w / 2 - 4, cy + h / 2 + 2, 'cápsula', 'end');
+      ghostLabel(ghosts, cx - w / 2 - 4, cy + h / 2 + 2, t('sc.ghost.life'), 'end');
     }
     if (!slotOk.launcher) {
       const rx = 292, base = 205, h = 60;
       ghosts.appendChild(svgEl('path', { d: `M${rx - 7},${base} L${rx - 7},${base - h} L${rx},${base - h - 12} L${rx + 7},${base - h} L${rx + 7},${base} Z`, ...GHOST }));
-      ghostLabel(ghosts, rx, 216, 'foguete');
+      ghostLabel(ghosts, rx, 216, t('sc.ghost.launcher'));
     }
     svg.appendChild(ghosts);
     return svg;
@@ -195,9 +196,9 @@ export function spacecraftSvg(player, { assembly = false } = {}) {
 
   // Vazio: dica
   if (!panels && !instruments.length && !c.antenna && !c.dish && !hasCapsule) {
-    const t = svgEl('text', { x: cx, y: cy + busH / 2 + 30, 'text-anchor': 'middle', 'font-size': 10, fill: '#9aa5c7' });
-    t.textContent = 'Compre peças para montar a espaçonave';
-    svg.appendChild(t);
+    const hint = svgEl('text', { x: cx, y: cy + busH / 2 + 30, 'text-anchor': 'middle', 'font-size': 10, fill: '#9aa5c7' });
+    hint.textContent = t('sc.emptyHint');
+    svg.appendChild(hint);
   }
 
   return svg;

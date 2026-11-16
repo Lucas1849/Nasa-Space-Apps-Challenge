@@ -6,9 +6,15 @@
 // Funções puras, sem DOM.
 import { MISSIONS } from '../data/missions.js';
 import { effectiveTotals } from './resources.js';
+// `tr`: `t` é usado como variável local (totais da nave) em funções deste módulo.
+import { t as tr } from '../i18n/index.js';
 
 export const HIDDEN_KINDS = ['science', 'comms'];
-export const NEED_LABELS = { science: 'ciência', comms: 'comunicação' };
+// Rótulos em i18n (needs.label.<kind>); getters para trocar com o idioma.
+export const NEED_LABELS = {
+  get science() { return tr('needs.label.science'); },
+  get comms() { return tr('needs.label.comms'); },
+};
 // Ids dos checks de checkDesign (sim/simulate.js) que dependem de um mínimo escondido.
 export const HIDDEN_CHECK_IDS = ['science', 'mission_comms'];
 
@@ -20,7 +26,7 @@ export const isHidden = (player, missionId = player.missionId) =>
 const LEVELS = { science: [2, 5], comms: [3, 6] }; // até o 1º valor = baixa; até o 2º = moderada; acima = alta
 export function needLevel(kind, value) {
   const [low, mid] = LEVELS[kind];
-  return value <= low ? 'baixa' : value <= mid ? 'moderada' : 'alta';
+  return value <= low ? tr('needs.level.low') : value <= mid ? tr('needs.level.mid') : tr('needs.level.high');
 }
 
 // Marca os mínimos da missão como conhecidos. Devolve true se era a primeira vez.
@@ -43,7 +49,7 @@ export function assessNeeds(player) {
       kind,
       label: NEED_LABELS[kind],
       ok: ratio >= 1,
-      status: ratio >= 1 ? 'atende' : ratio >= 0.75 ? 'está um pouco abaixo' : 'está bem abaixo',
+      status: ratio >= 1 ? tr('needs.status.ok') : ratio >= 0.75 ? tr('needs.status.slightly') : tr('needs.status.far'),
     };
   });
 }

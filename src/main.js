@@ -14,6 +14,7 @@ import { tickClock } from './ui/turnClock.js';
 import { yearOverlayKey, yearOverlayNode, YEAR_OVERLAY_MS, YEAR_OVERLAY_REDUCED_MS } from './ui/yearOverlay.js';
 import { floatDelta, countUp, flyCoins, puff } from './ui/motion.js';
 import { currentPlayer } from './sim/state.js';
+import { toggleLang, t } from './i18n/index.js';
 
 const app = document.getElementById('app');
 let state = createInitialState();
@@ -212,22 +213,24 @@ const actions = {
   // Passar a vez é direto, sem janela de confirmação: o que aconteceu já apareceu na hora (cartão de
   // resultado no tabuleiro) e o "Desde o seu último turno" recapitula no começo da próxima vez.
   endTurn: netWrap('endTurn'),
-  turnTimeout: netWrap('turnTimeout', () => showToast('Tempo esgotado: o turno terminou sozinho.')),
+  turnTimeout: netWrap('turnTimeout', () => showToast(t('ui.turnTimedOut'))),
   toggleGuide: wrap(() => { setGuide(!guideOn()); }),
   setGuide: (on) => setGuide(on),
+  // Troca o idioma (pt/en) e redesenha tudo. Puramente local, nunca viaja pela rede.
+  toggleLang: () => { toggleLang(); render(); },
   newGame: wrapAndSync(() => { state = createInitialState(); resetSummaries(); lastYearShown = null; }),
   // Sala online (ver docs/PLANO-SALAS.md). A tela só chama estas ações; erros viram
   // toast aqui, e o sucesso leva ao lobby (enterLobby, acima) sem a tela se preocupar.
   hostOnline: async (count) => {
     try { await net.host(count); } catch (err) {
-      showToast(err?.message || 'Não foi possível criar a sala. Confira a internet.');
+      showToast(err?.message || t('net.createFailNet'));
     }
   },
   joinOnline: async (raw) => {
     try { await net.join(raw); } catch (err) {
       showToast(err?.type === 'peer-unavailable'
-        ? 'Sala não encontrada. Confira o código com o anfitrião.'
-        : err?.message || 'Não foi possível entrar na sala.');
+        ? t('net.roomNotFound')
+        : err?.message || t('net.joinFailGeneric'));
     }
   },
   isOnline: () => net.isConnected(),
@@ -260,11 +263,12 @@ const actions = {
 // tabuleiro público e a sua oficina em modo leitura, mais o botão de dicas. Nenhuma
 // jogada viaja pela rede: os botões de jogada nem são renderizados/ficam desabilitados
 // e, se algo escapar, a trava de turno (net.dispatch) barra do mesmo jeito.
-const blockedInSpectate = () => showToast('Você poderá mexer na oficina na sua vez.');
+const blockedInSpectate = () => showToast(t('net.spectateBlocked'));
 const spectatorActions = {
   openWorkshop: () => { spectateView = 'workshop'; render(); },
   go: (screen) => { spectateView = screen === 'workshop' ? 'workshop' : 'board'; render(); },
   toggleGuide: () => { setGuide(!guideOn()); render(); },
+  toggleLang: () => { toggleLang(); render(); },
   buyItem: blockedInSpectate,
   sellItem: blockedInSpectate,
   chooseLauncher: blockedInSpectate,
@@ -289,7 +293,7 @@ function showLaunchOverlay() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const o = document.createElement('div');
   o.className = 'launch-overlay';
-  o.title = 'Clique para pular';
+  o.title = t('ui.launchSkip');
   o.innerHTML = `<div class="count">3</div><div class="lift"><svg viewBox="0 0 40 72" aria-hidden="true"><path class="lift-flame" d="M14 50 20 70l6-20z" fill="#ffc857" stroke="#ff7a3c" stroke-width="1.5"/><path d="M20 2c8 6 11 15 11 26v22H9V28C9 17 12 8 20 2z" fill="#f2f6ff" stroke="#10213d" stroke-width="1.6"/><path d="M9 34 2 46v8l7-4zM31 34l7 12v8l-7-4z" fill="#c4473a" stroke="#10213d" stroke-width="1.4"/><circle cx="20" cy="24" r="5" fill="#1d3f86" stroke="#10213d" stroke-width="1.4"/></svg></div><div class="pad"></div>`;
   document.body.appendChild(o);
   const count = o.querySelector('.count');
@@ -299,7 +303,7 @@ function showLaunchOverlay() {
     setTimeout(() => { count.textContent = '2'; }, 450),
     setTimeout(() => { count.textContent = '1'; }, 900),
     setTimeout(() => {
-      count.textContent = 'Decolagem!';
+      count.textContent = t('ui.launchGo');
       lift.classList.add('go');
       smoke = setInterval(() => { const r = lift.getBoundingClientRect(); puff(r.left + r.width / 2, r.bottom - 6, 3, 'launch-smoke'); }, 50);
     }, 1350),
@@ -338,6 +342,6 @@ render();
 // cai no lobby da sala, sem passar pela tela de setup.
 const roomCode = new URLSearchParams(window.location.search).get('sala');
 if (roomCode) {
-  showToast('Conectando à sala...');
+  showToast(t('net.connecting'));
   actions.joinOnline(roomCode);
 }

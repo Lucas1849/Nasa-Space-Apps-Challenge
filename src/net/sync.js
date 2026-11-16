@@ -13,6 +13,7 @@ import { newCode, peerIdFor, normalizeCode } from './roomCode.js';
 import {
   createSession, claimSlot, releaseSlot, removeSlot, canStart, assignmentsFor, turnBlockError,
 } from './lobby.js';
+import { t } from '../i18n/index.js';
 
 const HOST_RETRIES = 3; // tentativas de código até desistir (colisão é raríssima)
 
@@ -28,7 +29,7 @@ export function createNetworkController({
   function applyLocally(name, args) {
     // `name` pode vir de uma mensagem de rede: só roda o que está na lista vetada
     // (ver NETWORKED_ACTION_NAMES em main.js), nunca uma função arbitrária.
-    if (typeof actionsMap[name] !== 'function') return 'Ação desconhecida.';
+    if (typeof actionsMap[name] !== 'function') return t('net.unknownAction');
     const error = actionsMap[name](getState(), ...args);
     render();
     if (channel?.isHost) channel.broadcast({ type: 'state', state: getState() });
@@ -80,7 +81,7 @@ export function createNetworkController({
           peerId: peerIdFor(code),
           onData: onHostData,
           onPeerJoin: (pid) => {
-            if (session?.started) { room.sendTo(pid, { type: 'rejected', reason: 'Esta partida já começou.' }); return; }
+            if (session?.started) { room.sendTo(pid, { type: 'rejected', reason: t('net.alreadyStarted') }); return; }
             broadcastLobby();
           },
           onPeerLeave: (pid) => {
@@ -90,7 +91,7 @@ export function createNetworkController({
               render();
             }
           },
-          onError: () => { showError?.('Um jogador não conseguiu se conectar à sala.'); },
+          onError: () => { showError?.(t('net.joinFail')); },
         });
         channel = { isHost: true, broadcast: room.broadcast, sendTo: room.sendTo, close: room.close };
         myPeerId = room.id;
@@ -103,7 +104,7 @@ export function createNetworkController({
         throw err;
       }
     }
-    throw lastErr ?? new Error('Não foi possível criar a sala.');
+    throw lastErr ?? new Error(t('net.createFail'));
   }
 
   function onClientData(msg, conn) {
@@ -130,16 +131,16 @@ export function createNetworkController({
   // e preenche quando o primeiro broadcast do host chega.
   async function join(rawCode) {
     const code = normalizeCode(rawCode);
-    if (!code) throw new Error('Código de sala inválido.');
+    if (!code) throw new Error(t('net.invalidCode'));
     const conn = await joinRoom(peerIdFor(code), {
       onData: (msg) => onClientData(msg, conn),
       onClose: () => {
         const wasConnected = !!channel;
         channel = null;
         session = null;
-        if (wasConnected) showError?.('A conexão com a sala caiu.');
+        if (wasConnected) showError?.(t('net.connLost'));
       },
-      onError: () => { showError?.('Problema na conexão com a sala.'); },
+      onError: () => { showError?.(t('net.connProblem')); },
     });
     channel = { isHost: false, send: conn.send, close: conn.close };
     myPeerId = conn.id;
@@ -180,8 +181,8 @@ export function createNetworkController({
   // e manda o estado + o mapa peer->agência, para cada um saber qual jogador é seu.
   // Devolve string de erro (vira toast) ou undefined.
   function startSession(startGameFn) {
-    if (!channel?.isHost || !session) return 'Só o anfitrião inicia a partida.';
-    if (!canStart(session)) return 'A partida só começa com todas as vagas ocupadas.';
+    if (!channel?.isHost || !session) return t('net.onlyHost');
+    if (!canStart(session)) return t('net.needAllSlots');
     const error = startGameFn(session.slots.map((s) => ({ name: s.name })));
     if (typeof error === 'string') return error;
     session = { ...session, started: true };

@@ -5,9 +5,10 @@
 //    queira ler as regras. O cartão escolhe COMO jogar (docs/PLANO-SALAS.md, Fase 2): sozinho contra o bot,
 //    no mesmo aparelho (hot-seat) ou online com link; o online cria a sala na hora e segue para o lobby.
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
-import { el, button, themeToggle, openRulesModal } from './components.js';
+import { el, button, themeToggle, langToggle, openRulesModal } from './components.js';
 import { icon } from './icons.js';
 import { guideOn, themeOf, toggleTheme, timerSeconds, setTimerSeconds } from './prefs.js';
+import { getLang, setLang, t } from '../i18n/index.js';
 import { pixelSpace } from './pixelArt.js';
 import { START_YEAR, END_YEAR } from '../data/history.js';
 
@@ -176,12 +177,12 @@ function buildSplashView(onEnter) {
     onclick: triggerEnter,
     role: 'button',
     tabindex: '0',
-    'aria-label': 'Clique ou aperte qualquer tecla para começar',
+    'aria-label': t('st.splashPrompt'),
   }, [
     starfield,
     el('h1', { class: 'splash-only-title' }, 'Apogeu'),
     el('div', { class: 'splash-only-art' }, [canvas]),
-    el('p', { class: 'splash-only-prompt' }, 'Clique ou aperte qualquer tecla para começar'),
+    el('p', { class: 'splash-only-prompt' }, t('st.splashPrompt')),
   ]);
 
   return splashRoot;
@@ -198,16 +199,17 @@ const draft = {
   joinCode: '',
 };
 
+// Rótulos em i18n (st.mode.<id> / st.mode.<id>.desc), traduzidos no render.
 const MODES = [
-  { id: 'solo', icon: 'helmet', label: 'Solo' },
-  { id: 'local', icon: 'die', label: 'Mesmo aparelho' },
-  { id: 'online', icon: 'wifi', label: 'Online' },
+  { id: 'solo', icon: 'helmet' },
+  { id: 'local', icon: 'die' },
+  { id: 'online', icon: 'wifi' },
 ];
 
 // Tempo do relógio do turno: desligado ou 60/90/120/180 s (sim/turnTimer.js). Salvo no navegador e gravado
 // na partida ao começar (main.js), para valer igual para todos no online.
 function timerChoice(onChange) {
-  return segmented('Tempo por turno', [0, 60, 90, 120, 180].map((n) => ({ value: n, label: n ? `${n} s` : 'Sem relógio' })), timerSeconds(), (v) => { setTimerSeconds(v); onChange(); });
+  return segmented(t('st.timer'), [0, 60, 90, 120, 180].map((n) => ({ value: n, label: n ? `${n} s` : t('st.timerOff') })), timerSeconds(), (v) => { setTimerSeconds(v); onChange(); });
 }
 
 // Cartões de opção (ícone e nome), como a escolha de modo em jogos.
@@ -244,12 +246,10 @@ const rowLabel = (title, sub) => el('div', { class: 'setup-row-label' }, [
 ]);
 
 function modeNoteText() {
-  if (draft.mode === 'online') return 'Cada agência no seu dispositivo, numa sala com link.';
-  if (draft.sandbox) return 'Sem tabuleiro, com verba e tecnologia livres para testar projetos.';
-  if (draft.mode === 'solo') return 'Você contra um bot que cumpre cada degrau no ano real (com um ano de variação).';
-  return draft.localCount === 2
-    ? '2 agências no mesmo aparelho, revezando. Cada uma joga escondida: use espionagem e boatos.'
-    : `${draft.localCount} agências no mesmo aparelho, revezando. Quem é do mesmo lado disputa os mesmos degraus.`;
+  if (draft.mode === 'online') return t('st.note.online');
+  if (draft.sandbox) return t('st.note.sandbox');
+  if (draft.mode === 'solo') return t('st.note.solo');
+  return draft.localCount === 2 ? t('st.note.local2') : t('st.note.localN', { n: draft.localCount });
 }
 
 function renderConfigView(actions, backToSplash) {
@@ -258,10 +258,10 @@ function renderConfigView(actions, backToSplash) {
   const playerInputs = (count) => el('div', { class: 'setup-players-list' }, Array.from({ length: count }, (_, i) => {
     const input = el('input', {
       type: 'text',
-      placeholder: `Agência ${i + 1}`, // o nome que ela recebe se ficar em branco
+      placeholder: count === 1 ? t('st.agencyPh1') : t('st.agencyPhN', { n: i + 1 }),
       maxlength: 20,
       value: draft.names[i],
-      'aria-label': count === 1 ? 'Nome da sua agência' : `Nome da agência ${i + 1}`,
+      'aria-label': count === 1 ? t('st.agencyAria1') : t('st.agencyAriaN', { n: i + 1 }),
     });
     input.addEventListener('input', (e) => { draft.names[i] = e.target.value; });
     return el('div', { class: 'setup-player-item' }, [el('span', { class: `avatar c${i}` }, String(i + 1)), input]);
@@ -273,7 +273,7 @@ function renderConfigView(actions, backToSplash) {
       class: 'setup-switch',
       role: 'switch',
       'aria-checked': String(guideOn()),
-      'aria-label': 'Dicas passo a passo',
+      'aria-label': t('st.guideSwitch'),
       onclick: () => {
         const on = !guideOn();
         actions.setGuide(on);
@@ -292,65 +292,65 @@ function renderConfigView(actions, backToSplash) {
   const render = () => {
     const rows = [
       el('div', { class: 'setup-row setup-row-stack' }, [
-        rowLabel('Como jogar'),
-        optionCards('Como jogar', MODES.map((m) => ({ value: m.id, label: m.label, icon: m.icon })), draft.mode, (v) => { draft.mode = v; render(); }),
+        rowLabel(t('st.howToPlay')),
+        optionCards(t('st.howToPlay'), MODES.map((m) => ({ value: m.id, label: t(`st.mode.${m.id}`), icon: m.icon, desc: t(`st.mode.${m.id}.desc`) })), draft.mode, (v) => { draft.mode = v; render(); }),
       ]),
     ];
 
     if (draft.mode === 'online') {
       rows.push(
         el('div', { class: 'setup-row' }, [
-          rowLabel('Jogadores na sala', 'Uma vaga por agência'),
-          segmented('Jogadores na sala', [2, 3, 4].map((n) => ({ value: n, label: String(n) })), draft.onlineCount, (v) => { draft.onlineCount = v; render(); }),
+          rowLabel(t('st.playersInRoom'), t('st.oneSlotEach')),
+          segmented(t('st.playersInRoom'), [2, 3, 4].map((n) => ({ value: n, label: String(n) })), draft.onlineCount, (v) => { draft.onlineCount = v; render(); }),
         ]),
         el('div', { class: 'setup-row setup-note' }, [
           icon('wifi', { size: 15 }),
-          el('small', {}, 'Criar a sala gera um link curto na hora: mande para os outros e cada um ocupa a sua agência no lobby. Precisa de internet, e quem criou mantém a aba aberta durante a partida.'),
+          el('small', {}, t('st.onlineNote')),
         ]),
       );
     } else {
       rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
-        rowLabel('Modo'),
-        optionCards('Modo de jogo', [
-          { value: false, icon: 'flag', label: `Corrida ${START_YEAR}–${String(END_YEAR).slice(2)}` },
-          { value: true, icon: 'flask', label: 'Sandbox' },
+        rowLabel(t('st.mode')),
+        optionCards(t('st.modeGroup'), [
+          { value: false, icon: 'flag', label: t('st.raceMode', { start: START_YEAR, end2: String(END_YEAR).slice(2) }), desc: t('st.raceModeDesc') },
+          { value: true, icon: 'flask', label: t('st.sandbox'), desc: t('st.sandboxDesc') },
         ], draft.sandbox, (v) => { draft.sandbox = v; render(); }),
       ]));
       if (draft.mode === 'local') {
         rows.push(el('div', { class: 'setup-row' }, [
-          rowLabel('Agências', 'Revezando o mesmo dispositivo'),
-          segmented('Número de agências', [2, 3, 4].map((n) => ({ value: n, label: String(n) })), draft.localCount, (v) => { draft.localCount = v; render(); }),
+          rowLabel(t('st.agencies'), t('st.agenciesSub')),
+          segmented(t('st.agenciesCount'), [2, 3, 4].map((n) => ({ value: n, label: String(n) })), draft.localCount, (v) => { draft.localCount = v; render(); }),
         ]));
       }
       const count = draft.mode === 'solo' ? 1 : draft.localCount;
       rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
-        rowLabel(count > 1 ? 'Nomes das agências' : 'Sua agência'),
+        rowLabel(count > 1 ? t('st.agencyNames') : t('st.yourAgency')),
         playerInputs(count),
       ]));
     }
 
     if (draft.mode !== 'solo' && !(draft.mode === 'local' && draft.sandbox)) {
       rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
-        rowLabel('Tempo por turno', 'Ao zerar, o turno termina sozinho'),
+        rowLabel(t('st.timer'), t('st.timerSub')),
         timerChoice(() => render()),
       ]));
     }
     rows.push(el('div', { class: 'setup-row' }, [
-      rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'),
+      rowLabel(t('st.guideRow'), t('st.guideRowSub')),
       guideSwitch(),
     ]));
 
     const footer = draft.mode === 'online'
       ? [
-        busyButton([icon('wifi', { size: 18 }), 'Criar sala'], 'Criando sala...', () => actions.hostOnline(draft.onlineCount), { class: 'primary setup-submit' }),
+        busyButton([icon('wifi', { size: 18 }), t('st.createRoom')], t('st.creatingRoom'), () => actions.hostOnline(draft.onlineCount), { class: 'primary setup-submit' }),
         joinBox(),
       ]
-      : [button([icon('rocket', { size: 18 }), 'Começar a partida'], start, { class: 'primary setup-submit' })];
+      : [button([icon('rocket', { size: 18 }), t('st.startMatch')], start, { class: 'primary setup-submit' })];
 
     body.replaceChildren(
       el('div', { class: 'setup-sheet-head' }, [
         el('span', { class: 'eyebrow' }, `${START_YEAR} — ${END_YEAR}`),
-        el('h1', { class: 'setup-sheet-title' }, draft.mode === 'online' ? 'Sala online' : 'Nova partida'),
+        el('h1', { class: 'setup-sheet-title' }, draft.mode === 'online' ? t('st.onlineRoom') : t('st.newGame')),
         el('small', { class: 'setup-row-sub' }, modeNoteText()),
       ]),
       el('div', { class: 'setup-group' }, rows),
@@ -360,12 +360,12 @@ function renderConfigView(actions, backToSplash) {
 
   // "Recebeu um convite?": código de 6 letras ou o link inteiro (net/roomCode.js entende os dois).
   const joinBox = () => {
-    const input = el('input', { type: 'text', placeholder: 'Código ou link da sala', value: draft.joinCode, 'aria-label': 'Código ou link da sala' });
+    const input = el('input', { type: 'text', placeholder: t('st.codeOrLink'), value: draft.joinCode, 'aria-label': t('st.codeOrLink') });
     input.addEventListener('input', (e) => { draft.joinCode = e.target.value; });
-    const join = busyButton('Entrar na sala', 'Entrando...', () => actions.joinOnline(input.value));
+    const join = busyButton(t('st.joinRoom'), t('st.joining'), () => actions.joinOnline(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') join.click(); });
     return el('div', { class: 'setup-join' }, [
-      el('span', { class: 'setup-join-label' }, 'Recebeu um convite?'),
+      el('span', { class: 'setup-join-label' }, t('st.gotInvite')),
       el('div', { class: 'setup-join-row' }, [input, join]),
     ]);
   };
@@ -374,9 +374,10 @@ function renderConfigView(actions, backToSplash) {
 
   return el('section', { class: 'screen setup-clean enter' }, [
     el('header', { class: 'setup-clean-bar' }, [
-      button([icon('arrowLeft', { size: 15 }), 'Menu'], backToSplash, { class: 'small ghost' }),
+      button([icon('arrowLeft', { size: 15 }), t('st.menu')], backToSplash, { class: 'small ghost' }),
       el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-        button([icon('bulb', { size: 15 }), 'Como funciona'], openRulesModal, { class: 'small ghost' }),
+        button([icon('bulb', { size: 15 }), t('st.howItWorks')], openRulesModal, { class: 'small ghost' }),
+        langToggle(actions),
         themeToggle(),
       ]),
     ]),
@@ -387,7 +388,7 @@ function renderConfigView(actions, backToSplash) {
 }
 
 // Menu principal (entre a capa e a Nova Partida), como nos jogos: jogar, regras, configurações, créditos.
-function renderMainMenu(go) {
+function renderMainMenu(actions, go) {
   // Lista secundária: ícone, nome e uma seta que aparece no foco/hover (o que é clicável fica evidente).
   // Cada opção leva um planeta em pixel animado (ui/pixelArt.js) no lugar do ícone de linha.
   const planet = (kind, size) => el('span', { class: 'mm-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind, x: 0.5, y: 0.5, size }], cells: 17, fps: 8, ambient: 0.35, minCell: 2 })]);
@@ -399,8 +400,8 @@ function renderMainMenu(go) {
   return el('section', { class: 'screen main-menu enter' }, [
     createSplashStarfield(),
     el('header', { class: 'setup-clean-bar main-menu-bar' }, [
-      button([icon('arrowLeft', { size: 15 }), 'Voltar à capa'], () => go('splash'), { class: 'small ghost' }),
-      themeToggle(),
+      button([icon('arrowLeft', { size: 15 }), t('st.backToCover')], () => go('splash'), { class: 'small ghost' }),
+      el('div', { class: 'row', style: 'margin:0;gap:8px' }, [langToggle(actions), themeToggle()]),
     ]),
     el('div', { class: 'main-menu-box' }, [
       el('div', { class: 'main-menu-head' }, [
@@ -409,23 +410,23 @@ function renderMainMenu(go) {
           el('h1', { class: 'main-menu-title' }, 'Apogeu'),
           el('span', { class: 'mm-title-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind: 'jupiter', x: 0.5, y: 0.5, size: 0.86 }], cells: 26, fps: 8, ambient: 0.2, minCell: 2 })]),
         ]),
-        el('p', { class: 'main-menu-sub' }, 'Projete, lance e opere missões espaciais com recursos limitados.'),
+        el('p', { class: 'main-menu-sub' }, t('st.tagline')),
       ]),
       // A ação de quase todo mundo que abre o jogo é a principal, cheia; o resto fica na lista.
-      button([icon('rocket', { size: 18 }), 'Nova partida'], () => go('config'), { class: 'primary main-menu-primary' }),
-      el('nav', { class: 'main-menu-list', 'aria-label': 'Menu principal' }, [
-        item('moon', 0.8, 'Como funciona', openRulesModal),
-        item('nebula', 0.82, 'Configurações', () => go('settings')),
-        item('saturn', 0.46, 'Créditos', () => go('credits')),
+      button([icon('rocket', { size: 18 }), t('st.newGame')], () => go('config'), { class: 'primary main-menu-primary' }),
+      el('nav', { class: 'main-menu-list', 'aria-label': t('st.mainMenu') }, [
+        item('moon', 0.8, t('st.howItWorks'), openRulesModal),
+        item('nebula', 0.82, t('st.settings'), () => go('settings')),
+        item('saturn', 0.46, t('st.credits'), () => go('credits')),
       ]),
-      el('p', { class: 'main-menu-foot' }, 'NASA Space Apps Challenge 2026 · Space Mission Design Game'),
+      el('p', { class: 'main-menu-foot' }, t('st.mainMenuFoot')),
     ]),
   ]);
 }
 
 // Moldura das telas secundárias do menu (configurações, créditos): voltar no topo e um cartão no centro.
 const menuSheet = (title, body, go) => el('section', { class: 'screen setup-clean enter' }, [
-  el('header', { class: 'setup-clean-bar' }, [button([icon('arrowLeft', { size: 15 }), 'Menu'], () => go('menu'), { class: 'small ghost' }), el('span', {})]),
+  el('header', { class: 'setup-clean-bar' }, [button([icon('arrowLeft', { size: 15 }), t('st.menu')], () => go('menu'), { class: 'small ghost' }), el('span', {})]),
   el('div', { class: 'setup-clean-center' }, [
     el('div', { class: 'setup-sheet' }, [el('div', { class: 'setup-sheet-head' }, [el('h1', { class: 'setup-sheet-title' }, title)]), ...body]),
   ]),
@@ -433,42 +434,45 @@ const menuSheet = (title, body, go) => el('section', { class: 'screen setup-clea
 
 function renderSettings(actions, go) {
   const themeSeg = el('div', {});
-  const drawTheme = () => themeSeg.replaceChildren(segmented('Tema', [{ value: 'claro', label: 'Claro' }, { value: 'escuro', label: 'Escuro' }], themeOf(), (v) => { if (v !== themeOf()) toggleTheme(); drawTheme(); }));
+  const drawTheme = () => themeSeg.replaceChildren(segmented(t('st.theme'), [{ value: 'claro', label: t('theme.light') }, { value: 'escuro', label: t('theme.dark') }], themeOf(), (v) => { if (v !== themeOf()) toggleTheme(); drawTheme(); }));
   drawTheme();
+  // Idioma: ao trocar, re-monta a tela de configurações já no novo idioma (go re-renderiza a view atual).
+  const langSeg = segmented(t('lang.label'), [{ value: 'pt', label: 'Português' }, { value: 'en', label: 'English' }], getLang(), (v) => { if (v !== getLang()) { setLang(v); go('settings'); } });
   const sw = el('button', {
-    type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': 'Dicas passo a passo',
+    type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': t('st.guideSwitch'),
     onclick: () => { const on = !guideOn(); actions.setGuide(on); sw.setAttribute('aria-checked', String(on)); },
   });
   const timerBox = el('div', {});
   const drawTimer = () => timerBox.replaceChildren(timerChoice(drawTimer));
   drawTimer();
-  return menuSheet('Configurações', [
+  return menuSheet(t('st.settings'), [
     el('div', { class: 'setup-group' }, [
-      el('div', { class: 'setup-row' }, [rowLabel('Tema', 'Papel claro ou grafite escuro'), themeSeg]),
-      el('div', { class: 'setup-row' }, [rowLabel('Dicas passo a passo', 'Mostra o que fazer em cada turno'), sw]),
-      el('div', { class: 'setup-row setup-row-stack' }, [rowLabel('Tempo por turno', 'Em partidas com 2 ou mais agências; ao zerar, o turno termina sozinho'), timerBox]),
+      el('div', { class: 'setup-row' }, [rowLabel(t('lang.label'), t('st.langSub')), langSeg]),
+      el('div', { class: 'setup-row' }, [rowLabel(t('st.theme'), t('st.themeSub')), themeSeg]),
+      el('div', { class: 'setup-row' }, [rowLabel(t('st.guideRow'), t('st.guideRowSub')), sw]),
+      el('div', { class: 'setup-row setup-row-stack' }, [rowLabel(t('st.timer'), t('st.timerSubSettings')), timerBox]),
     ]),
-    el('small', { class: 'setup-row-sub' }, 'As preferências ficam salvas neste navegador.'),
+    el('small', { class: 'setup-row-sub' }, t('st.prefsSaved')),
   ], go);
 }
 
 function renderCredits(go) {
   const entry = (title, text) => el('li', {}, [el('strong', {}, title), text]);
-  return menuSheet('Créditos', [
+  return menuSheet(t('st.credits'), [
     el('ul', { class: 'credits-list' }, [
       // Equipe em ordem alfabética, no mesmo formato das outras entradas.
-      el('li', {}, [el('strong', {}, 'Equipe'), ...[
+      el('li', {}, [el('strong', {}, t('st.cr.team')), ...[
         'Daniel Carlos Medeiros Alves',
         'Henrique Melo de Araújo',
         'Lucas Vieira Alves Nominato Santos',
         'Marcus Vinicius Alves Marques',
         'Pedro Henrique Ferreira Borges Vaz',
       ].map((n) => el('span', { class: 'credits-name' }, n))]),
-      entry('Desafio', 'NASA Space Apps Challenge 2026, desafio Space Mission Design Game.'),
-      entry('Base do jogo', 'Processo de design de missões da NASA (Need → Concept → Requirements → Design → Verify → Implement) e a atividade Marsbound do JPL. Datas históricas: NASA History.'),
-      entry('Números', 'Os valores de peças, foguetes e missões são fictícios, criados para o aprendizado.'),
-      entry('Tipografia', 'DM Sans e DM Mono (licença SIL Open Font).'),
-      entry('Código', 'Feito com apoio de IA, declarado na submissão conforme as regras do evento.'),
+      entry(t('st.cr.challenge'), t('st.cr.challengeText')),
+      entry(t('st.cr.base'), t('st.cr.baseText')),
+      entry(t('st.cr.numbers'), t('st.cr.numbersText')),
+      entry(t('st.cr.type'), t('st.cr.typeText')),
+      entry(t('st.cr.code'), t('st.cr.codeText')),
     ]),
   ], go);
 }
@@ -489,7 +493,7 @@ export function setupScreen(state, actions) {
     else if (view === 'config') host.appendChild(renderConfigView(actions, () => go('menu')));
     else if (view === 'settings') host.appendChild(renderSettings(actions, go));
     else if (view === 'credits') host.appendChild(renderCredits(go));
-    else host.appendChild(renderMainMenu(go));
+    else host.appendChild(renderMainMenu(actions, go));
   };
   mount();
   return host;

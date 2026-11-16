@@ -5,6 +5,8 @@
 // Uso: icon('rocket') devolve um <span class="ic"> com o SVG. icon('rocket', { size: 32, label: 'Foguete' }).
 // Para adicionar um ícone: acrescente uma entrada em ICONS com o miolo do SVG (paths, circles...).
 
+import { t } from '../i18n/index.js';
+
 const F = 'fill="currentColor" stroke="none"'; // pontos cheios (olhos, pips de dado)
 
 export const ICONS = {
@@ -21,6 +23,7 @@ export const ICONS = {
   lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6M14.8 14.8l3.6 3.6M18.4 5.6l-3.6 3.6M9.2 14.8l-3.6 3.6"/>',
   scissors: '<circle cx="6" cy="7" r="2.8"/><circle cx="6" cy="17" r="2.8"/><path d="M8.3 8.6L20 19M8.3 15.4L20 5"/>',
   wifi: '<path d="M4.5 10.5a11 11 0 0 1 15 0"/><path d="M7.5 13.8a6.8 6.8 0 0 1 9 0"/><path d="M10.4 17a2.9 2.9 0 0 1 3.2 0"/><circle cx="12" cy="19.5" r="1" ' + F + '/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3v18"/><path d="M12 3c2.6 2.4 4 5.6 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.6-4-9s1.4-6.6 4-9z"/>',
 
   // ---- prédios
   factory: '<path d="M3 21V11l5 3v-3l5 3v-3l5 3V4h3v17z"/><path d="M7 18h2M12 18h2"/>',
@@ -138,7 +141,7 @@ export function dieFace(n, { size = 48, className = '' } = {}) {
   const span = document.createElement('span');
   span.className = `ic die-face ${className}`.trim();
   span.setAttribute('role', 'img');
-  span.setAttribute('aria-label', `dado ${n}`);
+  span.setAttribute('aria-label', t('ic.die', { n }));
   span.innerHTML = svgMarkup(`<rect x="3" y="3" width="18" height="18" rx="1.5"/>${pips}`, size);
   return span;
 }

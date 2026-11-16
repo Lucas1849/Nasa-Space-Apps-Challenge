@@ -8,6 +8,7 @@ import { guideOn } from './prefs.js';
 import { currentPlayer } from '../sim/state.js';
 import { ladderProgress } from '../sim/progress.js';
 import { yearOf, isNewYear, ROUNDS_PER_YEAR, END_YEAR } from '../data/history.js';
+import { t } from '../i18n/index.js';
 
 let tracker = freshTracker();
 function freshTracker() {
@@ -38,10 +39,10 @@ function logSince(state, head, viewerId) {
 
 function deltas(from, to) {
   return [
-    { key: 'funds', label: 'Verba', icon: 'coins', value: to.funds - from.funds },
-    { key: 'tech', label: 'Tecnologia', icon: 'chip', value: to.tech - from.tech },
-    { key: 'shields', label: 'Proteções', icon: 'shield', value: to.shields - from.shields },
-    { key: 'steps', label: 'Degraus', icon: 'ladder', value: to.steps - from.steps },
+    { key: 'funds', label: t('res.funds'), icon: 'coins', value: to.funds - from.funds },
+    { key: 'tech', label: t('res.tech'), icon: 'chip', value: to.tech - from.tech },
+    { key: 'shields', label: t('res.shields'), icon: 'shield', value: to.shields - from.shields },
+    { key: 'steps', label: t('sum.steps'), icon: 'ladder', value: to.steps - from.steps },
   ].filter((d) => d.value !== 0);
 }
 
@@ -68,7 +69,7 @@ export function markTurnEnd(state) {
 }
 
 function changeChips(changes) {
-  if (!changes.length) return el('p', { class: 'hint' }, 'Nenhuma mudança na verba, na tecnologia ou nos degraus.');
+  if (!changes.length) return el('p', { class: 'hint' }, t('sum.noChange'));
   return el('div', { class: 'delta-row' }, changes.map((d) => el('span', { class: `delta ${d.value > 0 ? 'up' : 'down'}` }, [
     icon(d.icon, { size: 16 }), `${d.label} `, el('strong', { class: 'num' }, `${d.value > 0 ? '+' : ''}${d.value}`),
   ])));
@@ -84,7 +85,8 @@ export function roundLine(state) {
   const year = yearOf(state.round);
   const inYear = ((state.round - 1) % ROUNDS_PER_YEAR) + 1;
   const yearsLeft = END_YEAR - year;
-  return `${year}, rodada ${inYear} de ${ROUNDS_PER_YEAR} · ${yearsLeft > 0 ? `faltam ${yearsLeft} ano(s) até ${END_YEAR}` : `último ano da corrida`}`;
+  const rest = yearsLeft > 0 ? t('sum.yearsLeft', { n: yearsLeft, end: END_YEAR }) : t('sum.lastYear');
+  return t('sum.roundLine', { year, inYear, rpy: ROUNDS_PER_YEAR, rest });
 }
 
 // Cartão "Desde o seu último turno", no tabuleiro, até o jogador rolar os dados.
@@ -97,16 +99,16 @@ export function sinceCard(state) {
     // Com as dicas ligadas o cartão de orientação já diz o que fazer: este só empurraria o tabuleiro para baixo.
     if (guideOn()) return null;
     return el('div', { class: 'panel since-card' }, [
-      el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, `Primeiro turno de ${p.name}`)]),
-      el('p', { class: 'hint' }, `${roundLine(state)}. Sua missão é subir a escada do seu lado antes dos rivais.`),
+      el('div', { class: 'since-head' }, [icon('flag', { size: 20 }), el('strong', {}, t('sum.firstTurn', { name: p.name }))]),
+      el('p', { class: 'hint' }, t('sum.firstText', { line: roundLine(state) })),
     ]);
   }
   // Nada mudou e não é ano novo: o cartão só empurraria o tabuleiro para baixo (um aviso só por tela).
   if (!newYear && !since.changes.length && !since.entries.length) return null;
   return el('div', { class: 'panel since-card' }, [
-    el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, 'Desde o seu último turno')]),
+    el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, t('sum.since'))]),
     el('p', { class: 'hint' }, roundLine(state)),
-    newYear ? el('p', { class: 'new-year' }, [icon('calendar', { size: 16 }), `Ano novo: ${yearOf(state.round)}. Orçamento e tecnologia do ano entraram.`]) : null,
+    newYear ? el('p', { class: 'new-year' }, [icon('calendar', { size: 16 }), t('sum.newYear', { year: yearOf(state.round) })]) : null,
     changeChips(since.changes),
     since.entries.length ? entriesList(since.entries, '') : null,
   ]);

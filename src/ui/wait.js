@@ -6,18 +6,19 @@ import { el, avatar, sideBadge } from './components.js';
 import { currentPlayer } from '../sim/state.js';
 import { MISSIONS } from '../data/missions.js';
 import { yearOf } from '../data/history.js';
+import { t } from '../i18n/index.js';
 
 export function waitScreen(state, myPlayerId) {
   const current = currentPlayer(state);
   const me = state.players[myPlayerId] ?? null;
   return el('section', { class: 'screen handoff' }, [
     el('div', { class: 'panel handoff-card' }, [
-      el('p', { class: 'eyebrow' }, `${yearOf(state.round)} · partida online`),
+      el('p', { class: 'eyebrow' }, t('wait.eyebrow', { year: yearOf(state.round) })),
       avatar(current, 64),
-      el('h1', {}, `Vez de ${current.name}`),
+      el('h1', {}, t('common.turnOf', { name: current.name })),
       el('p', { class: 'chip' }, sideBadge(current)),
-      me && el('p', { class: 'hint' }, `Sua agência: ${me.name} · degrau ${me.step + 1}: ${MISSIONS[me.missionId]?.name ?? '—'}`),
-      el('p', { class: 'hint' }, 'Aguarde a sua vez — a tela atualiza sozinha. As decisões de cada agência são secretas.'),
+      me && el('p', { class: 'hint' }, t('wait.yourAgency', { name: me.name, n: me.step + 1, mission: MISSIONS[me.missionId]?.name ?? '—' })),
+      el('p', { class: 'hint' }, t('wait.hint')),
     ]),
   ]);
 }

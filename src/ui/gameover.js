@@ -4,7 +4,8 @@ import { el, button, avatar, progressBar, sideLabel, sideBadge, panelTitle } fro
 import { icon } from './icons.js';
 import { ladderProgress } from '../sim/progress.js';
 import { MISSIONS } from '../data/missions.js';
-import { REAL_HISTORY, EPILOGUE, yearOf } from '../data/history.js';
+import { REAL_HISTORY, yearOf } from '../data/history.js';
+import { t } from '../i18n/index.js';
 
 export function gameoverScreen(state, actions) {
   const ranked = [...state.players].sort((a, b) => {
@@ -19,39 +20,40 @@ export function gameoverScreen(state, actions) {
     el('div', { class: 'panel report-head' }, [
       el('span', { class: 'stamp' }, icon('trophy', { size: 150 })),
       el('div', {}, [
-        el('p', { class: 'eyebrow' }, `Fim da corrida · ${yearOf(state.round)}`),
-        el('h1', {}, `${names} ${state.winners.length > 1 ? 'venceram' : 'venceu'}`),
+        el('p', { class: 'eyebrow' }, t('go.eyebrow', { year: yearOf(state.round) })),
+        el('h1', {}, t(state.winners.length > 1 ? 'go.wonMany' : 'go.won', { names })),
         el('p', { class: 'hint' }, state.endReason === 'ladder'
-          ? 'Uma escada foi completada. A rodada terminou para todos jogarem o mesmo número de turnos, e agora o estado de todos é revelado.'
-          : `Ninguém completou a escada até ${yearOf(state.round)}. Vence quem subiu mais degraus.`),
-        !humanWon && state.players.some((p) => p.bot) ? el('p', { class: 'hint' }, 'A história real chegou antes. Tente lançar mais cedo, ou investir em tecnologia para errar menos.') : null,
+          ? t('go.ladderHint')
+          : t('go.timeHint', { year: yearOf(state.round) })),
+        !humanWon && state.players.some((p) => p.bot) ? el('p', { class: 'hint' }, t('go.botWonHint')) : null,
       ]),
     ]),
-    el('h2', {}, 'Classificação'),
+    el('h2', {}, t('go.ranking')),
     el('div', { class: 'panel race' }, ranked.map((p) => {
       const prog = ladderProgress(p);
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: 'Vencedor', className: 'winner' }) : null,
+          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: t('go.winner'), className: 'winner' }) : null,
           el('span', { class: 'chip small' }, sideBadge(p)),
           el('span', { class: 'spacer' }),
-          el('span', { class: 'num' }, `${prog.steps}/${prog.total} degraus`),
+          el('span', { class: 'num' }, t('go.steps', { steps: prog.steps, total: prog.total })),
         ]),
         progressBar(prog.pct, prog.done ? 'done' : 'ok'),
         el('small', { class: 'hint' }, p.bot
-          ? 'Bot histórico: seguiu o calendário real com variação.'
-          : `${p.launches} lançamento(s) · tecnologia ${p.tech} · ${p.completed.reduce((s, c) => s + c.science, 0)} de ciência entregue`),
+          ? t('go.botRow')
+          : t('go.humanRow', { n: p.launches, tech: p.tech, sci: p.completed.reduce((s, c) => s + c.science, 0) })),
       ]);
     })),
-    el('h2', {}, 'Você × a história real'),
+    el('h2', {}, t('go.vsHistory')),
     el('ul', { class: 'reasons' }, state.players.filter((p) => !p.bot).flatMap((p) => p.completed.map((c) => {
       const real = REAL_HISTORY[c.missionId].sides[p.side];
-      if (real == null) return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year}. Na história real, ${sideLabel(p)} nunca cumpriu esta missão.`);
+      if (real == null) return el('li', {}, t('go.rowNever', { name: p.name, mission: MISSIONS[c.missionId].name, year: c.year, side: sideLabel(p) }));
       const diff = c.year - real;
-      return el('li', {}, `${p.name}: ${MISSIONS[c.missionId].name} em ${c.year} (${sideLabel(p)} na história real: ${real}, ${diff === 0 ? 'mesmo ano' : diff < 0 ? `${-diff} ano(s) antes` : `${diff} ano(s) depois`}).`);
+      const cmp = diff === 0 ? t('go.same') : diff < 0 ? t('go.before', { n: -diff }) : t('go.after', { n: diff });
+      return el('li', {}, t('go.row', { name: p.name, mission: MISSIONS[c.missionId].name, year: c.year, side: sideLabel(p), real, cmp }));
     }))),
-    state.players.some((p) => !p.bot && p.completed.length) ? null : el('p', { class: 'hint' }, 'Nenhum degrau cumprido nesta partida.'),
-    el('div', { class: 'panel lesson' }, [panelTitle('coop', 'Epílogo'), el('p', {}, EPILOGUE)]),
-    el('div', { class: 'row' }, [button([icon('refresh', { size: 18 }), 'Nova partida'], () => actions.newGame(), { class: 'primary' })]),
+    state.players.some((p) => !p.bot && p.completed.length) ? null : el('p', { class: 'hint' }, t('go.none')),
+    el('div', { class: 'panel lesson' }, [panelTitle('coop', t('go.epilogue')), el('p', {}, t('history.epilogue'))]),
+    el('div', { class: 'row' }, [button([icon('refresh', { size: 18 }), t('ws.newGame')], () => actions.newGame(), { class: 'primary' })]),
   ]);
 }
