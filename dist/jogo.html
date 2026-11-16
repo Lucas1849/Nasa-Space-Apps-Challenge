@@ -3817,7 +3817,7 @@ const pt = {
   'st.note.solo': 'Você contra um bot que cumpre cada degrau no ano real (com um ano de variação).',
   'st.note.local2': '2 agências no mesmo aparelho, revezando. Cada uma joga escondida: use espionagem e boatos.',
   'st.note.localN': '{n} agências no mesmo aparelho, revezando. Quem é do mesmo lado disputa os mesmos degraus.',
-  'st.agencyPh1': 'Nome da sua agência (ex.: NASA, Roscosmos)',
+  'st.agencyPh1': 'Nome da sua agência (ex.: Agência Estrela Polar)',
   'st.agencyPhN': 'Agência {n}',
   'st.agencyAria1': 'Nome da sua agência',
   'st.agencyAriaN': 'Nome da agência {n}',
@@ -4983,7 +4983,7 @@ const en = {
   'st.note.solo': 'You against a bot that completes each step in the real year (with a year of variation).',
   'st.note.local2': '2 agencies on the same device, taking turns. Each plays hidden: use espionage and rumors.',
   'st.note.localN': '{n} agencies on the same device, taking turns. Those on the same side compete for the same steps.',
-  'st.agencyPh1': 'Your agency name (e.g.: NASA, Roscosmos)',
+  'st.agencyPh1': 'Your agency name (e.g.: Polar Star Agency)',
   'st.agencyPhN': 'Agency {n}',
   'st.agencyAria1': 'Your agency name',
   'st.agencyAriaN': 'Agency {n} name',
@@ -5565,11 +5565,23 @@ const { en } = __mods["src/i18n/en.js"];
 const DICTS = { pt, en };
 const LANG_KEY = 'smdg.lang';
 
+// Idioma inicial, nesta ordem: ?lang=en|pt no link (vale só nesta visita, não grava), o que o jogador
+// escolheu antes (salvo no navegador) e, na primeira visita, o idioma do navegador: português para quem
+// usa português, inglês para os demais (juízes globais do Space Apps leem em inglês). Fora do navegador
+// (testes no Node) fica o português.
 let lang = 'pt';
 try {
   const saved = localStorage.getItem(LANG_KEY);
   if (saved === 'pt' || saved === 'en') lang = saved;
+  else if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.language) {
+    lang = /^pt(-|$)/i.test(navigator.language) ? 'pt' : 'en';
+  }
 } catch { /* sem armazenamento: português por padrão */ }
+try {
+  const fromUrl = typeof window !== 'undefined' && window.location
+    ? new URLSearchParams(window.location.search).get('lang') : null;
+  if (fromUrl === 'pt' || fromUrl === 'en') lang = fromUrl;
+} catch { /* link sem parâmetro ou ambiente sem URL: mantém o idioma acima */ }
 
 // Reflete o idioma no <html lang> (acessibilidade e leitores de tela).
 function syncLangDom() {

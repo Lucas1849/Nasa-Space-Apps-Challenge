@@ -597,7 +597,7 @@ export const pt = {
   'st.note.solo': 'Você contra um bot que cumpre cada degrau no ano real (com um ano de variação).',
   'st.note.local2': '2 agências no mesmo aparelho, revezando. Cada uma joga escondida: use espionagem e boatos.',
   'st.note.localN': '{n} agências no mesmo aparelho, revezando. Quem é do mesmo lado disputa os mesmos degraus.',
-  'st.agencyPh1': 'Nome da sua agência (ex.: NASA, Roscosmos)',
+  'st.agencyPh1': 'Nome da sua agência (ex.: Agência Estrela Polar)',
   'st.agencyPhN': 'Agência {n}',
   'st.agencyAria1': 'Nome da sua agência',
   'st.agencyAriaN': 'Nome da agência {n}',

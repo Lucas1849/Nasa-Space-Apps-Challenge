@@ -11,11 +11,23 @@ import { en } from './en.js';
 const DICTS = { pt, en };
 const LANG_KEY = 'smdg.lang';
 
+// Idioma inicial, nesta ordem: ?lang=en|pt no link (vale só nesta visita, não grava), o que o jogador
+// escolheu antes (salvo no navegador) e, na primeira visita, o idioma do navegador: português para quem
+// usa português, inglês para os demais (juízes globais do Space Apps leem em inglês). Fora do navegador
+// (testes no Node) fica o português.
 let lang = 'pt';
 try {
   const saved = localStorage.getItem(LANG_KEY);
   if (saved === 'pt' || saved === 'en') lang = saved;
+  else if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.language) {
+    lang = /^pt(-|$)/i.test(navigator.language) ? 'pt' : 'en';
+  }
 } catch { /* sem armazenamento: português por padrão */ }
+try {
+  const fromUrl = typeof window !== 'undefined' && window.location
+    ? new URLSearchParams(window.location.search).get('lang') : null;
+  if (fromUrl === 'pt' || fromUrl === 'en') lang = fromUrl;
+} catch { /* link sem parâmetro ou ambiente sem URL: mantém o idioma acima */ }
 
 // Reflete o idioma no <html lang> (acessibilidade e leitores de tela).
 function syncLangDom() {

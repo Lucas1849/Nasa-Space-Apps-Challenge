@@ -595,7 +595,7 @@ export const en = {
   'st.note.solo': 'You against a bot that completes each step in the real year (with a year of variation).',
   'st.note.local2': '2 agencies on the same device, taking turns. Each plays hidden: use espionage and rumors.',
   'st.note.localN': '{n} agencies on the same device, taking turns. Those on the same side compete for the same steps.',
-  'st.agencyPh1': 'Your agency name (e.g.: NASA, Roscosmos)',
+  'st.agencyPh1': 'Your agency name (e.g.: Polar Star Agency)',
   'st.agencyPhN': 'Agency {n}',
   'st.agencyAria1': 'Your agency name',
   'st.agencyAriaN': 'Agency {n} name',

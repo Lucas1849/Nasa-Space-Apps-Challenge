@@ -127,7 +127,9 @@ Other Project-Related SI Use · None / Did not use SI.
    e Other Data. Hoje isso não é verdade. Preencher as listas antes de enviar.
 9. **Recursos externos não listados em "Space Agency Partner & Other Data".** O rascunho diz "incluir
    tudo", mas não lista nada. Já usamos, no mínimo:
-   - Google Fonts: Space Grotesk e JetBrains Mono (carregadas em `index.html`) — https://fonts.google.com
+   - Google Fonts: DM Sans e DM Mono (carregadas em `index.html`; atualizado em 15/11) — https://fonts.google.com
+   - PeerJS 1.5.4 (biblioteca do modo online, carregada do jsDelivr em `src/net/peer.js`) e o servidor
+     público gratuito do PeerJS, que faz a ponte entre os aparelhos — https://peerjs.com
    - Claude Code (Anthropic), ferramenta de IA usada no código — https://claude.com/claude-code
    - Node.js (testes e build) — https://nodejs.org
    - GitHub / GitHub Pages (código e hospedagem) — https://github.com
@@ -155,6 +157,15 @@ Other Project-Related SI Use · None / Did not use SI.
     mais eventos de voo, versão para celular e capturas de tela para a página.
 14. **Repositório local na branch `master`**, enquanto o remoto e a documentação usam `main`. Antes do
     build final, confirmar que o `dist/jogo.html` publicado foi gerado a partir da `main` atualizada.
+
+### Avisos para o Project Details (15/11)
+
+- **Modo online depende de serviço externo gratuito** (servidor público do PeerJS). Se ele estiver fora
+  do ar, o online falha. Deixar escrito que o modo solo (contra o bot) e o hot-seat (mesmo aparelho)
+  funcionam sem rede e sem cadastro, para o juiz testar por eles.
+- **Idioma:** o jogo abre em inglês quando o navegador não está em português, e o link
+  `https://lucas1849.github.io/Nasa-Space-Apps-Challenge/?lang=en` força o inglês. Usar esse link no
+  campo do projeto.
 
 ### Pontos a confirmar com a equipe
 
