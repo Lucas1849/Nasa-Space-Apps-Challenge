@@ -103,6 +103,8 @@ export function sinceCard(state) {
       el('p', { class: 'hint' }, t('sum.firstText', { line: roundLine(state) })),
     ]);
   }
+  // Nada mudou e não é ano novo: o cartão só empurraria o tabuleiro para baixo (um aviso só por tela).
+  if (!newYear && !since.changes.length && !since.entries.length) return null;
   return el('div', { class: 'panel since-card' }, [
     el('div', { class: 'since-head' }, [icon('list', { size: 20 }), el('strong', {}, t('sum.since'))]),
     el('p', { class: 'hint' }, roundLine(state)),

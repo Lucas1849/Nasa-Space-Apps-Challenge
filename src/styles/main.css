@@ -2,7 +2,7 @@
    Space Mission Design Game — Sistema Visual inspirado na Íris (Tesela)
    Tokens editoriais: papel técnico (#efeeeb) + tinta (#16171a) no tema claro,
    e grafite neutro (#0f1012 / #17181b) no tema escuro (:root[data-tema="escuro"]).
-   Tipografia: IBM Plex Sans (títulos e texto) e IBM Plex Mono (números e rótulos técnicos).
+   Tipografia: DM Sans (títulos e texto, geométrica e arredondada) e DM Mono (números e rótulos técnicos).
    ========================================================= */
 
 :root {
@@ -41,9 +41,9 @@
   --av-1: #835600; --av-1-f: #f7ecd2;
   --av-2: #0b6a4a; --av-2-f: #dcf2e9;
   --av-3: #a33f12; --av-3-f: #fbe6dc;
-  --display: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --texto: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --display: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --texto: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --rapido: 150ms cubic-bezier(.2, .7, .2, 1);
   --radius: 6px;
   --radius-sm: 4px;
@@ -885,21 +885,33 @@ body:has(.board-screen) #app { max-width: 1560px; }
 /* ===== Relatório e Fim de Partida ===== */
 .report-head {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
   align-items: center;
-  padding: 22px 24px;
-  position: relative;
-  overflow: hidden;
+  padding: 20px 24px;
 }
-.report-head .stamp {
-  position: absolute;
-  right: 12px;
-  top: 8px;
-  opacity: 0.08;
-  transform: rotate(-8deg);
-  pointer-events: none;
-  line-height: 0;
+/* Selo do resultado: círculo cheio com o ícone (antes era um X gigante e apagado atrás da pontuação) */
+.report-head .result-seal {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: #fff;
+  align-self: start;
+}
+.report.success .report-head .result-seal { background: var(--ok); }
+.report.failure .report-head .result-seal { background: var(--alerta); }
+.report-head .report-head-text { display: grid; gap: 4px; min-width: 0; }
+.report-head .report-head-text h1 { margin: 0; }
+.report-head .report-head-text .hint { margin: 0; }
+.report-head .stage-track { margin: 8px 0 0; justify-content: flex-start; }
+.report-checks h3 { margin-top: 0; }
+.report-grid > div > .report-checks { margin-top: 12px; }
+.report-dock .dock-status { color: var(--tinta-2); }
+@media (max-width: 640px) {
+  .report-head { grid-template-columns: auto minmax(0, 1fr); }
+  .report-head .score { grid-column: 1 / -1; justify-self: start; }
 }
 .report.success .report-head { border-color: color-mix(in srgb, var(--ok) 45%, var(--linha)); background: var(--ok-fundo); }
 .report.failure .report-head { border-color: color-mix(in srgb, var(--alerta) 45%, var(--linha)); background: var(--alerta-fundo); }
@@ -931,7 +943,6 @@ body:has(.board-screen) #app { max-width: 1560px; }
   color: #ececee;
   animation: fadeIn .25s ease;
 }
-.launch-overlay .rocket { color: #ececee; line-height: 0; animation: liftoff 1.4s cubic-bezier(.4,0,.6,1) forwards; }
 .launch-overlay .count { position: absolute; top: 18%; font: 500 56px var(--mono); color: #ececee; }
 .launch-overlay .flame {
   position: absolute;
@@ -1243,9 +1254,11 @@ button.guide-target:disabled { box-shadow: none; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tinta-2);
-  margin: 4px 0 0;
-  animation: splashBlink 2.2s ease-in-out infinite;
+  margin: 32px 0 0; /* respiro abaixo da Terra */
+  animation: promptBlink 1.2s steps(1, end) infinite;
 }
+/* "Clique ou aperte qualquer tecla": pisca liga/desliga, como em jogo (parado com movimento reduzido) */
+@keyframes promptBlink { 0% { opacity: 1; } 60% { opacity: 0; } }
 @keyframes splashBlink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.8; }
@@ -2385,6 +2398,68 @@ button.guide-target:disabled { box-shadow: none; }
 @keyframes yearFadeOut { to { opacity: 0; } }
 @keyframes gainPop { from { transform: translateY(6px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
+/* "Fotos" 3D dos itens e dos foguetes na oficina (ui/itemArt.js) */
+.card .item-photo { display: block; margin: -14px -16px 12px; height: 118px; overflow: hidden; border-radius: 6px 6px 0 0; background: #0d0e12; }
+.card .item-photo svg { width: 100%; height: 100%; display: block; }
+.card.locked .item-photo { filter: grayscale(1) brightness(.7); }
+.card.owned .item-photo { box-shadow: inset 0 -3px 0 var(--ok); }
+.card .card-head .icon { display: none; } /* a foto substitui o ícone pequeno */
+.choice .row.wrap button:has(.choice-photo) { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; }
+.choice-photo { display: block; width: 72px; height: 45px; border-radius: 4px; overflow: hidden; background: #0d0e12; }
+.choice-photo svg { width: 100%; height: 100%; display: block; }
+
+/* ===== Como funciona: fluxo do turno, escadas como linha do tempo, glossário em lista ===== */
+.modal.rules-modal { width: min(760px, 100%); padding: 28px 30px 24px; border-radius: 22px; display: grid; gap: 14px; }
+.rm-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.rm-head .modal-title { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.rm-lead { margin: 6px 0 0; color: var(--tinta-2); font-size: 14.5px; max-width: 56ch; }
+.rm-label { margin: 10px 0 0; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tinta-3); }
+.rm-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.rm-step { position: relative; display: grid; justify-items: start; gap: 6px; padding: 0 18px 0 0; }
+.rm-step + .rm-step { padding-left: 18px; border-left: 1px solid var(--linha); }
+.rm-step-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--superficie-2); border: 1px solid var(--linha); color: var(--tinta); }
+.rm-step-art svg { width: 30px; height: 30px; }
+.rm-step strong { font-size: 15px; font-weight: 600; }
+.rm-step small { font-size: 13px; line-height: 1.45; color: var(--tinta-2); }
+.rm-step:not(:last-child)::after {
+  content: "→"; position: absolute; right: -7px; top: 15px; z-index: 1; width: 14px; height: 20px;
+  display: grid; place-items: center; background: var(--superficie); color: var(--tinta-3); font-size: 14px;
+}
+.rm-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.rm-side { display: grid; gap: 12px; align-content: start; }
+.rm-side-head { display: flex; align-items: center; gap: 10px; }
+.rm-side-head strong { display: block; font-size: 16px; font-weight: 600; }
+.rm-side-head small { color: var(--tinta-3); font-size: 12.5px; }
+.rm-side-ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--superficie-2); border: 1px solid var(--linha); color: var(--tinta); }
+.rm-ladder { list-style: none; margin: 0; padding: 0 0 0 4px; display: grid; gap: 0; }
+.rm-ladder li { position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 0 7px 22px; font-size: 14px; color: var(--tinta); }
+.rm-ladder li::before { content: ""; position: absolute; left: 3px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--superficie); border: 2px solid var(--tinta-3); }
+.rm-ladder li:not(:last-child)::after { content: ""; position: absolute; left: 7.5px; top: calc(50% + 6px); bottom: calc(-50% + 6px); width: 1px; background: var(--linha-forte); }
+.rm-ladder li.goal::before { background: var(--tinta); border-color: var(--tinta); }
+.rm-ladder li.goal span { font-weight: 600; }
+.rm-ladder li .ic { color: var(--tinta-2); }
+.rm-traits { list-style: none; margin: 0; padding: 10px 0 0; display: grid; gap: 6px; border-top: 1px solid var(--linha); }
+.rm-traits li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; color: var(--tinta-2); }
+.rm-traits li .ic { margin-top: 2px; flex: none; }
+.rm-traits li.plus .ic { color: var(--ok); }
+.rm-traits li.minus .ic { color: var(--ambar); }
+.rules-modal .glossary { margin: 6px 0 0; padding: 0; border: 0; background: transparent; box-shadow: none; border-top: 1px solid var(--linha); border-radius: 0; }
+.rules-modal .glossary summary { padding: 14px 0 0; }
+.rules-modal .glossary dl { margin: 6px 0 0; display: grid; gap: 0; }
+.rules-modal .glossary dt { margin: 0; padding: 10px 0 2px; border-top: 1px solid var(--linha); font-size: 14px; }
+.rules-modal .glossary dt:first-child { border-top: 0; }
+.rules-modal .glossary dd { padding-bottom: 8px; font-size: 13px; color: var(--tinta-2); }
+.rm-foot { margin: 4px 0 0; font-size: 12px; color: var(--tinta-3); }
+@media (max-width: 640px) {
+  .rm-flow, .rm-sides { grid-template-columns: 1fr; }
+  .rm-step, .rm-step + .rm-step { padding: 12px 0 0; border-left: 0; }
+  .rm-step + .rm-step { border-top: 1px solid var(--linha); }
+  .rm-step:not(:last-child)::after { display: none; }
+}
+
+/* Créditos: um nome da equipe por linha, no mesmo formato das outras entradas */
+.credits-list .credits-name { display: block; }
+
 /* ===== Barra lateral fixa: navegação em cima, utilidades embaixo ===== */
 .side-rail {
   position: fixed;
@@ -2457,31 +2532,57 @@ body:has(.side-rail) #app { padding-left: max(88px, calc(88px + env(safe-area-in
 .main-menu-item:hover:not(:disabled), .main-menu-item:focus-visible { background: var(--superficie); padding-left: 12px; }
 .main-menu-item:hover .mm-chev, .main-menu-item:focus-visible .mm-chev { opacity: 1; transform: none; }
 .main-menu-foot { font: 400 11px var(--mono); color: var(--tinta-3); margin: 0; }
+/* planetas em pixel do menu: miniatura em cada opção e um Júpiter ao lado do título */
+.mm-planet { display: block; width: 34px; height: 34px; border-radius: 8px; background: #07080b; overflow: hidden; flex: none; }
+.mm-planet .pixel-space, .mm-title-planet .pixel-space, .splash-only-art .pixel-space { width: 100%; height: 100%; display: block; }
+:root[data-tema="escuro"] .mm-planet { box-shadow: 0 0 0 1px var(--linha-forte); }
+.main-menu-title-row { display: flex; align-items: center; gap: 14px; }
+.mm-title-planet { display: block; width: 58px; height: 58px; }
 .credits-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 13.5px; color: var(--tinta-2); }
 .credits-list strong { display: block; font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-3); margin-bottom: 2px; }
+
+/* Relógio do turno no topo (ui/turnClock.js): âmbar nos últimos 30 s, vermelho piscando nos últimos 10 */
+.turn-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 11px 3px 9px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+  border: 1px solid var(--linha);
+  color: var(--tinta);
+}
+.turn-clock .ic { color: var(--tinta-2); }
+.turn-clock .tc-num { font: 500 17px/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 3.2ch; }
+.turn-clock .tc-bar { position: relative; width: 56px; height: 4px; background: var(--linha); overflow: hidden; }
+.turn-clock .tc-fill { position: absolute; inset: 0 auto 0 0; background: var(--tinta); transition: width .25s linear; }
+.turn-clock.warn { border-color: color-mix(in srgb, var(--ambar) 55%, var(--linha)); background: var(--ambar-fundo); }
+.turn-clock.warn .tc-num, .turn-clock.warn .ic { color: var(--ambar); }
+.turn-clock.warn .tc-fill { background: var(--ambar); }
+.turn-clock.danger { border-color: var(--alerta); background: var(--alerta-fundo); animation: clockPulse 1s ease-in-out infinite; }
+.turn-clock.danger .tc-num, .turn-clock.danger .ic { color: var(--alerta); }
+.turn-clock.danger .tc-fill { background: var(--alerta); }
+@keyframes clockPulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--alerta) 25%, transparent); } }
 
 /* Cartões de opção da Nova Partida (como jogar, modo) */
 .option-cards { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px; }
 .option-card {
   height: auto;
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 8px;
-  row-gap: 2px;
-  align-content: start;
-  justify-items: start;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 12px;
-  text-align: left;
+  text-align: center;
   white-space: normal;
   background: var(--superficie);
   border: 1px solid var(--linha-forte);
   border-radius: 4px;
 }
-.option-card .ic { grid-row: 1; color: var(--tinta-3); margin: 0; }
-.option-card strong { grid-row: 1; font-size: 13.5px; font-weight: 600; line-height: 1.2; }
-.option-card small { grid-column: 1 / -1; font-size: 12px; font-weight: 400; color: var(--tinta-3); line-height: 1.35; }
+.option-card .ic { color: var(--tinta-3); margin: 0; }
+.option-card strong { font-size: 14px; font-weight: 600; line-height: 1.2; }
 .option-card[aria-pressed="true"] { border-color: var(--tinta); box-shadow: inset 0 0 0 1px var(--tinta); }
 .option-card[aria-pressed="true"] .ic { color: var(--tinta); }
 @media (max-width: 520px) { .option-cards { grid-template-columns: 1fr; } .option-card { min-height: 0; } }
@@ -2602,8 +2703,8 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
 .trajectory.failed .traj-ship { color: var(--alerta); transform: translate(-50%, -50%) rotate(150deg); }
 .flight .alarm.burst { position: relative; color: var(--ok); animation: burstPop .5s cubic-bezier(.2, .9, .3, 1.4) both; }
 @keyframes burstPop { from { transform: scale(.3); opacity: 0; } }
-.report.success .report-head .stamp { animation: stampIn .5s cubic-bezier(.2, .9, .3, 1.3) .15s both; }
-@keyframes stampIn { from { transform: rotate(-30deg) scale(2.2); opacity: 0; } to { transform: rotate(-12deg) scale(1); opacity: .08; } }
+.report.success .report-head .result-seal { animation: stampIn .5s cubic-bezier(.2, .9, .3, 1.3) .15s both; }
+@keyframes stampIn { from { transform: rotate(-30deg) scale(1.8); opacity: 0; } to { transform: none; opacity: 1; } }
 .report.failure .report-head { animation: failShake .5s ease .1s both; }
 @keyframes failShake { 15%, 45%, 75% { transform: translateX(-6px); } 30%, 60%, 90% { transform: translateX(6px); } }
 
@@ -2746,22 +2847,29 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
 /* Cartas de decisão e de resultado flutuam centralizadas sobre o miolo, como uma carta posta na mesa:
    fora do fluxo, não esticam as casas do anel; se forem maiores que o miolo, rolam por dentro. */
 .board-screen .board-gadget .ring-center { min-height: 0; }
-.board-screen .board-gadget .ring-center > .tile-decision,
-.board-screen .board-gadget .ring-center > .outcome {
+.board-screen .board-gadget .ring-center > .center-cards {
   position: absolute;
   z-index: 3;
   inset: 10px;
-  margin: auto;
-  width: min(460px, calc(100% - 20px));
-  height: fit-content;
-  max-height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 10px;
   overflow: auto;
 }
-/* com a carta na mesa, os dados ficam esmaecidos atrás; o letreiro e a legenda somem (a casa atual já está
-   no carimbo do topo do tabuleiro), para não sobrar texto apagado ilegível */
-.board-screen .board-gadget .ring-center:has(> .tile-decision, > .outcome) > .dice-choice { opacity: 0.25; }
-.board-screen .board-gadget .ring-center:has(> .tile-decision, > .outcome) > .gadget-banner,
-.board-screen .board-gadget .ring-center:has(> .tile-decision, > .outcome) > .dice-choice .label { visibility: hidden; }
+.board-screen .board-gadget .center-cards > .tile-decision,
+.board-screen .board-gadget .center-cards > .outcome { position: relative; width: min(460px, 100%); max-width: none; flex: none; }
+/* com aviso e decisão juntos, o aviso fica compacto em cima */
+.board-screen .board-gadget .center-cards > .outcome:not(:only-child) { padding: 8px 40px 8px 12px; gap: 2px; }
+.board-gadget .outcome .card-close {
+  position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 4px; background: transparent; color: inherit; opacity: .75;
+}
+.board-gadget .outcome .card-close:hover:not(:disabled) { opacity: 1; background: rgba(20, 35, 61, .08); }
+.board-screen .board-gadget .ring-center:has(> .center-cards) > .dice-choice { opacity: 0.25; }
+.board-screen .board-gadget .ring-center:has(> .center-cards) > .gadget-banner,
+.board-screen .board-gadget .ring-center:has(> .center-cards) > .dice-choice .label { visibility: hidden; }
 
 /* baia da agência: mesma planta */
 .board-screen .board-gadget .agency-strip { background: transparent; background-image: none; border: 1px solid var(--bp-line); border-radius: 0; box-shadow: none; }
@@ -2791,6 +2899,83 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
 .board-gadget .tile.active .pawn.rocket-pawn { animation: pawnHover 2.4s ease-in-out infinite; }
 @keyframes pawnHover { 50% { transform: translateY(-2px); } }
 @media (max-width: 600px) { .board-gadget .pawn.rocket-pawn { width: 13px; height: 20px; } }
+
+/* ===== Animações do tabuleiro (só visual; tudo para com "reduzir movimento") ===== */
+/* chama do foguete: acesa em voo e enquanto anda */
+.rocket-pawn .rk-flame { display: none; transform-origin: 10px 23.5px; }
+.rocket-pawn .rk-flame.on, .pawn-ghost .rk-flame { display: block; animation: flameFlicker .12s steps(2) infinite; }
+@keyframes flameFlicker { 50% { transform: scaleY(1.35) scaleX(.85); } }
+.pawn-ghost { filter: drop-shadow(0 0 6px rgba(255, 200, 87, .55)); }
+/* partículas de pixel: fumaça do rastro, poeira do pouso, fumaça da decolagem */
+.px-particle { position: fixed; z-index: 44; width: 4px; height: 4px; pointer-events: none; animation: pxFade .8s ease-out forwards; }
+.smoke-puff { background: rgba(225, 230, 240, .75); }
+.land-puff { background: #ffc857; width: 3px; height: 3px; }
+.launch-smoke { z-index: 52; width: 8px; height: 8px; background: rgba(230, 232, 238, .85); animation-duration: 1.2s; }
+@keyframes pxFade { to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.4); } }
+/* pouso: a casa pisca uma vez */
+.board-screen .board-gadget .tile.tile-landed { animation: tileLand .6s ease-out; }
+@keyframes tileLand { 0% { box-shadow: 0 0 0 0 rgba(255, 200, 87, .9); } 100% { box-shadow: 0 0 0 14px rgba(255, 200, 87, 0); } }
+/* dados com peso: caem quicando */
+@keyframes tumble {
+  0% { transform: translate(-60px, -48px) rotate(-300deg) scale(.6); opacity: 0; }
+  45% { transform: translate(4px, 6px) rotate(14deg) scale(1.05); opacity: 1; }
+  60% { transform: translate(0, -10px) rotate(-6deg); }
+  74% { transform: translate(0, 2px) rotate(3deg); }
+  86% { transform: translate(0, -3px); }
+  100% { transform: none; }
+}
+.gb-die.tumble { animation-duration: .9s; }
+/* casas-alvo: a borda tracejada corre, como formigas marchando */
+.board-screen .board-gadget .tile.tile-target, .board-screen .board-gadget .tile.tile-preview { border-color: rgba(255, 200, 87, .35); border-style: solid; }
+.board-screen .board-gadget .tile.tile-target::after, .board-screen .board-gadget .tile.tile-preview::after {
+  content: ""; position: absolute; inset: -2px; pointer-events: none; z-index: 4;
+  background:
+    linear-gradient(90deg, #ffc857 50%, transparent 0) top / 12px 2px repeat-x,
+    linear-gradient(90deg, #ffc857 50%, transparent 0) bottom / 12px 2px repeat-x,
+    linear-gradient(0deg, #ffc857 50%, transparent 0) left / 2px 12px repeat-y,
+    linear-gradient(0deg, #ffc857 50%, transparent 0) right / 2px 12px repeat-y;
+  animation: ants .7s linear infinite;
+}
+@keyframes ants { to { background-position: 12px 0, -12px 100%, 0 -12px, 100% 12px; } }
+/* caminho do dado pela trilha */
+.route-preview { fill: none; stroke: #ffc857; stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; animation: routeDash .6s linear infinite; }
+@keyframes routeDash { to { stroke-dashoffset: -18; } }
+/* carta saindo do baralho e virando */
+.board-screen .board-gadget .center-cards > .deal-in { animation: dealIn .6s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes dealIn {
+  0% { transform: translate(-36%, 34%) rotate(-10deg) scale(.32) rotateY(180deg); opacity: .4; }
+  55% { transform: translate(-6%, 6%) rotate(-3deg) scale(.85) rotateY(70deg); opacity: 1; }
+  100% { transform: none; }
+}
+/* moedinhas da verba */
+.px-coin { position: fixed; left: 0; top: 0; z-index: 70; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: #ffc857; box-shadow: inset -2px -2px 0 #c99a2e; pointer-events: none; }
+/* prédio novo subindo na casa */
+.board-screen .board-gadget .tile.just-built .t-art-ink { animation: buildUp .7s cubic-bezier(.2, .9, .3, 1.3) both; transform-origin: 50% 100%; }
+@keyframes buildUp { from { transform: scaleY(0); opacity: 0; } 60% { opacity: 1; } }
+.board-screen .board-gadget .tile.just-built { animation: tileLand .8s ease-out .3s; }
+/* virada de ano: faixa de luz varrendo a planta */
+.board-gadget.year-sweep::after {
+  content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  background: linear-gradient(100deg, transparent 42%, rgba(242, 246, 255, .22) 50%, transparent 58%) no-repeat;
+  background-size: 260% 100%;
+  animation: sweep 1.8s ease-in-out forwards;
+}
+@keyframes sweep { from { background-position: 120% 0; } to { background-position: -40% 0; } }
+/* decolagem (main.js showLaunchOverlay) */
+.launch-overlay {
+  background:
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 20%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 45% 60%, #fff, transparent), radial-gradient(1px 1px at 85% 75%, #fff, transparent),
+    radial-gradient(ellipse at 50% 120%, #1d3f86 0%, #07080b 60%);
+}
+.launch-overlay .count { top: 16%; font: 500 56px var(--mono); color: #f2f6ff; letter-spacing: -0.02em; }
+.launch-overlay .lift { position: absolute; left: 50%; bottom: 18%; width: 64px; height: 116px; transform: translateX(-50%); }
+.launch-overlay .lift svg { width: 100%; height: 100%; display: block; }
+.launch-overlay .lift .lift-flame { display: none; transform-origin: 20px 50px; }
+.launch-overlay .lift.go .lift-flame { display: block; animation: flameFlicker .1s steps(2) infinite; }
+.launch-overlay .lift.go { animation: liftUp 1.25s cubic-bezier(.55, 0, .8, .4) forwards; }
+@keyframes liftUp { 0% { transform: translateX(-50%); } 12% { transform: translateX(calc(-50% + 1px)); } 100% { transform: translate(-50%, -90vh); } }
+.launch-overlay .pad { position: absolute; left: 50%; bottom: calc(18% - 8px); width: 120px; height: 8px; transform: translateX(-50%); background: #2a2f3a; }
 
 /* ===== Funcionalidades novas da equipe, no nosso padrão ===== */
 /* Tela de espectador (ui/spectate.js): faixa de "quem está jogando" e aviso de só leitura */
@@ -2836,3 +3021,48 @@ button.launch-ready { animation: readyGlow 1.6s ease-in-out infinite; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+
+/* Terreno livre: cada prédio aparece como "foto" para escolher (ui/itemArt.js) */
+.build-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; width: 100%; }
+button.build-option, .board-screen .board-gadget button.build-option { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; height: auto; padding: 0; overflow: hidden; border-radius: 8px; min-height: 0; text-align: center; white-space: normal; }
+.build-option .build-photo { display: block; aspect-ratio: 160 / 100; background: #0d0e12; }
+.build-option .build-photo svg { width: 100%; height: 100%; display: block; }
+.build-option .build-name { display: block; padding: 6px 4px; font-size: 13px; line-height: 1.2; }
+.build-option:hover:not(:disabled) .build-photo svg { transform: scale(1.06); }
+.build-option .build-photo svg { transition: transform .2s ease; }
+.build-option:disabled .build-photo { filter: grayscale(1); opacity: .6; }
+/* Casa com prédio: a foto ocupa o quadrado da esquerda no lugar do ícone de traço */
+.board-screen .board-gadget .t-art-ink.t-art-photo { width: 52px; height: 39px; }
+.board-screen .board-gadget .tile-corner .t-art-ink.t-art-photo { width: 64px; height: 48px; }
+@media (prefers-reduced-motion: reduce) { .build-option .build-photo svg { transition: none; } }
+
+/* Nave em montagem (oficina): trilha de sistemas e encaixes tracejados (ui/spacecraft.js) */
+.spacecraft-box .assembly-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 4px; }
+.assembly-status { display: inline-flex; align-items: center; gap: 6px; font: 600 12.5px var(--mono); color: #e7e9ee; letter-spacing: .02em; }
+.assembly-steps { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.assembly-steps li { padding: 3px 8px; border: 1px dashed #4b5b7a; border-radius: 999px; font: 500 11px var(--mono); color: #a9b4c8; }
+.assembly-steps li.ok { border-style: solid; border-color: #3f9a5d; background: rgba(63, 154, 93, .18); color: #c9f0d6; }
+.spacecraft-box.whole .assembly-status { color: #f3d27a; }
+.spacecraft-box.ready { border-color: #3f9a5d; box-shadow: inset 0 0 0 1px rgba(63, 154, 93, .5), 0 0 22px rgba(63, 154, 93, .25), var(--sombra-cartao); }
+.spacecraft-box.ready .assembly-status { color: #8ee0a8; }
+.spacecraft.assembling .sc-ghost-label { font-family: var(--mono); letter-spacing: .03em; }
+.spacecraft.assembling .sc-ghosts { animation: ghostPulse 2.4s ease-in-out infinite; }
+@keyframes ghostPulse { 50% { opacity: .55; } }
+.spacecraft .sc-part.snap-in { animation: snapIn .6s cubic-bezier(.2, .9, .3, 1.3) both; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes snapIn { 0% { opacity: 0; transform: translateY(-14px) scale(1.12); } 60% { opacity: 1; } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .spacecraft.assembling .sc-ghosts, .spacecraft .sc-part.snap-in { animation: none; } }
+/* Na oficina a legenda vai embaixo do desenho (antes ficava por cima do foguete) */
+.spacecraft-box .assembly-bar ~ .caption { position: static; display: block; margin-top: 4px; }
+/* Casa com prédio: nome do prédio inteiro numa linha, sem hifenizar */
+.board-screen .board-gadget .tile.owned .t-main-row { padding: 6px 6px 6px 8px; }
+.board-screen .board-gadget .tile.owned .t-label { font-size: 12px; letter-spacing: -0.01em; hyphens: none; overflow-wrap: normal; }
+
+/* Faixa "Sua agência": foto do prédio no nível atual à esquerda de cada cartão (cresce a cada nível) */
+.building-card { grid-template-columns: 104px minmax(0, 1fr); column-gap: 10px; }
+.building-card > :not(.bc-photo) { grid-column: 2; }
+.building-card .bc-photo { grid-column: 1; grid-row: 1 / span 4; align-self: start; display: block; width: 104px; aspect-ratio: 160 / 100; border-radius: 4px; overflow: hidden; background: #0d0e12; }
+.building-card .bc-photo svg { display: block; width: 100%; height: 100%; }
+.building-card.not-built .bc-photo { filter: grayscale(1); opacity: .45; }
+.building-card.grew .bc-photo svg { animation: buildUp .7s cubic-bezier(.2, .9, .3, 1.3) both; transform-origin: 50% 90%; }
+@media (max-width: 560px) { .building-card { grid-template-columns: 80px minmax(0, 1fr); } .building-card .bc-photo { width: 80px; } }
+@media (prefers-reduced-motion: reduce) { .building-card.grew .bc-photo svg { animation: none; } }

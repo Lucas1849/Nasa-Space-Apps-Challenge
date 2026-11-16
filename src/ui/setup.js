@@ -7,9 +7,9 @@
 // Os lados são SORTEADOS ao começar, de forma equilibrada (IDEIA.md v3 seção 9).
 import { el, button, themeToggle, langToggle, openRulesModal } from './components.js';
 import { icon } from './icons.js';
-import { guideOn, themeOf, toggleTheme } from './prefs.js';
+import { guideOn, themeOf, toggleTheme, timerSeconds, setTimerSeconds } from './prefs.js';
 import { getLang, setLang, t } from '../i18n/index.js';
-import { createAsciiCanvas } from './art.js';
+import { pixelSpace } from './pixelArt.js';
 import { START_YEAR, END_YEAR } from '../data/history.js';
 
 
@@ -145,13 +145,8 @@ function createSplashStarfield() {
 
 function buildSplashView(onEnter) {
   const starfield = createSplashStarfield();
-  const { canvas } = createAsciiCanvas({
-    scene: 'olho',
-    cycle: true,
-    width: 440,
-    height: 360,
-    cell: 5,
-  });
+  // Terra em pixel colorido com retícula, girando devagar (ui/pixelArt.js)
+  const canvas = pixelSpace({ items: [{ kind: 'earth', x: 0.5, y: 0.5, size: 0.86 }], width: 340, height: 340, cells: 60 });
 
   let entered = false;
   const triggerEnter = () => {
@@ -211,11 +206,17 @@ const MODES = [
   { id: 'online', icon: 'wifi' },
 ];
 
-// Cartões de opção (ícone, nome e uma linha do que é): escolha que precisa de explicação, não só um rótulo.
+// Tempo do relógio do turno: desligado ou 60/90/120/180 s (sim/turnTimer.js). Salvo no navegador e gravado
+// na partida ao começar (main.js), para valer igual para todos no online.
+function timerChoice(onChange) {
+  return segmented(t('st.timer'), [0, 60, 90, 120, 180].map((n) => ({ value: n, label: n ? `${n} s` : t('st.timerOff') })), timerSeconds(), (v) => { setTimerSeconds(v); onChange(); });
+}
+
+// Cartões de opção (ícone e nome), como a escolha de modo em jogos.
 function optionCards(label, options, value, onPick) {
   return el('div', { class: 'option-cards', role: 'group', 'aria-label': label, style: `--cols:${options.length}` }, options.map((o) => el('button', {
     type: 'button', class: 'option-card', 'aria-pressed': String(o.value === value), onclick: () => onPick(o.value),
-  }, [icon(o.icon, { size: 18 }), el('strong', {}, o.label), el('small', {}, o.desc)])));
+  }, [icon(o.icon, { size: 20 }), el('strong', {}, o.label)])));
 }
 
 // Botão que se desabilita enquanto a promessa da ação roda (criar/entrar na sala).
@@ -282,6 +283,7 @@ function renderConfigView(actions, backToSplash) {
     return sw;
   };
 
+
   const start = () => {
     const count = draft.mode === 'solo' ? 1 : draft.localCount;
     actions.startGame(draft.names.slice(0, count).map((name) => ({ name: name.trim() })), { sandbox: draft.sandbox });
@@ -327,6 +329,12 @@ function renderConfigView(actions, backToSplash) {
       ]));
     }
 
+    if (draft.mode !== 'solo' && !(draft.mode === 'local' && draft.sandbox)) {
+      rows.push(el('div', { class: 'setup-row setup-row-stack' }, [
+        rowLabel(t('st.timer'), t('st.timerSub')),
+        timerChoice(() => render()),
+      ]));
+    }
     rows.push(el('div', { class: 'setup-row' }, [
       rowLabel(t('st.guideRow'), t('st.guideRowSub')),
       guideSwitch(),
@@ -382,8 +390,10 @@ function renderConfigView(actions, backToSplash) {
 // Menu principal (entre a capa e a Nova Partida), como nos jogos: jogar, regras, configurações, créditos.
 function renderMainMenu(actions, go) {
   // Lista secundária: ícone, nome e uma seta que aparece no foco/hover (o que é clicável fica evidente).
-  const item = (iconName, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
-    icon(iconName, { size: 18 }),
+  // Cada opção leva um planeta em pixel animado (ui/pixelArt.js) no lugar do ícone de linha.
+  const planet = (kind, size) => el('span', { class: 'mm-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind, x: 0.5, y: 0.5, size }], cells: 17, fps: 8, ambient: 0.35, minCell: 2 })]);
+  const item = (kind, size, label, run) => el('button', { type: 'button', class: 'main-menu-item', onclick: run }, [
+    planet(kind, size),
     el('span', { class: 'mm-label' }, label),
     el('span', { class: 'mm-chev', 'aria-hidden': 'true' }, icon('arrowRight', { size: 16 })),
   ]);
@@ -396,17 +406,20 @@ function renderMainMenu(actions, go) {
     el('div', { class: 'main-menu-box' }, [
       el('div', { class: 'main-menu-head' }, [
         el('span', { class: 'eyebrow' }, `${START_YEAR} — ${END_YEAR}`),
-        el('h1', { class: 'main-menu-title' }, 'Apogeu'),
+        el('div', { class: 'main-menu-title-row' }, [
+          el('h1', { class: 'main-menu-title' }, 'Apogeu'),
+          el('span', { class: 'mm-title-planet', 'aria-hidden': 'true' }, [pixelSpace({ items: [{ kind: 'jupiter', x: 0.5, y: 0.5, size: 0.86 }], cells: 26, fps: 8, ambient: 0.2, minCell: 2 })]),
+        ]),
         el('p', { class: 'main-menu-sub' }, t('st.tagline')),
       ]),
       // A ação de quase todo mundo que abre o jogo é a principal, cheia; o resto fica na lista.
       button([icon('rocket', { size: 18 }), t('st.newGame')], () => go('config'), { class: 'primary main-menu-primary' }),
       el('nav', { class: 'main-menu-list', 'aria-label': t('st.mainMenu') }, [
-        item('bulb', t('st.howItWorks'), openRulesModal),
-        item('compass', t('st.settings'), () => go('settings')),
-        item('users', t('st.credits'), () => go('credits')),
+        item('moon', 0.8, t('st.howItWorks'), openRulesModal),
+        item('nebula', 0.82, t('st.settings'), () => go('settings')),
+        item('saturn', 0.46, t('st.credits'), () => go('credits')),
       ]),
-      el('p', { class: 'main-menu-foot' }, 'NASA Space Apps Challenge 2026 · Space Mission Design Game'),
+      el('p', { class: 'main-menu-foot' }, t('st.mainMenuFoot')),
     ]),
   ]);
 }
@@ -429,11 +442,15 @@ function renderSettings(actions, go) {
     type: 'button', class: 'setup-switch', role: 'switch', 'aria-checked': String(guideOn()), 'aria-label': t('st.guideSwitch'),
     onclick: () => { const on = !guideOn(); actions.setGuide(on); sw.setAttribute('aria-checked', String(on)); },
   });
+  const timerBox = el('div', {});
+  const drawTimer = () => timerBox.replaceChildren(timerChoice(drawTimer));
+  drawTimer();
   return menuSheet(t('st.settings'), [
     el('div', { class: 'setup-group' }, [
       el('div', { class: 'setup-row' }, [rowLabel(t('lang.label'), t('st.langSub')), langSeg]),
       el('div', { class: 'setup-row' }, [rowLabel(t('st.theme'), t('st.themeSub')), themeSeg]),
       el('div', { class: 'setup-row' }, [rowLabel(t('st.guideRow'), t('st.guideRowSub')), sw]),
+      el('div', { class: 'setup-row setup-row-stack' }, [rowLabel(t('st.timer'), t('st.timerSubSettings')), timerBox]),
     ]),
     el('small', { class: 'setup-row-sub' }, t('st.prefsSaved')),
   ], go);
@@ -443,6 +460,14 @@ function renderCredits(go) {
   const entry = (title, text) => el('li', {}, [el('strong', {}, title), text]);
   return menuSheet(t('st.credits'), [
     el('ul', { class: 'credits-list' }, [
+      // Equipe em ordem alfabética, no mesmo formato das outras entradas.
+      el('li', {}, [el('strong', {}, t('st.cr.team')), ...[
+        'Daniel Carlos Medeiros Alves',
+        'Henrique Melo de Araújo',
+        'Lucas Vieira Alves Nominato Santos',
+        'Marcus Vinicius Alves Marques',
+        'Pedro Henrique Ferreira Borges Vaz',
+      ].map((n) => el('span', { class: 'credits-name' }, n))]),
       entry(t('st.cr.challenge'), t('st.cr.challengeText')),
       entry(t('st.cr.base'), t('st.cr.baseText')),
       entry(t('st.cr.numbers'), t('st.cr.numbersText')),

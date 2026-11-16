@@ -3,8 +3,9 @@
 // e qual o risco do voo. É a decisão central: lançar agora ou esperar melhorar.
 import { el, button, hud, gauges, checklist, glossary, missionPicker, ITEM_ICONS, panelTitle, outcomeCard } from './components.js';
 import { icon } from './icons.js';
+import { itemPhotoSvg } from './itemArt.js';
 import { guideCard, hl } from './guide.js';
-import { spacecraftSvg } from './spacecraft.js';
+import { spacecraftSvg, assemblySlots } from './spacecraft.js';
 import { INSTRUMENTS } from '../data/instruments.js';
 import { PARTS } from '../data/parts.js';
 import { LAUNCHERS } from '../data/launchers.js';
@@ -44,6 +45,8 @@ function itemCard(player, item, actions, justBought = false, canAct = true) {
     item.dataRate && t('board.offer.data', { n: item.dataRate }),
   ].filter(Boolean);
   return el('div', { class: `card ${owned ? 'owned' : ''} ${locked ? 'locked' : ''} ${justBought ? 'just-bought' : ''}` }, [
+    // "Foto" 3D do item (ui/itemArt.js), para reconhecer a peça antes de ler os números.
+    el('span', { class: 'item-photo', 'aria-hidden': 'true', html: itemPhotoSvg(item.visual) }),
     el('div', { class: 'card-head' }, [
       el('span', { class: 'icon' }, icon(ITEM_ICONS[item.visual] || 'hexnut', { size: 22 })),
       el('strong', {}, item.name),
@@ -67,7 +70,9 @@ function choice(label, options, selectedId, onPick, describe, player, cls = '', 
     el('h2', {}, label),
     el('div', { class: 'row wrap' }, Object.values(options).map((o) => {
       const locked = player && isLocked(player, o);
-      return button(locked ? [icon('lock', { size: 14 }), t('ws.lockedChoice', { name: o.name, n: requiredTech(player, o) })] : describe(o), () => onPick(o.id), {
+      const photo = itemPhotoSvg(o.id);
+      const optLabel = locked ? [icon('lock', { size: 14 }), t('ws.lockedChoice', { name: o.name, n: requiredTech(player, o) })] : describe(o);
+      return button(photo ? [el('span', { class: 'choice-photo', 'aria-hidden': 'true', html: photo }), el('span', {}, [].concat(optLabel))] : optLabel, () => onPick(o.id), {
         class: o.id === selectedId ? 'selected' : '',
         disabled: locked || !canAct,
       });
@@ -166,16 +171,13 @@ export function workshopScreen(state, actions, viewer = null, opts = {}) {
 
   return el('section', { class: `screen workshop${readOnly ? ' read-only' : ''}` }, [
     hud(state, p, 'workshop', actions),
-    readOnly || canAct ? null : el('div', { class: 'panel planning' }, [
-      panelTitle('clipboard', t('ws.planningTitle')),
-      el('p', {}, t('ws.planningText')),
-    ]),
     readOnly ? el('p', { class: 'hint with-icon spectate-note' }, [icon('eye', { size: 16 }), t('ws.spectateNote')]) : null,
-    guideCard(state, 'workshop', p),
+    // Modo planejamento entra no mesmo cartão da dica (um aviso só por tela).
+    guideCard(state, 'workshop', p, readOnly || canAct ? null : { tag: t('ws.planningTitle'), text: t('ws.planningText') }),
     state.sandbox ? el('details', { class: 'swap' }, [el('summary', {}, t('ws.swapMission')), missionPicker(state, p, actions)]) : null,
     el('div', { class: 'workshop-grid' }, [
       el('div', {}, [
-        el('div', { class: `spacecraft-box ${bought.size ? 'build-pulse' : ''}` }, [spacecraftSvg(p), el('span', { class: 'caption' }, t('ws.caption', { mission: mission.name, orbit: ORBITS[mission.orbit].name, needs }))]),
+        assemblyBox(p, design, bought.size > 0, t('ws.caption', { mission: mission.name, orbit: ORBITS[mission.orbit].name, needs })),
         discount ? el('p', { class: 'hint with-icon' }, [icon('tag', { size: 16 }), t('ws.discount', { n: discount })]) : null,
         choice(t('ws.launcher'), launchers, p.spacecraft.launcherId, actions.chooseLauncher,
           (l) => t('ws.launcherDesc', { name: l.name, maxMass: l.maxMass, cost: l.cost, reach: l.reach.map((r) => ORBITS[r].name.split(' (')[0]).join(', ') }), p, hl(state, 'workshop', 'launcher', p), canAct),
@@ -200,6 +202,25 @@ export function workshopScreen(state, actions, viewer = null, opts = {}) {
       ]),
     ]),
     launchDock(state, p, design, blocked, hidden, back, actions, readOnly, canAct),
+  ]);
+}
+
+// Nave em montagem: o desenho ganha cada sistema comprado e os encaixes vazios ficam tracejados.
+// Embaixo, uma trilha de sistemas (energia, comunicação, instrumento, cápsula, foguete). "Inteira" é
+// o kit mínimo de cada sistema; quem decide se pode lançar continua sendo checkDesign.
+function assemblyBox(p, design, pulse, caption) {
+  const slots = assemblySlots(p);
+  const done = slots.filter((sl) => sl.ok).length;
+  const whole = done === slots.length;
+  const status = !whole ? t('ws.assemblyProgress', { done, total: slots.length })
+    : design.ok ? t('ws.assemblyReady') : t('ws.assemblyCheck');
+  return el('div', { class: `spacecraft-box${pulse ? ' build-pulse' : ''}${whole ? ' whole' : ''}${whole && design.ok ? ' ready' : ''}` }, [
+    el('div', { class: 'assembly-bar', role: 'group', 'aria-label': `${status}.` }, [
+      el('strong', { class: 'assembly-status' }, [whole ? icon('check', { size: 14 }) : null, status]),
+      el('ol', { class: 'assembly-steps' }, slots.map((sl) => el('li', { class: sl.ok ? 'ok' : '', title: sl.ok ? t('ws.slotInstalled', { label: sl.label }) : t('ws.slotMissing', { label: sl.label }) }, sl.label))),
+    ]),
+    spacecraftSvg(p, { assembly: true }),
+    el('span', { class: 'caption' }, caption),
   ]);
 }
 

@@ -7,7 +7,8 @@ import {
   el, button, hud, milestoneTrack, logPanel, ladderPanel, rivalsPanel, agencyStrip, sideBadge, sidePanel, MISSION_ICONS, simpleUi, outcomeCard,
 } from './components.js';
 import { icon } from './icons.js';
-import { dieSvg, TILE_ART, BUILDING_ART, ORBIT_ART } from './boardArt.js';
+import { dieSvg, TILE_ART, ORBIT_ART } from './boardArt.js';
+import { buildingPhotoSvg } from './itemArt.js';
 import { walkPawn, scrollIntoViewIfNeeded } from './motion.js';
 import { guideCard, hl } from './guide.js';
 import { sinceCard } from './summary.js';
@@ -26,7 +27,6 @@ import { DILEMMAS } from '../data/dilemmas.js';
 import { yearOf, ROUNDS_PER_YEAR } from '../data/history.js';
 import { t } from '../i18n/index.js';
 
-const TILE_ICONS = { start: 'flag', funds: 'coins', event: 'card', tech: 'flask', shop: 'cart', workshop: 'wrench', lot: 'crane', spy: 'eye', repair: 'wrench', catchup: 'lifebuoy' };
 // Anel quadrado no sentido horário a partir do canto superior esquerdo, calculado pelo número de casas
 // (16 casas = 5×5, 20 casas = 6×6); o miolo fica para os dados. Cantos, setas e a trilha saem da mesma conta.
 const RING_N = TILES.length / 4 + 1;
@@ -49,7 +49,11 @@ const CORNER_IDS = new Set([0, 1, 2, 3].map((k) => k * (RING_N - 1)));
 export const RING_STYLE = `--ring-n:${RING_N};grid-template-columns:1.4fr repeat(${RING_N - 2}, minmax(0, 1fr)) 1.4fr;`
   + `grid-template-rows:minmax(80px, auto) repeat(${RING_N - 2}, minmax(58px, auto)) minmax(80px, auto)`;
 let lastRollSeen = null;
-let lastDiceKey = null;     // último par de dados já mostrado (para girar só os recém-rolados)
+let lastDiceKey = null;
+let lastCardKey = null;     // carta já mostrada no miolo (entra saindo do baralho só quando é nova)
+let dismissedOutcome = null; // aviso de resultado que o jogador fechou no X
+let knownLots = null;      // terrenos com prédio no desenho anterior (o prédio novo "sobe" na casa)
+const freshLots = new Set();     // último par de dados já mostrado (para girar só os recém-rolados)
 const lastPositions = {};   // casa de cada jogador no desenho anterior (o peão anda a partir dela)
 
 // Nome curto na casa: o que vem antes dos dois-pontos ("Discurso", "Crise diplomática"); o completo fica no balão.
@@ -92,12 +96,6 @@ function tileSub(state, tile) {
   }
 }
 
-function tileIcon(state, t) {
-  if (t.type === 'lot' && state.lots[t.id]) return BUILDINGS[state.lots[t.id].buildingId].icon;
-  if (t.type === 'funds' && t.funds < 0) return 'trendDown';
-  return TILE_ICONS[t.type];
-}
-
 // Ilustração vetorial estilo jogo de tabuleiro (Monopoly espacial) para cada casa
 function tileBoardArt(state, tile, targetDice) {
   const lot = state.lots[tile.id];
@@ -116,7 +114,7 @@ function tileBoardArt(state, tile, targetDice) {
   }
 
   // Ícone de traço único (ui/boardArt.js), na cor da tinta da planta. Terreno com prédio mostra o prédio.
-  const art = lot ? BUILDING_ART[lot.buildingId] : TILE_ART[tile.type === 'funds' && tile.funds < 0 ? 'crisis' : tile.type] || '';
+  const art = lot ? buildingPhotoSvg(lot.buildingId, { bare: true, level: state.players[lot.ownerId].buildings[lot.buildingId] || 1 }) : TILE_ART[tile.type === 'funds' && tile.funds < 0 ? 'crisis' : tile.type] || '';
 
   const targetBadge = targetDice
     ? `<span class="t-target-pill">${t('board.diceTarget', { n: targetDice })}</span>`
@@ -131,7 +129,7 @@ function tileBoardArt(state, tile, targetDice) {
       <span class="t-band-dir">${dir}</span>
     </div>
     <div class="t-art-row">
-      <span class="t-art-ink">${art}</span>
+      <span class="t-art-ink${lot ? ' t-art-photo' : ''}">${art}</span>
       ${targetBadge}
     </div>
   `;
@@ -204,8 +202,8 @@ function tileDecision(state, p, actions) {
     if (!options.length) return el('p', { class: 'hint' }, t('board.build.all'));
     return el('div', { class: cls }, [
       el('strong', { class: 'decision-title' }, [icon('crane', { size: 18 }), t('board.build.q', { cost: upgradeCost(0) })]),
-      el('div', { class: 'row wrap', style: 'justify-content:center' }, [
-        ...options.map((b) => button([icon(b.icon, { size: 16 }), b.name], () => actions.buildOnLot(b.id), { class: 'small', disabled: p.funds < upgradeCost(0), title: b.effect })),
+      el('div', { class: 'build-options' }, options.map((b) => button([el('span', { class: 'build-photo', 'aria-hidden': 'true', html: buildingPhotoSvg(b.id) }), el('span', { class: 'build-name' }, b.name)], () => actions.buildOnLot(b.id), { class: 'build-option', disabled: p.funds < upgradeCost(0), title: b.effect }))),
+      el('div', { class: 'row', style: 'justify-content:center' }, [
         button(t('board.build.skip'), () => actions.skipTile(), { class: 'small ghost' }),
       ]),
     ]);
@@ -259,9 +257,19 @@ function diceView(state, p, actions, rolling) {
     const key = `${state.round}:${state.turn}:${state.dice.join(',')}`;
     const fresh = key !== lastDiceKey;
     lastDiceKey = key;
+    // Passar o mouse num dado acende a casa onde ele para e desenha o caminho pela trilha.
     const preview = (d, on) => () => {
       const tile = document.querySelector(`[data-tile="${(p.position + d) % TILES.length}"]`);
       if (tile) tile.classList.toggle('tile-preview', on);
+      document.querySelector('.route-preview')?.remove();
+      const svg = document.querySelector('.gadget-map-svg');
+      if (!on || !svg) return;
+      const ptsList = Array.from({ length: d + 1 }, (_, k) => TILE_CENTERS[(p.position + k) % TILES.length].join(',')).join(' ');
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      line.setAttribute('points', ptsList);
+      line.setAttribute('class', 'route-preview');
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.appendChild(line);
     };
     return el('div', { class: 'dice-choice gb-dice' }, [
       el('div', { class: 'gb-dice-row' }, state.dice.map((d, i) => {
@@ -297,14 +305,27 @@ function centerPanel(state, p, actions, rolling) {
     : !p.rolled
       ? t('board.banner.turn', { name: p.name.toUpperCase() })
       : t('board.banner.tile', { num: String(p.position).padStart(2, '0'), label: activeTile.label.toUpperCase() });
+  const decision = dilemmaDecision(state, actions) || tileDecision(state, p, actions);
+  // Aviso de resultado com X para fechar (não volta a aparecer depois de fechado).
+  const outcomeKey = state.outcome ? `${state.round}:${state.turn}:${state.outcome.title}:${state.outcome.choice || ''}` : null;
+  const outcome = outcomeKey && outcomeKey === dismissedOutcome ? null : outcomeCard(state, p);
+  if (outcome) {
+    const close = button(icon('x', { size: 14 }), () => { dismissedOutcome = outcomeKey; outcome.remove(); }, { class: 'card-close', title: t('board.closeAlert') });
+    close.setAttribute('aria-label', t('board.closeAlert'));
+    outcome.appendChild(close);
+  }
+  const cardKey = decision ? `d:${state.round}:${state.turn}:${p.position}:${state.pendingDilemma?.id || state.pendingTile?.kind}`
+    : outcome ? `o:${state.round}:${state.turn}:${state.outcome?.title}` : null;
+  const fresh = cardKey && cardKey !== lastCardKey;
+  lastCardKey = cardKey;
+  if (fresh) [decision, outcome].forEach((n) => { if (n && n.className != null) n.className += ' deal-in'; });
   return el('div', { class: 'panel ring-center gb-center' }, [
     el('span', { class: 'center-orbits', 'aria-hidden': 'true', html: ORBIT_ART }),
     dilemmaDeck(state, p),
     el('div', { class: 'gadget-banner', 'aria-hidden': 'true' }, [el('div', { class: 'gadget-banner-plate' }, bannerText)]),
     diceView(state, p, actions, rolling),
-    dilemmaDecision(state, actions),
-    tileDecision(state, p, actions),
-    outcomeCard(state, p),
+    // Aviso e decisão empilhados (aviso em cima), nunca um cobrindo o outro.
+    decision || outcome ? el('div', { class: 'center-cards' }, [outcome, decision]) : null,
   ]);
 }
 
@@ -425,7 +446,7 @@ function gadgetTopBar(state, p) {
 const PAWN_COLORS = ['#6ea6ee', '#f0cf7a', '#4cc49a', '#f08a5c'];
 function rocketPawnSvg(color, flying) {
   return `<svg viewBox="0 0 20 30" aria-hidden="true" focusable="false">
-    ${flying ? '<path d="M7.2 23.5 10 29.5l2.8-6z" fill="#ffc857" stroke="#10213d" stroke-width="0.8"/>' : ''}
+    <path class="rk-flame${flying ? ' on' : ''}" d="M7.2 23.5 10 29.5l2.8-6z" fill="#ffc857" stroke="#ff7a3c" stroke-width="0.8"/>
     <path d="M10 1.2c3.6 3 5.2 7.2 5.2 12.3v8.7H4.8v-8.7C4.8 8.4 6.4 4.2 10 1.2z" fill="${color}" stroke="#f2f6ff" stroke-width="1.3" stroke-linejoin="round"/>
     <path d="M4.8 15.5 1.6 20.5v3.6l3.2-1.9zM15.2 15.5l3.2 5v3.6l-3.2-1.9z" fill="${color}" stroke="#f2f6ff" stroke-width="1.1" stroke-linejoin="round"/>
     <circle cx="10" cy="11" r="2.4" fill="#10213d" stroke="#f2f6ff" stroke-width="1"/>
@@ -441,7 +462,7 @@ export function boardTile(state, t, i, current, simple, targetDice = null) {
   const neg = t.type === 'funds' && t.funds < 0;
   const isCorner = CORNER_IDS.has(t.id);
   return el('div', {
-    class: `tile tile-${t.type} ${neg ? 'tile-neg' : ''} ${isCorner ? 'tile-corner' : ''} ${targetDice ? 'tile-target' : ''} ${current.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''}`,
+    class: `tile tile-${t.type} ${neg ? 'tile-neg' : ''} ${isCorner ? 'tile-corner' : ''} ${targetDice ? 'tile-target' : ''} ${current.position === t.id ? 'active' : ''} ${lot ? `owned o${lot.ownerId % 4}` : ''} ${freshLots.has(t.id) ? 'just-built' : ''}`,
     style: `grid-row:${r};grid-column:${c}`,
     'data-tile': String(t.id),
     title: `${t.label}: ${tileSub(state, t)}`,
@@ -454,9 +475,8 @@ export function boardTile(state, t, i, current, simple, targetDice = null) {
       html: rocketPawnSvg(PAWN_COLORS[pl.id % 4], Boolean(pl.flight)),
     }))),
     el('div', { class: 't-main-row' }, [
-      lot ? el('span', { class: 't-icon' }, icon(tileIcon(state, t), { size: 16 })) : null,
       el('div', { class: 't-body', lang: 'pt-BR' }, [
-        el('div', { class: 't-label' }, shortName(t)),
+        el('div', { class: 't-label' }, lot ? BUILDINGS[lot.buildingId].name : shortName(t)),
         // Na casa vai só o efeito curto (como em jogos de tabuleiro publicados); o texto completo fica no balão.
         el('div', { class: 't-sub' }, shortSub(state, t)),
       ]),
@@ -480,6 +500,11 @@ export function boardScreen(state, actions) {
   const targetMap = new Map();
   if (state.dice) state.dice.forEach((d) => targetMap.set((p.position + d) % TILES.length, d));
 
+  // Prédio recém-construído: a casa ganha a animação de "subir" uma vez.
+  const lotIds = Object.keys(state.lots).map(Number);
+  freshLots.clear();
+  if (knownLots) lotIds.filter((id) => !knownLots.has(id)).forEach((id) => freshLots.add(id));
+  knownLots = new Set(lotIds);
   const tiles = TILES.map((t, i) => boardTile(state, t, i, p, simple, targetMap.get(t.id)));
 
   // Abas da lateral: no começo só a missão e o diário; o resto aparece quando passa a fazer sentido.

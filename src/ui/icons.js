@@ -5,6 +5,8 @@
 // Uso: icon('rocket') devolve um <span class="ic"> com o SVG. icon('rocket', { size: 32, label: 'Foguete' }).
 // Para adicionar um ícone: acrescente uma entrada em ICONS com o miolo do SVG (paths, circles...).
 
+import { t } from '../i18n/index.js';
+
 const F = 'fill="currentColor" stroke="none"'; // pontos cheios (olhos, pips de dado)
 
 export const ICONS = {
@@ -139,7 +141,7 @@ export function dieFace(n, { size = 48, className = '' } = {}) {
   const span = document.createElement('span');
   span.className = `ic die-face ${className}`.trim();
   span.setAttribute('role', 'img');
-  span.setAttribute('aria-label', `dado ${n}`);
+  span.setAttribute('aria-label', t('ic.die', { n }));
   span.innerHTML = svgMarkup(`<rect x="3" y="3" width="18" height="18" rx="1.5"/>${pips}`, size);
   return span;
 }

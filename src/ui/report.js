@@ -32,14 +32,16 @@ export function reportScreen(state, actions) {
   return el('section', { class: `screen report ${r.success ? 'success' : 'failure'}` }, [
     hud(state, p, 'report', actions),
     guideCard(state, 'report'),
+    // Cabeçalho: selo do resultado, título, etapas do voo numa linha e a pontuação ao lado.
     el('div', { class: 'panel report-head' }, [
-      el('span', { class: 'stamp' }, icon(r.success ? 'check' : 'x', { size: 150 })),
-      el('div', {}, [
+      el('span', { class: 'result-seal', 'aria-hidden': 'true' }, icon(r.success ? 'check' : 'x', { size: 26 })),
+      el('div', { class: 'report-head-text' }, [
         el('p', { class: 'eyebrow' }, t('rep.eyebrow', { name: mission.name })),
         el('h1', {}, title),
         el('p', { class: 'hint' }, r.success
           ? t('rep.scienceDelivered', { n: r.scienceDelivered, record: r.record ? t('rep.record') : '' })
           : t('rep.failHint')),
+        r.stages?.length ? stageTrack(r.stages.map((x) => x.stageId), r.stages, -1) : null,
       ]),
       el('div', { class: 'score' }, [el('div', { class: 'big' }, r.score), el('div', { class: 'label' }, t('rep.points'))]),
     ]),
@@ -68,16 +70,28 @@ export function reportScreen(state, actions) {
       ]),
       el('div', {}, [
         el('div', { class: 'spacecraft-box' }, [spacecraftSvg(craftView), el('span', { class: 'caption' }, r.success ? t('rep.craftOp') : t('rep.craftThis'))]),
-        r.stages?.length ? el('div', { class: 'panel', style: 'margin-top:12px' }, [stageTrack(r.stages.map((s) => s.stageId), r.stages, -1)]) : null,
-        r.checks?.length ? el('div', { class: 'panel', style: 'margin-top:12px' }, [el('h3', { style: 'margin-top:0' }, t('rep.fullCheck')), checklist(r.checks)]) : null,
+        // Checagem: só o que falhou (ou ficou desconhecido) aberto; o que deu certo fica recolhido.
+        r.checks?.length ? el('div', { class: 'panel report-checks' }, [el('h3', {}, t('rep.fullCheck')), compactChecks(r.checks)]) : null,
       ]),
     ]),
-    el('p', { class: 'hint' }, r.success ? t('rep.scoreNote') : t('rep.lostNote')),
-    el('div', { class: 'row' }, [
+    // Barra fixa embaixo (como o Lançar da oficina): a próxima ação nunca fica fora da tela.
+    el('div', { class: 'launch-dock report-dock', role: 'region', 'aria-label': t('rep.nextStep') }, [
+      el('p', { class: 'dock-status' }, r.success ? t('rep.scoreNote') : t('rep.lostNote')),
+      el('div', { class: 'row dock-buttons' }, [
       button(state.sandbox ? [icon('wrench', { size: 18 }), t('rep.backWorkshop')] : [t('board.endTurn'), icon('arrowRight', { size: 18 })], () => actions.endTurn(), { class: `primary ${hl(state, 'report', 'end')}` }),
       state.sandbox ? null : button([icon('wrench', { size: 18 }), t('step.workshop')], () => actions.go('workshop')),
       button([icon('refresh', { size: 18 }), t('ws.newGame')], () => actions.newGame(), { class: 'ghost' }),
     ]),
+    ]),
+  ]);
+}
+
+function compactChecks(checks) {
+  const open = checks.filter((c) => c.hidden || !c.ok);
+  const done = checks.filter((c) => !c.hidden && c.ok);
+  return el('div', { class: 'checks-compact' }, [
+    open.length ? checklist(open) : el('p', { class: 'all-ok' }, [icon('check', { size: 16 }), t('rep.allOk')]),
+    done.length ? el('details', { class: 'checks-ok' }, [el('summary', {}, t('rep.itemsOk', { n: done.length })), checklist(done)]) : null,
   ]);
 }
 

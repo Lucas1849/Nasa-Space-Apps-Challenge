@@ -33,7 +33,7 @@ export function gameoverScreen(state, actions) {
       const prog = ladderProgress(p);
       return el('div', { class: 'race-row' }, [
         el('div', { class: 'row', style: 'margin:0;gap:8px' }, [
-          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: 'Vencedor', className: 'winner' }) : null,
+          avatar(p, 26), el('strong', {}, p.name), state.winners.includes(p.id) ? icon('trophy', { size: 18, label: t('go.winner'), className: 'winner' }) : null,
           el('span', { class: 'chip small' }, sideBadge(p)),
           el('span', { class: 'spacer' }),
           el('span', { class: 'num' }, t('go.steps', { steps: prog.steps, total: prog.total })),

@@ -56,3 +56,18 @@ export function toggleTheme() {
   return theme;
 }
 
+
+// Tempo do relógio do turno (sim/turnTimer.js), em segundos; 0 desliga. Padrão: 120.
+const TIMER_KEY = 'smdg.timer';
+let timer = 120;
+try {
+  const saved = Number(localStorage.getItem(TIMER_KEY));
+  if ([0, 60, 90, 120, 180].includes(saved) && localStorage.getItem(TIMER_KEY) != null) timer = saved;
+} catch { /* sem armazenamento: 120 s */ }
+
+export const timerSeconds = () => timer;
+
+export function setTimerSeconds(seconds) {
+  timer = Number(seconds) || 0;
+  try { localStorage.setItem(TIMER_KEY, String(timer)); } catch { /* ignora */ }
+}
