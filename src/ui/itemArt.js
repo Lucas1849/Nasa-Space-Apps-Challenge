@@ -24,9 +24,13 @@ function cyl(cx, cy, z, r, h, [top, side1, side2], id) {
     + `<path d="M${tx - rx},${ty} L${bx - rx},${by} A${rx},${ry} 0 0 0 ${bx + rx},${by} L${tx + rx},${ty} Z" fill="url(#${id})" stroke="rgba(0,0,0,.25)" stroke-width=".6"/>`
     + `<ellipse cx="${tx}" cy="${ty}" rx="${rx}" ry="${ry}" fill="${top}" stroke="rgba(0,0,0,.2)" stroke-width=".6"/>`;
 }
-const shadow = (w = 46, y = 74) => `<ellipse cx="${OX}" cy="${y}" rx="${w}" ry="${w * 0.22}" fill="rgba(0,0,0,.45)" filter="url(#soft)"/>`;
+// Sombra e brilho suaves com degradê radial (antes era filtro de desfoque gaussiano, que pesa muito no celular
+// quando a oficina mostra várias "fotos" de uma vez). O degradê termina transparente, o que imita o desfoque.
+const SOFT_DEFS = '<radialGradient id="soft-shade"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset=".55" stop-color="#000" stop-opacity=".32"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>'
+  + '<radialGradient id="soft-glow"><stop offset="0" stop-color="#ff9d4d" stop-opacity=".7"/><stop offset="1" stop-color="#ff9d4d" stop-opacity="0"/></radialGradient>';
+const shadow = (w = 46, y = 74) => `<ellipse cx="${OX}" cy="${y}" rx="${w + 6}" ry="${w * 0.22 + 4}" fill="url(#soft-shade)"/>`;
 const frame = (body, w, y) => `<svg viewBox="0 0 160 100" class="item-photo-svg" aria-hidden="true" focusable="false">`
-  + `<defs><filter id="soft" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="3"/></filter>`
+  + `<defs>${SOFT_DEFS}`
   + `<radialGradient id="studio" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2a2d36"/><stop offset="1" stop-color="#0d0e12"/></radialGradient></defs>`
   + `<rect width="160" height="100" fill="url(#studio)"/>${shadow(w, y)}${body}</svg>`;
 
@@ -65,7 +69,7 @@ const ART = {
       + `<defs><linearGradient id="noz" x1="0" x2="1"><stop offset="0" stop-color="#d7dbe2"/><stop offset=".45" stop-color="#8a909d"/><stop offset="1" stop-color="#3c414b"/></linearGradient></defs>`
       + `<path d="M${x - 9},${y + 4} L${x - 22},${y + 34} Q${x},${y + 44} ${x + 22},${y + 34} L${x + 9},${y + 4} Z" fill="url(#noz)" stroke="rgba(0,0,0,.35)" stroke-width=".7"/>`
       + `<ellipse cx="${x}" cy="${y + 36}" rx="22" ry="7" fill="#1c1f26" stroke="#5d6370" stroke-width=".8"/>`
-      + `<ellipse cx="${x}" cy="${y + 38}" rx="12" ry="3.5" fill="#ff9d4d" opacity=".55" filter="url(#soft)"/>`, 34, 82);
+      + `<ellipse cx="${x}" cy="${y + 38}" rx="16" ry="6" fill="url(#soft-glow)"/>`, 34, 82);
   },
   capsule: () => {
     const [x, y] = P(0, 0, 8);
@@ -123,7 +127,7 @@ function rocket(scale, boosters) {
     + `<rect x="${cx - ww / 2}" y="${base - hh * 0.5}" width="${ww}" height="${Math.max(2, hh * 0.06)}" fill="#c4473a"/><rect x="${cx - ww / 2}" y="${base - hh * 0.25}" width="${ww}" height="${Math.max(2, hh * 0.05)}" fill="#20242c"/>`;
   const fins = `<path d="M${x - w / 2},${base - 14 * scale} L${x - w / 2 - 9 * scale},${base} L${x - w / 2},${base} Z M${x + w / 2},${base - 14 * scale} L${x + w / 2 + 9 * scale},${base} L${x + w / 2},${base} Z" fill="#c4473a" stroke="rgba(0,0,0,.3)" stroke-width=".6"/>`;
   const side = boosters ? one(x - w * 0.95, h * 0.55, w * 0.55) + one(x + w * 0.95, h * 0.55, w * 0.55) : '';
-  return `<svg viewBox="0 0 160 100" class="item-photo-svg" aria-hidden="true" focusable="false"><defs><filter id="soft" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="3"/></filter><radialGradient id="studio" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2a2d36"/><stop offset="1" stop-color="#0d0e12"/></radialGradient></defs><rect width="160" height="100" fill="url(#studio)"/>${shadow(22 * scale + (boosters ? 10 : 0), 86)}${body}${side}${fins}${one(x, h, w)}</svg>`;
+  return `<svg viewBox="0 0 160 100" class="item-photo-svg" aria-hidden="true" focusable="false"><defs>${SOFT_DEFS}<radialGradient id="studio" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2a2d36"/><stop offset="1" stop-color="#0d0e12"/></radialGradient></defs><rect width="160" height="100" fill="url(#studio)"/>${shadow(22 * scale + (boosters ? 10 : 0), 86)}${body}${side}${fins}${one(x, h, w)}</svg>`;
 }
 const LAUNCHERS = { small: () => rocket(0.75, false), medium: () => rocket(1, false), heavy: () => rocket(1.08, true) };
 
@@ -247,7 +251,7 @@ export function buildingPhotoSvg(id, { bare = false, level = 1 } = {}) {
   if (!fn) return '';
   const body = fn(Math.min(3, Math.max(1, level)));
   return `<svg viewBox="${bare ? '22 2 116 86' : '0 0 160 100'}" class="building-photo-svg" aria-hidden="true" focusable="false">`
-    + `<defs><filter id="soft" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="3"/></filter>`
+    + `<defs>${SOFT_DEFS}`
     + `<radialGradient id="studio" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2a2d36"/><stop offset="1" stop-color="#0d0e12"/></radialGradient></defs>`
     + `${bare ? '' : '<rect width="160" height="100" fill="url(#studio)"/>'}${shadow(44, 80)}${body}</svg>`;
 }

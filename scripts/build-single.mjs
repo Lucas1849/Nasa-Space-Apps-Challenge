@@ -60,10 +60,21 @@ function load(abs) {
 load(entry);
 
 const css = readFileSync(join(root, 'src', 'styles', 'main.css'), 'utf8');
-const html = readFileSync(join(root, 'index.html'), 'utf8');
+let html = readFileSync(join(root, 'index.html'), 'utf8');
+
+// Desempenho no index.html (GitHub Pages): sem isto o navegador só descobre cada módulo depois de baixar quem
+// o importa, numa cascata de ~10 viagens de rede (lenta no celular). Com modulepreload, baixa todos em paralelo.
+// A lista é regenerada aqui a cada build, a partir do mesmo grafo de imports, então não fica desatualizada.
+const PRELOAD_RE = /(<!-- modulepreload:start[^>]*-->)[\s\S]*?(\s*<!-- modulepreload:end -->)/;
+if (PRELOAD_RE.test(html)) {
+  const links = [...modules.keys()].filter((id) => id !== 'src/main.js').map((id) => `\n  <link rel="modulepreload" href="${id}">`).join('');
+  html = html.replace(PRELOAD_RE, (_, start, end) => `${start}${links}${end}`);
+  writeFileSync(join(root, 'index.html'), html);
+}
 const js = `(() => {\n'use strict';\nconst __mods = {};\n${[...modules.values()].join('\n\n')}\n})();`;
 
 const out = html
+  .replace(PRELOAD_RE, '') // no arquivo único os módulos já estão embutidos
   .replace(/<link rel="stylesheet" href="src\/styles\/main\.css">/, () => `<style>\n${css}\n</style>`)
   .replace(/<script type="module" src="src\/main\.js"><\/script>/, () => `<script>\n${js.replace(/<\/script/gi, '<\\/script')}\n</script>`);
 if (/<script type="module"|<link rel="stylesheet" href="src\//.test(out)) throw new Error('index.html mudou: ajuste os padrões do build.');

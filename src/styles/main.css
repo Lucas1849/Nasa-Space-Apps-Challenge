@@ -3066,3 +3066,94 @@ button.build-option, .board-screen .board-gadget button.build-option { display: 
 .building-card.grew .bc-photo svg { animation: buildUp .7s cubic-bezier(.2, .9, .3, 1.3) both; transform-origin: 50% 90%; }
 @media (max-width: 560px) { .building-card { grid-template-columns: 80px minmax(0, 1fr); } .building-card .bc-photo { width: 80px; } }
 @media (prefers-reduced-motion: reduce) { .building-card.grew .bc-photo svg { animation: none; } }
+
+
+/* =========================================================
+   Celular e desempenho (branch daniel/mobile-desempenho)
+   Tudo aqui é só apresentação: nenhuma regra de jogo muda. Fica no fim do arquivo para vencer as regras acima.
+   ========================================================= */
+
+/* Toque mais rápido: sem o atraso de "duplo toque para zoom" e sem o flash azul do toque no Android/iOS. */
+button, a, summary, label, [role="button"], .tile { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+/* O fundo pontilhado fixo vira uma camada própria: rolar a página não obriga a repintar a malha inteira. */
+body::before { will-change: transform; }
+
+/* Altura real da tela no celular (100vh conta a barra do navegador e corta o rodapé). */
+@supports (height: 100dvh) {
+  .modal { max-height: calc(100dvh - 32px); }
+  .main-menu { min-height: calc(100dvh - 44px); }
+}
+
+@media (max-width: 700px) {
+  /* Desfoque atrás das janelas pesa muito na GPU do celular: troca por um fundo mais opaco. */
+  .modal-backdrop { backdrop-filter: none; background: color-mix(in srgb, var(--fundo) 82%, transparent); }
+
+  #app, body:has(.side-rail) #app {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+
+  /* Topo (HUD): no celular ele ocupava metade da tela grudado em cima. Fica compacto e rola junto com a página;
+     o relógio do turno continua sempre à vista (abaixo). */
+  .hud { position: static; margin: 0 0 12px; padding: 8px 10px; gap: 6px; }
+  .hud .spacer { display: none; }
+  .hud .chip { white-space: normal; height: auto; min-height: 28px; padding-block: 4px; line-height: 1.25; max-width: 100%; }
+  .hud .stat { min-height: 0; padding: 3px 8px 3px 6px; gap: 6px; }
+  .hud .stat-num { font-size: 15px; }
+  .hud .stat-next { display: none; } /* a previsão continua no balão (title) */
+  .hud .turn-clock {
+    position: fixed;
+    z-index: 30;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    background: var(--superficie);
+    box-shadow: var(--sombra-flutua);
+  }
+  .hud:has(.turn-clock) { margin-top: 36px; } /* abre espaço para o relógio fixo não cobrir a 1ª linha do topo */
+
+  /* Barra de navegação horizontal: rola de lado sem mostrar a barra de rolagem; alvos de toque maiores. */
+  .side-rail { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .side-rail::-webkit-scrollbar { display: none; }
+  .rail-item { min-height: 48px; flex: 0 0 auto; }
+
+  /* Barra do turno colada no rodapé, mais enxuta */
+  .turn-dock, .launch-dock { padding: 8px 10px; gap: 8px; margin-top: 12px; border-radius: 10px 10px 0 0; }
+
+  /* Janelas (regras, sair, etc.) cabem na tela */
+  .modal { padding: 18px 16px; }
+  .modal.rules-modal { padding: 20px 16px 18px; border-radius: 14px; }
+  .year-card { padding: 18px 16px 14px; }
+
+  .toast { max-width: calc(100vw - 32px); text-align: center; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  /* iOS dá zoom na página ao focar campo com fonte menor que 16px (ex.: código da sala) */
+  input, select, textarea { font-size: 16px; }
+}
+
+@media (max-width: 600px) {
+  /* Botões: altura mínima confortável para o dedo e texto que quebra linha em vez de vazar da tela. */
+  button { height: auto; min-height: 40px; padding-block: 6px; white-space: normal; }
+  button.small { min-height: 34px; }
+
+  /* Tabuleiro: o miolo do anel tem só ~3 casas de largura no celular, pequeno demais para as cartas de decisão
+     (dilema, terreno, fornecedor). Aqui a carta passa a cobrir o anel inteiro, como uma carta posta sobre a mesa,
+     com fundo da planta; ao decidir, ela some e o tabuleiro volta. Os montes de cartas e as órbitas são só
+     enfeite e saem para não brigar com a carta. */
+  .board-screen .board-gadget { padding: 12px 8px 10px; border-radius: 16px; }
+  .board-screen .board-gadget .ring-center { position: static; padding: 8px; }
+  .board-screen .board-gadget .ring-center > .center-orbits,
+  .board-gadget .center-court-decks { display: none; }
+  .board-screen .board-gadget .ring-center > .center-cards {
+    inset: 0;
+    padding: 10px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--bp-deep) 94%, transparent);
+    box-shadow: 0 0 0 1px var(--bp-line);
+    justify-content: flex-start;
+  }
+  .board-screen .board-gadget .center-cards > .tile-decision,
+  .board-screen .board-gadget .center-cards > .outcome { width: 100%; }
+  .build-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

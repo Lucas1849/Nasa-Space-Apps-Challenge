@@ -42,21 +42,32 @@ function createSplashStarfield() {
   ];
 
   let raf = 0;
+  let last = 0;
   const t0 = performance.now();
+  const ctx = sky.getContext('2d');
+  // Desempenho: as estrelas mudam devagar, então ~30 quadros/s bastam (antes redesenhava a 60+ e
+  // seguia desenhando com a aba escondida). Em tela pequena o desenho é mais leve (menos pixels por estrela).
+  const FRAME_MS = 1000 / 30;
+  const small = window.matchMedia?.('(max-width: 700px)').matches;
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   const render = (now) => {
     if (sky.isConnected === false && now - t0 > 600) {
       cancelAnimationFrame(raf);
       return;
     }
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (document.hidden || now - last < FRAME_MS) {
+      raf = requestAnimationFrame(render);
+      return;
+    }
+    last = now;
+    const dpr = Math.min(window.devicePixelRatio || 1, small ? 1.5 : 2);
     const w = window.innerWidth || 1280;
     const h = window.innerHeight || 720;
     if (sky.width !== Math.floor(w * dpr) || sky.height !== Math.floor(h * dpr)) {
       sky.width = Math.floor(w * dpr);
       sky.height = Math.floor(h * dpr);
     }
-    const ctx = sky.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
@@ -136,7 +147,7 @@ function createSplashStarfield() {
       ctx.fillRect(mx - 1.5, my - 1.5, 3, 3);
     }
 
-    raf = requestAnimationFrame(render);
+    if (!reduced) raf = requestAnimationFrame(render);
   };
 
   raf = requestAnimationFrame(render);
