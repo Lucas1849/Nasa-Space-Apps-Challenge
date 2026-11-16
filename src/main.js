@@ -225,9 +225,11 @@ const actions = {
   },
   joinOnline: async (raw) => {
     try { await net.join(raw); } catch (err) {
+      // Mensagens de rede são longas (dizem o que fazer): ficam 8 s na tela.
+      document.querySelectorAll('.toast').forEach((t) => t.remove()); // tira o "Conectando à sala..."
       showToast(err?.type === 'peer-unavailable'
-        ? 'Sala não encontrada. Confira o código com o anfitrião.'
-        : err?.message || 'Não foi possível entrar na sala.');
+        ? 'Sala não encontrada. Confira o código e se a aba da sala continua aberta no aparelho do anfitrião.'
+        : err?.message || 'Não foi possível entrar na sala.', 8000);
     }
   },
   isOnline: () => net.isConnected(),
@@ -275,12 +277,12 @@ const spectatorActions = {
   newGame: blockedInSpectate,
 };
 
-function showToast(text) {
+function showToast(text, ms = 2500) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = text;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  setTimeout(() => t.remove(), ms);
 }
 
 // Animação curta de lançamento (contagem + foguete) antes da tela de voo. Um clique pula.
